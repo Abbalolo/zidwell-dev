@@ -6,7 +6,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Podcast from "./components/Podcast";
-import Pricing from "./components/Pricing";
+
 import Services from "./components/Services";
 import Testimonials from "./components/Testimonials";
 
