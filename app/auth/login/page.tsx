@@ -36,7 +36,7 @@ const page = () => {
                       <h1 className="font-bold text-lg">Zidwell</h1>
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your ZenPay account</CardDescription>
+          <CardDescription>Sign in to your Zidwell account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
