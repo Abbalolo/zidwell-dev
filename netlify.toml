@@ -1,9 +1,6 @@
 [build]
   command = "npm run build"
-  publish = "out" # for `next export` or use `.next` with adapter
-  # If using the @netlify/next plugin, `publish = ".next"` is fine
+  publish = ".next"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
