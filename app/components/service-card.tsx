@@ -11,7 +11,7 @@ const services = [
     description: "Buy Airtime",
     icon: Smartphone,
     color: "bg-green-50 text-green-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   {
     id: 2,
@@ -19,7 +19,7 @@ const services = [
     description: "Buy Data",
     icon: Wifi,
     color: "bg-blue-50 text-blue-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   {
     id: 3,
@@ -27,7 +27,7 @@ const services = [
     description: "Pay Electricity",
     icon: Lightbulb,
     color: "bg-yellow-50 text-yellow-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   {
     id: 4,
@@ -35,7 +35,7 @@ const services = [
     description: "Pay TV Subscription",
     icon: Tv,
     color: "bg-purple-50 text-purple-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   {
     id: 5,
@@ -43,7 +43,7 @@ const services = [
     description: "Generate invoice",
     icon: CreditCard,
     color: "bg-red-50 text-red-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   {
     id: 6,
@@ -51,7 +51,7 @@ const services = [
     description: "Generate Contract",
     icon: GraduationCap,
     color: "bg-indigo-50 text-indigo-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   {
     id: 7,
@@ -59,7 +59,7 @@ const services = [
     description: "Acounting Assistance",
     icon: GraduationCap,
     color: "bg-indigo-50 text-indigo-600",
-    buttonColor: "bg-gray-900 hover:bg-gray-800",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
   },
   
 
@@ -85,7 +85,7 @@ export default function ServiceCards() {
 
               {/* Action Button */}
               <Button
-                className={`w-full text-white text-sm py-2 px-4 rounded-lg cursor-pointer ${service.buttonColor}`}
+                className={`w-full text-white  text-sm py-2 px-4 rounded-lg cursor-pointer ${service.buttonColor}`}
                 onClick={() => console.log(`Clicked ${service.title}`)}
               >
                 {service.description}

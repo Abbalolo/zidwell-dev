@@ -4,7 +4,7 @@ import AIAccountant from "@/app/components/AiAccountant"
 
 export default function AIAccountantPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
       <div className="lg:ml-64">

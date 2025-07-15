@@ -3,8 +3,9 @@ import DashboardHeader from "../components/dashboard-hearder"
 import ProfileSettings from "../components/Profile-settings"
 
 export default function ProfilePage() {
+   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
       <div className="lg:ml-64">

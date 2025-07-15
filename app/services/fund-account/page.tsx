@@ -4,7 +4,7 @@ import FundAccountMethods from "@/app/components/FundAccount"
 
 export default function FundAccountPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
       <div className="lg:ml-64">

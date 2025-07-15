@@ -38,7 +38,7 @@ export default function BalanceCard() {
           </div>
 
           <div className="flex items-center justify-center space-x-4 pt-4">
-            <Button className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3">
+            <Button className="bg-[#C29307] hover:bg-[#C29307] text-white px-8 py-3">
               <Plus className="w-4 h-4 mr-2" />
               Add Money
             </Button>

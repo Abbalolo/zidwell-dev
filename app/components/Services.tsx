@@ -1,4 +1,5 @@
-
+"use client";
+import Link from "next/link";
 import { Card, CardContent } from "./ui/card";
 import { 
   Tv, 
@@ -10,62 +11,73 @@ import {
   Scale,
   FileText
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const Services = () => {
+  const router = useRouter();
   const services = [
     {
-      icon: <Tv className="h-12 w-12" />,
+      icon: <Tv className="h-10 w-10" />,
       title: "Cable TV",
       description: "Pay for your cable TV subscriptions from all major providers instantly.",
-      color: "from-red-500 to-red-600"
+      color: "from-red-500 to-red-600",
+     
     },
     {
-      icon: <Smartphone className="h-12 w-12" />,
+      icon: <Smartphone className="h-10 w-10" />,
       title: "Airtime",
       description: "Top up your mobile phone with airtime for all networks quickly.",
-      color: "from-green-500 to-green-600"
+      color: "from-green-500 to-green-600",
+     
+
     },
     {
-      icon: <GraduationCap className="h-12 w-12" />,
+      icon: <GraduationCap className="h-10 w-10" />,
       title: "Education",
       description: "Pay school fees, exam fees, and other educational expenses seamlessly.",
-      color: "from-blue-500 to-blue-600"
+      color: "from-blue-500 to-blue-600",
+     
     },
     {
-      icon: <Zap className="h-12 w-12" />,
+      icon: <Zap className="h-10 w-10" />,
       title: "Buy Power",
       description: "Purchase electricity units for your home or office with ease.",
-      color: "from-yellow-500 to-yellow-600"
+      color: "from-yellow-500 to-yellow-600",
+      link: "/platform-services/#electricity"
     },
     {
-      icon: <Wifi className="h-12 w-12" />,
+      icon: <Wifi className="h-10 w-10" />,
       title: "Buy Data",
       description: "Get data bundles for all networks at competitive rates.",
-      color: "from-purple-500 to-purple-600"
+      color: "from-purple-500 to-purple-600",
+ 
     },
     {
-      icon: <Calculator className="h-12 w-12" />,
+      icon: <Calculator className="h-10 w-10" />,
       title: "AI Accountant",
       description: "Smart accounting assistance powered by artificial intelligence.",
-      color: "from-indigo-500 to-indigo-600"
+      color: "from-indigo-500 to-indigo-600",
+      
     },
     {
-      icon: <Scale className="h-12 w-12" />,
+      icon: <Scale className="h-10 w-10" />,
       title: "Legal Contact",
       description: "Connect with legal professionals for your business needs.",
-      color: "from-gray-500 to-gray-600"
+      color: "from-gray-500 to-gray-600",
+     
     },
     {
-      icon: <FileText className="h-12 w-12" />,
+      icon: <FileText className="h-10 w-10" />,
       title: "Create Invoice",
       description: "Generate professional invoices for your business in minutes.",
-      color: "from-orange-500 to-orange-600"
+      color: "from-orange-500 to-orange-600",
+      
     }
   ];
 
   return (
     <section id="services" className="py-20 bg-gray-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-5 lg:px-20 ">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             All Your Bills
@@ -78,19 +90,20 @@ const Services = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {services.map((service, index) => (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          {services.map((service:any, index) => (
             <Card 
               key={index} 
+              onClick={() => router.push("/platform-services")}
               className="group hover:shadow-xl transition-all duration-300 border-0 bg-white hover:scale-105"
             >
               <CardContent className="p-8 text-center">
-                <div className={`mb-6 w-20 h-20 mx-auto rounded-2xl bg-gradient-to-r ${service.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`mb-6 w-16 h-16 mx-auto rounded-2xl bg-gradient-to-r ${service.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}>
                   {service.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                <Link href="/platform-services" className="text-xl hover:underline font-semibold text-gray-900 mb-3">
                   {service.title}
-                </h3>
+                </Link>
                 <p className="text-gray-600 leading-relaxed">
                   {service.description}
                 </p>

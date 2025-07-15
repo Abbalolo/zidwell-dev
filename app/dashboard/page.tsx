@@ -4,10 +4,12 @@ import DashboardSidebar from "../components/dashboard-sidebar";
 import ReferralSection from "../components/referral-section";
 import ServiceCards from "../components/service-card";
 import TransactionHistory from "../components/transaction-history";
+import { useUserContextData } from "../context/userData";
 
 export default function page() {
+ 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
       <div className="lg:ml-64">

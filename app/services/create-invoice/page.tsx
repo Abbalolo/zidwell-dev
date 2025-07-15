@@ -4,7 +4,7 @@ import InvoiceManager from "@/app/components/InvoiceGen"
 
 export default function InvoicePage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
       <div className="lg:ml-64">

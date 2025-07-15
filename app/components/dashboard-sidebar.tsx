@@ -1,8 +1,8 @@
-"use client"
-import logo from "/public/zidwell-logo.png"
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+"use client";
+import logo from "/public/zidwell-logo.png";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Wallet,
@@ -14,8 +14,9 @@ import {
   User,
   Menu,
   X,
-} from "lucide-react"
-import Image from "next/image"
+} from "lucide-react";
+import Image from "next/image";
+import { useUserContextData } from "../context/userData";
 
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -23,28 +24,32 @@ const navigationItems = [
   { name: "My Transaction", href: "/transactions", icon: Receipt },
   { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
   { name: "Legal contract", href: "/services/legal-contract", icon: FileText },
-  { name: "Create Invoice", href: "/services/create-invoice", icon: FileSpreadsheet },
+  {
+    name: "Create Invoice",
+    href: "/services/create-invoice",
+    icon: FileSpreadsheet,
+  },
   { name: "AI accountant", href: "/services/ai-accountant", icon: Bot },
-]
+];
 
-const preferenceItems = [{ name: "My Profile", href: "/profile", icon: User }]
+const preferenceItems = [{ name: "My Profile", href: "/profile", icon: User }];
 
 export default function DashboardSidebar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const pathname = usePathname()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const { userData } = useUserContextData();
 
-  
-    useEffect(() => {
+  useEffect(() => {
     if (isMobileMenuOpen) {
-      document.body.classList.add("overflow-hidden")
+      document.body.classList.add("overflow-hidden");
     } else {
-      document.body.classList.remove("overflow-hidden")
+      document.body.classList.remove("overflow-hidden");
     }
-  
+
     return () => {
-      document.body.classList.remove("overflow-hidden")
-    }
-  }, [isMobileMenuOpen])
+      document.body.classList.remove("overflow-hidden");
+    };
+  }, [isMobileMenuOpen]);
 
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
     <Link
@@ -58,16 +63,24 @@ export default function DashboardSidebar() {
       <item.icon className="w-5 h-5" />
       <span className="font-medium">{item.name}</span>
     </Link>
-  )
+  );
 
   return (
     <>
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className={isMobileMenuOpen ? "lg:hidden fixed top-4 right-3 z-50 p-2 bg-gray-800 text-white rounded-lg " : `lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-lg`}
+        className={
+          isMobileMenuOpen
+            ? "lg:hidden fixed top-4 right-3 z-50 p-2 bg-gray-800 text-white rounded-lg "
+            : `lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-lg`
+        }
       >
-        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {isMobileMenuOpen ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <Menu className="w-6 h-6" />
+        )}
       </button>
 
       {/* Sidebar */}
@@ -81,32 +94,46 @@ export default function DashboardSidebar() {
           <div className="p-6 border-b border-gray-700">
             <div className="flex items-center space-x-3 mb-4">
               <Link href="/" className="flex items-center">
-            <Image
-              src={logo}
-              alt="Zidwell Logo"
-              width={32}
-              height={32}
-              className="mr-2"
-            />
-            <h1 className="font-bold text-lg text-white">Zidwell</h1>
-          </Link>
+                <Image
+                  src={logo}
+                  alt="Zidwell Logo"
+                  width={32}
+                  height={32}
+                  className="mr-2"
+                />
+                <h1 className="font-bold text-lg text-white">Zidwell</h1>
+              </Link>
             </div>
-            <p className="text-gray-400 text-sm">Welcome Back Chukwuebuka</p>
+            {userData && userData.firstName ? (
+              <p className="text-gray-400 text-sm">
+                Welcome Back {`${userData.firstName}`}
+              </p>
+            ) : null}
           </div>
 
           {/* Navigation */}
           <div className="flex-1 px-4 py-6 space-y-2">
             {navigationItems.map((item) => (
-              <NavItem key={item.name} item={item} isActive={pathname === item.href} />
+              <NavItem
+                key={item.name}
+                item={item}
+                isActive={pathname === item.href}
+              />
             ))}
           </div>
 
           {/* Preferences */}
           <div className="px-4 py-6 border-t border-gray-700">
-            <h3 className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Preferences</h3>
+            <h3 className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">
+              Preferences
+            </h3>
             <div className="space-y-2">
               {preferenceItems.map((item) => (
-                <NavItem key={item.name} item={item} isActive={pathname === item.href} />
+                <NavItem
+                  key={item.name}
+                  item={item}
+                  isActive={pathname === item.href}
+                />
               ))}
             </div>
           </div>
@@ -121,5 +148,5 @@ export default function DashboardSidebar() {
         />
       )}
     </>
-  )
+  );
 }
