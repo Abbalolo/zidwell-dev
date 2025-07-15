@@ -11,7 +11,7 @@ export default function DashboardHeader() {
   const router = useRouter();
 
    const {userData} = useUserContextData();
-  console.log(userData)
+ 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
