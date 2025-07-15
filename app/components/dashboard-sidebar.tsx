@@ -93,7 +93,7 @@ export default function DashboardSidebar() {
           {/* Logo and welcome */}
           <div className="p-6 border-b border-gray-700">
             <div className="flex items-center space-x-3 mb-4">
-              <Link href="/" className="flex items-center">
+              <Link href="/dashboard" className="flex items-center">
                 <Image
                   src={logo}
                   alt="Zidwell Logo"
