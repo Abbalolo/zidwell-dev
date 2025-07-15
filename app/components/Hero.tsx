@@ -6,7 +6,11 @@ import { ArrowRight, Zap, Shield } from "lucide-react";
 const Hero = () => {
   const router = useRouter();
   return (
-    <section className=" pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+    <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 ">
+      {/* background design */}
+      <div className="absolute h-full inset-0 bg-patterns"></div>
+      
+      {/* Main content */}
       <div className="container mx-auto">
         <div className="text-center max-w-4xl mx-auto">
           <div className="mb-8">
