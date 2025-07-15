@@ -8,17 +8,13 @@ import React, {
   useEffect,
 } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, database, db } from "../firebase/firebaseAuth";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  doc,
-  getDoc,
-  onSnapshot,
-  Unsubscribe,
-} from "firebase/firestore";
+import { doc, getDoc, onSnapshot, Unsubscribe } from "firebase/firestore";
 import { get, ref, set } from "firebase/database";
 
-// Types
+import { auth, db, database } from "../firebase/firebaseAuth";
+
+// Interfaces
 interface Notification {
   id: string;
   message: string;
@@ -63,14 +59,6 @@ export interface BusinessData {
 }
 
 interface UserContextType {
-  notifications: Notification[];
-  initiatorNotifications: Notification[];
-  signeeNotifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-  setInitiatorNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-  setSigneeNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-  blogs: any[];
-  setBlogs: React.Dispatch<React.SetStateAction<any[]>>;
   user: FirebaseUser | null;
   userData: UserData | null;
   businessData: BusinessData | null;
@@ -80,85 +68,89 @@ interface UserContextType {
   setIsLogin: React.Dispatch<React.SetStateAction<boolean>>;
   isSignee: boolean;
   setIsSignee: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
   isDarkMode: boolean;
+  setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
   handleDarkModeToggle: () => void;
+  blogs: any[];
+  setBlogs: React.Dispatch<React.SetStateAction<any[]>>;
+  notifications: Notification[];
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  initiatorNotifications: Notification[];
+  setInitiatorNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  signeeNotifications: Notification[];
+  setSigneeNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
+const CACHE_EXPIRY = 5 * 60 * 1000;
 
-// Cache timeout
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
-
-const fetchUserData = (
-  uid: string,
+// Fetch user data safely
+export const fetchUserData = (
+  uid: string | undefined,
   setUserData: (data: UserData) => void,
   setLoading: (loading: boolean) => void,
-  useRealtime: boolean = false
+  useRealtime = false
 ): Unsubscribe => {
-  setLoading(true);
-  try {
-    const cachedData = localStorage.getItem(`userData_${uid}`);
-    const cachedTimestamp = localStorage.getItem(`userDataTimestamp_${uid}`);
+  if (!uid) {
+    console.warn("Missing UID.");
+    setLoading(false);
+    return () => {};
+  }
 
-    if (cachedData && cachedTimestamp) {
-      const age = Date.now() - parseInt(cachedTimestamp);
-      if (age < CACHE_EXPIRY) {
-        setUserData(JSON.parse(cachedData));
+  setLoading(true);
+
+  // Try cache
+  if (typeof window !== "undefined") {
+    try {
+      const cached = localStorage.getItem(`userData_${uid}`);
+      const cachedTimestamp = localStorage.getItem(`userDataTimestamp_${uid}`);
+
+      if (cached && cachedTimestamp && Date.now() - parseInt(cachedTimestamp, 10) < CACHE_EXPIRY) {
+        setUserData(JSON.parse(cached));
         setLoading(false);
         return () => {};
       }
+    } catch {
+      localStorage.removeItem(`userData_${uid}`);
+      localStorage.removeItem(`userDataTimestamp_${uid}`);
     }
+  }
 
-    const userDocRef = doc(db, "users", uid);
+  const userRef = doc(db, "users", uid);
 
-    if (useRealtime) {
-      const unsubscribe = onSnapshot(
-        userDocRef,
-        (docSnapshot) => {
-          if (docSnapshot.exists()) {
-            const data = docSnapshot.data() as UserData;
-            setUserData(data);
-            console.log("User data fetched from Firestore:", data);
-            localStorage.setItem(`userData_${uid}`, JSON.stringify(data));
-            localStorage.setItem(`userDataTimestamp_${uid}`, Date.now().toString());
-          }
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Snapshot error:", error);
-          setLoading(false);
+  if (useRealtime) {
+    const unsubscribe = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as UserData;
+        setUserData(data);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`userData_${uid}`, JSON.stringify(data));
+          localStorage.setItem(`userDataTimestamp_${uid}`, Date.now().toString());
         }
-      );
-      return unsubscribe;
-    } else {
-      getDoc(userDocRef)
-        .then((docSnapshot) => {
-          if (docSnapshot.exists()) {
-            const data = docSnapshot.data() as UserData;
-            setUserData(data);
+      }
+      setLoading(false);
+    });
+    return unsubscribe;
+  } else {
+    getDoc(userRef)
+      .then((snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as UserData;
+          setUserData(data);
+          if (typeof window !== "undefined") {
             localStorage.setItem(`userData_${uid}`, JSON.stringify(data));
             localStorage.setItem(`userDataTimestamp_${uid}`, Date.now().toString());
-          } else {
-            console.warn("No user data found");
           }
-        })
-        .catch((error) => {
-          console.error("Fetch error:", error);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-      return () => {};
-    }
-  } catch (error) {
-    console.error("Failed to fetch user data:", error);
-    setLoading(false);
+        }
+      })
+      .catch((err) => console.error("getDoc error:", err))
+      .finally(() => setLoading(false));
     return () => {};
   }
 };
 
-const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+// Main provider
+export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [businessData] = useState<BusinessData | null>(null);
@@ -167,126 +159,102 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [initiatorNotifications, setInitiatorNotifications] = useState<Notification[]>([]);
   const [signeeNotifications, setSigneeNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isLogin, setIsLogin] = useState<boolean>(false);
-  const [isSignee, setIsSignee] = useState<boolean>(false);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [isLogin, setIsLogin] = useState(false);
+  const [isSignee, setIsSignee] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
 
-  const excludePaths = [
-    "/contact",
-    "/Blog",
-    "/terms-of-use",
-    "/privacy-policy",
-    "/Auth/password-reset",
-    "/Auth/authentication-action",
-    "/Auth/password-reset/succeed",
-    "/Auth/register",
-    "/Auth/login",
-  ];
-  const isExcluded =
-    excludePaths.includes(pathname) || pathname.startsWith("/Blog/blogDetails/");
+  const excludedPaths = ["/contact", "/Blog", "/terms-of-use", "/privacy-policy", "/Auth/password-reset", "/Auth/register", "/Auth/login"];
+  const isExcluded = excludedPaths.includes(pathname) || pathname.startsWith("/Blog/blogDetails/");
 
-  const applyTheme = (darkMode: boolean) => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
+  const applyTheme = (dark: boolean) => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
   };
 
-  const saveUserPreferences = async (userId: string, darkMode: boolean) => {
+  const saveUserPreferences = async (uid: string, darkMode: boolean) => {
     try {
-      const userPreferencesRef = ref(database, `userPreferences/${userId}`);
-      await set(userPreferencesRef, { darkMode });
-    } catch (error) {
-      console.error("Error saving user preferences: ", error);
+      await set(ref(database, `userPreferences/${uid}`), { darkMode });
+    } catch (e) {
+      console.error("Saving preferences failed", e);
     }
   };
 
-  const loadUserPreferences = async (userId: string) => {
+  const loadUserPreferences = async (uid: string) => {
     try {
-      const userPreferencesRef = ref(database, `userPreferences/${userId}`);
-      const snapshot = await get(userPreferencesRef);
-      return snapshot.exists() ? snapshot.val().darkMode || false : false;
-    } catch (error) {
-      console.error("Error loading user preferences: ", error);
+      const snap = await get(ref(database, `userPreferences/${uid}`));
+      return snap.exists() ? !!snap.val().darkMode : false;
+    } catch {
       return false;
     }
   };
 
   const handleDarkModeToggle = async () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    applyTheme(newDarkMode);
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      await saveUserPreferences(currentUser.uid, newDarkMode);
-    }
+    const newVal = !isDarkMode;
+    setIsDarkMode(newVal);
+    applyTheme(newVal);
+    if (auth.currentUser) await saveUserPreferences(auth.currentUser.uid, newVal);
   };
 
- useEffect(() => {
-  let unsubscribeUserData: Unsubscribe | null = null;
+  useEffect(() => {
+    let unsubscribeUserData: Unsubscribe | null = null;
 
-  const handleAuthChange = async (currentUser: FirebaseUser | null) => {
-    setLoading(true);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
 
-    if (currentUser) {
-      setUser(currentUser);
-      setIsLogin(true);
+      if (currentUser) {
+        setUser(currentUser);
+        setIsLogin(true);
 
-      unsubscribeUserData = fetchUserData(currentUser.uid, setUserData, setLoading, false);
+        unsubscribeUserData = fetchUserData(currentUser.uid, setUserData, setLoading, false);
 
-      const darkModePreference = await loadUserPreferences(currentUser.uid);
-      setIsDarkMode(darkModePreference);
-      applyTheme(darkModePreference);
+        const dark = await loadUserPreferences(currentUser.uid);
+        setIsDarkMode(dark);
+        applyTheme(dark);
 
-      // ✅ Only redirect to dashboard if on the root or login page
-      if (
-        typeof window !== "undefined" &&
-        (window.location.pathname === "/" || window.location.pathname === "/auth/login") &&
-        currentUser.emailVerified
-      ) {
-        router.push("/dashboard");
+        if (typeof window !== "undefined" && ["/", "/auth/login"].includes(window.location.pathname) && currentUser.emailVerified) {
+          router.push("/dashboard");
+        }
+      } else {
+        setUser(null);
+        setIsLogin(false);
+        if (!isExcluded) router.push("/");
       }
-    } else {
-      setUser(null);
-      setIsLogin(false);
-      if (!isExcluded) router.push("/");
-    }
 
-    setLoading(false);
-  };
+      setLoading(false);
+    });
 
-  const unsubscribeAuth = onAuthStateChanged(auth, handleAuthChange);
-
-  return () => {
-    unsubscribeAuth();
-    if (unsubscribeUserData) unsubscribeUserData();
-  };
-}, []); // ✅ Remove pathname and router from dependencies
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUserData) unsubscribeUserData();
+    };
+  }, []);
 
   return (
     <UserContext.Provider
       value={{
         user,
-        blogs,
-        setBlogs,
         userData,
         businessData,
         loading,
         setUser,
         isLogin,
         setIsLogin,
+        isSignee,
+        setIsSignee,
         isDarkMode,
         setIsDarkMode,
         handleDarkModeToggle,
-        isSignee,
-        setIsSignee,
+        blogs,
+        setBlogs,
         notifications,
-        initiatorNotifications,
-        signeeNotifications,
-        setInitiatorNotifications,
-        setSigneeNotifications,
         setNotifications,
+        initiatorNotifications,
+        setInitiatorNotifications,
+        signeeNotifications,
+        setSigneeNotifications,
       }}
     >
       {children}
@@ -294,12 +262,11 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   );
 };
 
-const useUserContextData = (): UserContextType => {
+// Hook
+export const useUserContextData = (): UserContextType => {
   const context = useContext(UserContext);
   if (!context) {
     throw new Error("useUserContextData must be used within a UserProvider");
   }
   return context;
 };
-
-export { UserProvider, useUserContextData };

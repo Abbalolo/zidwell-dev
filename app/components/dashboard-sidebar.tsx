@@ -18,21 +18,35 @@ import {
 import Image from "next/image";
 import { useUserContextData } from "../context/userData";
 
+// const navigationItems = [
+//   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+//   { name: "Fund Account", href: "/services/fund-account", icon: Wallet },
+//   { name: "My Transaction", href: "/transactions", icon: Receipt },
+//   { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
+//   { name: "Legal contract", href: "/services/legal-contract", icon: FileText },
+//   {
+//     name: "Create Invoice",
+//     href: "/services/create-invoice",
+//     icon: FileSpreadsheet,
+//   },
+//   { name: "AI accountant", href: "/services/ai-accountant", icon: Bot },
+// ];
 const navigationItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Fund Account", href: "/services/fund-account", icon: Wallet },
-  { name: "My Transaction", href: "/transactions", icon: Receipt },
-  { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
-  { name: "Legal contract", href: "/services/legal-contract", icon: FileText },
+  { name: "Dashboard", 
+    href: "/dashboard", icon: LayoutDashboard },
+  { name: "Fund Account", href: "#", icon: Wallet },
+  { name: "My Transaction", href: "#", icon: Receipt },
+  { name: "Recurring Payments", href: "#", icon: RotateCcw },
+  { name: "Legal contract", href: "#", icon: FileText },
   {
     name: "Create Invoice",
-    href: "/services/create-invoice",
+    href: "#",
     icon: FileSpreadsheet,
   },
-  { name: "AI accountant", href: "/services/ai-accountant", icon: Bot },
+  { name: "AI accountant", href: "#", icon: Bot },
 ];
 
-const preferenceItems = [{ name: "My Profile", href: "/profile", icon: User }];
+const preferenceItems = [{ name: "My Profile", href: "#", icon: User }];
 
 export default function DashboardSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
