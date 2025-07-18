@@ -20,11 +20,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <UserProvider>
+        
         <body className={`${inter.variable} font-sans antialiased`}>
+      <UserProvider>
           {children}
-        </body>
       </UserProvider>
+        </body>
+        
     </html>
   );
 }

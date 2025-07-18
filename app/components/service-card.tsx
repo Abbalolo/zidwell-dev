@@ -1,10 +1,12 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { Button } from "./ui/button"
 import { Card, CardContent } from "./ui/card"
 import { Smartphone, Wifi, Lightbulb, Tv, CreditCard, GraduationCap, Car, Building } from "lucide-react"
+import { link } from "fs"
 
-const services = [
+const services:any = [
   {
     id: 1,
     title: "Airtime Top up",
@@ -12,6 +14,7 @@ const services = [
     icon: Smartphone,
     color: "bg-green-50 text-green-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/buy-airtime"
   },
   {
     id: 2,
@@ -20,6 +23,7 @@ const services = [
     icon: Wifi,
     color: "bg-blue-50 text-blue-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/services/buy-data"
   },
   {
     id: 3,
@@ -28,6 +32,7 @@ const services = [
     icon: Lightbulb,
     color: "bg-yellow-50 text-yellow-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/services/buy-power"
   },
   {
     id: 4,
@@ -36,6 +41,7 @@ const services = [
     icon: Tv,
     color: "bg-purple-50 text-purple-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    // link: "/dashboard/services/buy-cable-tv"
   },
   {
     id: 5,
@@ -44,6 +50,7 @@ const services = [
     icon: CreditCard,
     color: "bg-red-50 text-red-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    // link: "/dashboard/services/create-invoice"
   },
   {
     id: 6,
@@ -52,6 +59,7 @@ const services = [
     icon: GraduationCap,
     color: "bg-indigo-50 text-indigo-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    // link: "/dashboard/services/legal-contract"
   },
   {
     id: 7,
@@ -60,15 +68,17 @@ const services = [
     icon: GraduationCap,
     color: "bg-indigo-50 text-indigo-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    // link: "/dashboard/services/ai-accountant"
   },
   
 
 ]
 
 export default function ServiceCards() {
+  const router = useRouter()
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {services.map((service) => (
+      {services.map((service :any) => (
         <Card
           key={service.id}
           className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100"
@@ -86,7 +96,7 @@ export default function ServiceCards() {
               {/* Action Button */}
               <Button
                 className={`w-full text-white  text-sm py-2 px-4 rounded-lg cursor-pointer ${service.buttonColor}`}
-                onClick={() => console.log(`Clicked ${service.title}`)}
+                onClick={() => router.push(service.link)}
               >
                 {service.description}
               </Button>

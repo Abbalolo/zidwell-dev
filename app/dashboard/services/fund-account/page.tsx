@@ -1,9 +1,11 @@
 import DashboardSidebar from "@/app/components/dashboard-sidebar" 
 import DashboardHeader from "@/app/components/dashboard-hearder" 
 import FundAccountMethods from "@/app/components/FundAccount" 
+import ProtectedRoute from "@/app/components/ProtectedRoute"
 
 export default function FundAccountPage() {
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
@@ -22,5 +24,7 @@ export default function FundAccountPage() {
         </main>
       </div>
     </div>
+
+    </ProtectedRoute>
   )
 }

@@ -69,6 +69,7 @@ const page = () => {
       );
       const user = userCredential.user;
 
+
       if (!user.emailVerified) {
         await sendEmailVerification(user);
         Swal.fire({
@@ -88,22 +89,23 @@ const page = () => {
       }
 
       const userRef = doc(db, "users", user.uid);
-      const admin = await checkAdminStatus();
+      // const admin = await checkAdminStatus();
 
-      if (admin) {
-        Cookies.set("isAdmin", "true");
-      }
+      // if (admin) {
+      //   Cookies.set("isAdmin", "true");
+      // }
 
       await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
 
       setIsLogin(true);
       setErrors({});
-      router.push(redirectTo);
       Swal.fire({
         title: "Success!",
         icon: "success",
-        draggable: true,
+      
       });
+      router.push(redirectTo);
+      // Cookies.set("authToken", idToken, { path: "/", expires: 1 });
     } catch (error: any) {
       console.error(error.message);
 
@@ -113,15 +115,16 @@ const page = () => {
         Swal.fire({
           icon: "error",
           title: "Oops...",
-          text: "Something went wrong!",
-          footer: "Invalid email or password",
+          text: "Invalid email or password",
+          
         });
       } else {
         setErrors({ password: "An unexpected error occurred" });
         Swal.fire({
-          title: "The Internet?",
-          text: "Check your internet",
-          icon: "question",
+          icon: "error",
+          title: "Oops...",
+          text: "Something went wrong!",
+          footer: "Please try again later.",
         });
       }
     } finally {
