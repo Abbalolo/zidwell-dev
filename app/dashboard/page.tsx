@@ -9,12 +9,16 @@ import ReferralSection from "../components/referral-section";
 import ServiceCards from "../components/service-card";
 import TransactionHistory from "../components/transaction-history";
 import { useUserContextData } from "../context/userData";
+import Loader from "../components/Loader";
 
 export default function page() {
-  const router = useRouter();
-  const { userData, user, loading } = useUserContextData();
+
+  const { userData, loading } = useUserContextData();
 
 
+
+if (loading) return <Loader />;
+if (!userData) return <p>No data found.</p>;
 
 
   return (
