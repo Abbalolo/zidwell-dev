@@ -100,7 +100,7 @@ export default function ContractGen() {
     draft: "bg-gray-100 text-gray-800",
   };
 
-  const filteredContracts = contracts.filter((contract) => {
+  const filteredContracts = contracts?.filter((contract) => {
     const title = contract.contractTitle || "";
     const status = contract.status || "";
     const matchesSearch = title
@@ -198,7 +198,7 @@ export default function ContractGen() {
           </Card>
 
           <div className="space-y-4">
-            {filteredContracts.map((contract) => {
+            {filteredContracts?.map((contract) => {
               const title = contract.contractTitle || "Untitled Contract";
               const status = contract.status || "draft";
               const createdAt = contract.createdAt?.toDate?.() || new Date();

@@ -41,11 +41,7 @@ const navigationItems = [
     icon: Lightbulb,
   },
   { name: "Pay Cable/TV", href: "/dashboard/services/buy-cable-tv", icon: Tv },
-  {
-    name: "Fund Account",
-    href: "/dashboard/services/fund-account",
-    icon: Wallet,
-  },
+
   { name: "My Transaction", href: "/dashboard/transactions", icon: Receipt },
   // { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
   {
