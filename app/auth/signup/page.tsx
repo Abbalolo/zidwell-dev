@@ -175,7 +175,7 @@ export default function RegisterPage() {
     const { firstName, lastName, email, password, phone, bvn, pin } = formData;
 
     try {
-      // await sendVerification(email);
+      await sendVerification(email);
 
       const paybetaData = {
         first_name: firstName,
@@ -194,13 +194,13 @@ export default function RegisterPage() {
 
       // console.log("✅ Paybeta response:", response.data);
 
-      // Swal.fire({
-      //   title: "Check your email to verify your account",
-      //   text: "Please verify your email to access the app",
-      //   icon: "success",
-      // });
-      setShowModal(true);
-      // router.push("/auth/login");
+      Swal.fire({
+        title: "Check your email to verify your account",
+        text: "Please verify your email to access the app",
+        icon: "success",
+      });
+      // setShowModal(true);
+      router.push("/auth/login");
     } catch (error: any) {
       console.error(
         "Registration error:",
@@ -220,7 +220,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen">
+    <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen fade-in">
       <div
         className="lg:w-[50%] flex justify-center px-6 py-8 fade-in bg-cover bg-center min-h-screen"
         style={

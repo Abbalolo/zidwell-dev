@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 import image4 from "../../public/zid-pic/image4.jpg";
 import image15 from "../../public/zid-pic/image15.jpg";
 import image13 from "../../public/zid-pic/image13.jpg";
+import Image from "next/image";
 const Testimonials = () => {
   const testimonials:any = [
     {
@@ -86,7 +87,9 @@ const Testimonials = () => {
                 </p>
                 
                 <div className="flex items-center">
-                  <img
+                  <Image
+                  width={32}
+                  height={32}
                     src={testimonial.image}
                     alt={testimonial.name}
                     className="w-12 h-12 rounded-full mr-4 object-cover"

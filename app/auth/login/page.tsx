@@ -160,12 +160,12 @@
 // };
 "use client";
 import Swal from "sweetalert2";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import logo from "/public/logo.png";
 import { useRouter } from "next/navigation";
-
+import mobileBg from "../../../public/zidwell-bg-mobile.jpg";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -179,6 +179,23 @@ import {
 import { Eye, EyeOff } from "lucide-react";
 import { useUserContextData } from "@/app/context/userData";
 import axios from "axios";
+import Carousel from "@/app/components/Carousel";
+import image1 from "../../../public/zid-pic/image1.jpg";
+import image2 from "../../../public/zid-pic/image2.jpg";
+import image3 from "../../../public/zid-pic/image3.jpg";
+import image4 from "../../../public/zid-pic/image4.jpg";
+import image5 from "../../../public/zid-pic/image5.jpg";
+import image6 from "../../../public/zid-pic/image6.jpg";
+import image8 from "../../../public/zid-pic/image8.jpg";
+import image9 from "../../../public/zid-pic/image9.jpg";
+import image10 from "../../../public/zid-pic/image10.jpg";
+import image11 from "../../../public/zid-pic/image11.jpg";
+import image12 from "../../../public/zid-pic/image12.jpg";
+import image13 from "../../../public/zid-pic/image13.jpg";
+import image14 from "../../../public/zid-pic/image14.jpg";
+import image15 from "../../../public/zid-pic/image15.jpg";
+import image16 from "../../../public/zid-pic/image16.jpg";
+import image17 from "../../../public/zid-pic/image17.jpg";
 
 const Page = () => {
   const router = useRouter();
@@ -187,9 +204,44 @@ const Page = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
+ const [currentStep, setCurrentStep] = useState(1);
+  
 
-  const { login } = useUserContextData(); // Assuming you have a login function in your context
+  const { login } = useUserContextData(); 
+const [isMobile, setIsMobile] = useState(false);
 
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkScreenSize(); // Initial check
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  // Navigation handlers
+  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
+  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+
+ const images = [
+    image1,
+    image2,
+    image3,
+    image4,
+    image5,
+    image6,
+    image8,
+    image9,
+    image10,
+    image11,
+    image12,
+    image13,
+    image14,
+    image15,
+    image16,
+    image17,
+  ];
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const newErrors: { [key: string]: string } = {};
@@ -232,7 +284,19 @@ const Page = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 fade-in">
+    <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen fade-in">
+     <div
+        className="lg:w-[50%] flex justify-center px-6 py-8 fade-in bg-cover bg-center min-h-screen"
+        style={
+          isMobile
+            ? {
+                backgroundImage: `url(${mobileBg.src})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : {}
+        }
+      >
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
@@ -240,8 +304,8 @@ const Page = () => {
               src={logo}
               alt="Zidwell Logo"
               width={32}
-              height={32}
-              className="mr-2"
+                height={32}
+                className=" w-20 object-contain"
             />
             <h1 className="font-bold text-lg">Zidwell</h1>
           </div>
@@ -327,6 +391,10 @@ const Page = () => {
           </div>
         </CardContent>
       </Card>
+
+      </div>
+       <Carousel slides={images} autoSlide />
+     
     </div>
   );
 };

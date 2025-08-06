@@ -138,5 +138,6 @@
 .bg-patterns{
 background-color: #ffffff;
 opacity: 0.1;
+z-index: -1;
 background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #ffffff 38px ), repeating-linear-gradient( #C2930755, #C29307 );
 }
