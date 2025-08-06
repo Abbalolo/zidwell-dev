@@ -1,339 +1,306 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Wifi, Check, AlertCircle, CreditCard, ArrowRight, Clock, Smartphone } from "lucide-react"
-import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { Badge } from "./ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
-import Image from "next/image"
+import {
+  Wifi,
+  Check,
+  AlertCircle,
+  CreditCard,
+  ArrowRight,
+  Clock,
+  Smartphone,
+} from "lucide-react";
 
-interface NetworkProvider {
-  id: string
-  name: string
-  code: string
-  color: string
-  bgColor: string
-  logo: string
-  prefix: string[]
-}
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Button } from "./ui/button";
+import { useUserContextData } from "../context/userData";
+import DataPlanSelector from "./DataPlansSelector";
+import Image from "next/image";
+import Loader from "./Loader";
 
-interface DataPlan {
-  id: string
-  size: string
-  price: number
-  validity: string
-  description?: string
-  popular?: boolean
-  bonus?: string
-}
-
-interface DataCategory {
-  id: string
-  name: string
-  plans: DataPlan[]
-}
-
-const networkProviders: NetworkProvider[] = [
+const prefixColorMap = [
   {
     id: "mtn",
-    name: "MTN",
-    code: "MTN",
+    serviceName: "mtn_vtu",
+    serviceData: "mtn_data",
     color: "text-yellow-600",
     bgColor: "bg-yellow-50 border-yellow-200",
-    logo: "/placeholder.svg?height=60&width=60&text=MTN",
-    prefix: ["0803", "0806", "0703", "0706", "0813", "0816", "0810", "0814", "0903", "0906"],
+    prefix: [
+      "0803",
+      "0806",
+      "0703",
+      "0706",
+      "0813",
+      "0816",
+      "0810",
+      "0814",
+      "0903",
+      "0906",
+      "0913",
+    ],
   },
   {
     id: "airtel",
-    name: "Airtel",
-    code: "AIRTEL",
+    serviceName: "airtel_vtu",
+    serviceData: "airtel_data",
     color: "text-red-600",
     bgColor: "bg-red-50 border-red-200",
-    logo: "/placeholder.svg?height=60&width=60&text=AIRTEL",
     prefix: ["0802", "0808", "0708", "0812", "0701", "0902", "0907", "0901"],
   },
   {
     id: "glo",
-    name: "Glo",
-    code: "GLO",
+    serviceName: "glo_vtu",
+    serviceData: "glo_data",
     color: "text-green-600",
     bgColor: "bg-green-50 border-green-200",
-    logo: "/placeholder.svg?height=60&width=60&text=GLO",
     prefix: ["0805", "0807", "0705", "0815", "0811", "0905"],
   },
   {
     id: "9mobile",
-    name: "9Mobile",
-    code: "9MOBILE",
+    serviceName: "9mobile_vtu",
+    serviceData: "9mobile_data",
     color: "text-emerald-600",
     bgColor: "bg-emerald-50 border-emerald-200",
-    logo: "/placeholder.svg?height=60&width=60&text=9MOB",
     prefix: ["0809", "0818", "0817", "0909", "0908"],
   },
-]
-
-const dataPlans: { [key: string]: DataCategory[] } = {
-  mtn: [
-    {
-      id: "daily",
-      name: "Daily Plans",
-      plans: [
-        { id: "mtn-daily-1", size: "100MB", price: 100, validity: "1 Day" },
-        { id: "mtn-daily-2", size: "200MB", price: 200, validity: "1 Day", popular: true },
-        { id: "mtn-daily-3", size: "500MB", price: 500, validity: "1 Day" },
-        { id: "mtn-daily-4", size: "1GB", price: 800, validity: "1 Day", bonus: "+200MB bonus" },
-      ],
-    },
-    {
-      id: "weekly",
-      name: "Weekly Plans",
-      plans: [
-        { id: "mtn-weekly-1", size: "1GB", price: 1200, validity: "7 Days" },
-        { id: "mtn-weekly-2", size: "2GB", price: 2000, validity: "7 Days", popular: true },
-        { id: "mtn-weekly-3", size: "3GB", price: 2500, validity: "7 Days", bonus: "+500MB bonus" },
-        { id: "mtn-weekly-4", size: "5GB", price: 3500, validity: "7 Days", bonus: "+1GB bonus" },
-      ],
-    },
-    {
-      id: "monthly",
-      name: "Monthly Plans",
-      plans: [
-        { id: "mtn-monthly-1", size: "2GB", price: 2500, validity: "30 Days" },
-        { id: "mtn-monthly-2", size: "5GB", price: 5000, validity: "30 Days", popular: true },
-        { id: "mtn-monthly-3", size: "10GB", price: 8000, validity: "30 Days", bonus: "+2GB bonus" },
-        { id: "mtn-monthly-4", size: "20GB", price: 15000, validity: "30 Days", bonus: "+5GB bonus" },
-        { id: "mtn-monthly-5", size: "40GB", price: 25000, validity: "30 Days", bonus: "+10GB bonus" },
-      ],
-    },
-  ],
-  airtel: [
-    {
-      id: "daily",
-      name: "Daily Plans",
-      plans: [
-        { id: "airtel-daily-1", size: "100MB", price: 100, validity: "1 Day" },
-        { id: "airtel-daily-2", size: "300MB", price: 200, validity: "1 Day", popular: true },
-        { id: "airtel-daily-3", size: "500MB", price: 400, validity: "1 Day" },
-        { id: "airtel-daily-4", size: "1GB", price: 700, validity: "1 Day", bonus: "+300MB bonus" },
-      ],
-    },
-    {
-      id: "weekly",
-      name: "Weekly Plans",
-      plans: [
-        { id: "airtel-weekly-1", size: "1.5GB", price: 1000, validity: "7 Days" },
-        { id: "airtel-weekly-2", size: "3GB", price: 1800, validity: "7 Days", popular: true },
-        { id: "airtel-weekly-3", size: "6GB", price: 3000, validity: "7 Days", bonus: "+1GB bonus" },
-        { id: "airtel-weekly-4", size: "10GB", price: 4500, validity: "7 Days", bonus: "+2GB bonus" },
-      ],
-    },
-    {
-      id: "monthly",
-      name: "Monthly Plans",
-      plans: [
-        { id: "airtel-monthly-1", size: "3GB", price: 2000, validity: "30 Days" },
-        { id: "airtel-monthly-2", size: "6GB", price: 3500, validity: "30 Days", popular: true },
-        { id: "airtel-monthly-3", size: "12GB", price: 6000, validity: "30 Days", bonus: "+3GB bonus" },
-        { id: "airtel-monthly-4", size: "25GB", price: 12000, validity: "30 Days", bonus: "+5GB bonus" },
-        { id: "airtel-monthly-5", size: "50GB", price: 20000, validity: "30 Days", bonus: "+10GB bonus" },
-      ],
-    },
-  ],
-  glo: [
-    {
-      id: "daily",
-      name: "Daily Plans",
-      plans: [
-        { id: "glo-daily-1", size: "150MB", price: 100, validity: "1 Day" },
-        { id: "glo-daily-2", size: "350MB", price: 200, validity: "1 Day", popular: true },
-        { id: "glo-daily-3", size: "750MB", price: 500, validity: "1 Day" },
-        { id: "glo-daily-4", size: "1.2GB", price: 800, validity: "1 Day", bonus: "+300MB bonus" },
-      ],
-    },
-    {
-      id: "weekly",
-      name: "Weekly Plans",
-      plans: [
-        { id: "glo-weekly-1", size: "1.8GB", price: 1200, validity: "7 Days" },
-        { id: "glo-weekly-2", size: "3.5GB", price: 2000, validity: "7 Days", popular: true },
-        { id: "glo-weekly-3", size: "7GB", price: 3500, validity: "7 Days", bonus: "+1.5GB bonus" },
-        { id: "glo-weekly-4", size: "12GB", price: 5000, validity: "7 Days", bonus: "+3GB bonus" },
-      ],
-    },
-    {
-      id: "monthly",
-      name: "Monthly Plans",
-      plans: [
-        { id: "glo-monthly-1", size: "4GB", price: 2500, validity: "30 Days" },
-        { id: "glo-monthly-2", size: "7.5GB", price: 4000, validity: "30 Days", popular: true },
-        { id: "glo-monthly-3", size: "15GB", price: 7500, validity: "30 Days", bonus: "+3GB bonus" },
-        { id: "glo-monthly-4", size: "30GB", price: 14000, validity: "30 Days", bonus: "+7GB bonus" },
-        { id: "glo-monthly-5", size: "60GB", price: 25000, validity: "30 Days", bonus: "+15GB bonus" },
-      ],
-    },
-  ],
-  "9mobile": [
-    {
-      id: "daily",
-      name: "Daily Plans",
-      plans: [
-        { id: "9mobile-daily-1", size: "100MB", price: 100, validity: "1 Day" },
-        { id: "9mobile-daily-2", size: "250MB", price: 200, validity: "1 Day", popular: true },
-        { id: "9mobile-daily-3", size: "500MB", price: 400, validity: "1 Day" },
-        { id: "9mobile-daily-4", size: "1GB", price: 750, validity: "1 Day", bonus: "+250MB bonus" },
-      ],
-    },
-    {
-      id: "weekly",
-      name: "Weekly Plans",
-      plans: [
-        { id: "9mobile-weekly-1", size: "1.5GB", price: 1100, validity: "7 Days" },
-        { id: "9mobile-weekly-2", size: "3GB", price: 1900, validity: "7 Days", popular: true },
-        { id: "9mobile-weekly-3", size: "6GB", price: 3200, validity: "7 Days", bonus: "+1GB bonus" },
-        { id: "9mobile-weekly-4", size: "10GB", price: 4800, validity: "7 Days", bonus: "+2GB bonus" },
-      ],
-    },
-    {
-      id: "monthly",
-      name: "Monthly Plans",
-      plans: [
-        { id: "9mobile-monthly-1", size: "2.5GB", price: 2200, validity: "30 Days" },
-        { id: "9mobile-monthly-2", size: "5.5GB", price: 3800, validity: "30 Days", popular: true },
-        { id: "9mobile-monthly-3", size: "11GB", price: 6500, validity: "30 Days", bonus: "+2GB bonus" },
-        { id: "9mobile-monthly-4", size: "22GB", price: 12500, validity: "30 Days", bonus: "+5GB bonus" },
-        { id: "9mobile-monthly-5", size: "45GB", price: 22000, validity: "30 Days", bonus: "+10GB bonus" },
-      ],
-    },
-  ],
-}
+];
 
 export default function DataBundlePurchase() {
-  const [selectedProvider, setSelectedProvider] = useState<NetworkProvider | null>(null)
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null)
-  const [activeCategory, setActiveCategory] = useState("daily")
-  const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
+  const [providers, setProviders] = useState<any[] | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [pin, setPin] = useState("");
 
-  // Auto-detect network from phone number
-  const detectNetwork = (number: string) => {
-    const cleanNumber = number.replace(/\D/g, "")
-    if (cleanNumber.length >= 4) {
-      const prefix = cleanNumber.substring(0, 4)
-      const provider = networkProviders.find((p) => p.prefix.includes(prefix))
-      if (provider && provider.id !== selectedProvider?.id) {
-        setSelectedProvider(provider)
-        setSelectedPlan(null) // Reset selected plan when provider changes
-      }
-    }
-  }
-
-  // Validate Nigerian phone number
-  const validatePhoneNumber = (number: string) => {
-    const cleanNumber = number.replace(/\D/g, "")
-    const nigerianPhoneRegex = /^(0[7-9][0-1]\d{8}|234[7-9][0-1]\d{8})$/
-
-    if (!cleanNumber) {
-      return "Phone number is required"
-    }
-
-    if (cleanNumber.length !== 11 && cleanNumber.length !== 13) {
-      return "Phone number must be 11 digits (starting with 0) or 13 digits (starting with 234)"
-    }
-
-    if (!nigerianPhoneRegex.test(cleanNumber)) {
-      return "Please enter a valid Nigerian phone number"
-    }
-
-    return ""
-  }
+  const [bundles, setBundles] = useState<any[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [loading, setLoading] = useState(false);
+  const { user } = useUserContextData();
 
   const handlePhoneNumberChange = (value: string) => {
-    // Format phone number as user types
-    const cleanValue = value.replace(/\D/g, "")
-    let formattedValue = cleanValue
-
-    if (cleanValue.length > 4) {
-      formattedValue = `${cleanValue.substring(0, 4)} ${cleanValue.substring(4, 7)} ${cleanValue.substring(7, 11)}`
-    }
-
-    setPhoneNumber(formattedValue)
-    detectNetwork(cleanValue)
-
-    // Clear phone number error when user starts typing
+    const cleanValue = value.replace(/\D/g, "");
+    setPhoneNumber(cleanValue);
     if (errors.phoneNumber) {
-      setErrors((prev) => ({ ...prev, phoneNumber: "" }))
+      setErrors((prev) => ({ ...prev, phoneNumber: "" }));
     }
-  }
+  };
 
-  const handlePlanSelection = (plan: DataPlan) => {
-    setSelectedPlan(plan)
-    if (errors.plan) {
-      setErrors((prev) => ({ ...prev, plan: "" }))
-    }
-  }
+  const validatePhoneNumber = (number: string) => {
+    const cleanNumber = number.replace(/\D/g, "");
+    const nigerianPhoneRegex = /^(0[7-9][0-1]\d{8}|234[7-9][0-1]\d{8})$/;
+    if (!cleanNumber) return "Phone number is required";
+    if (cleanNumber.length !== 11 && cleanNumber.length !== 13)
+      return "Phone number must be 11 or 13 digits";
+    if (!nigerianPhoneRegex.test(cleanNumber))
+      return "Please enter a valid Nigerian phone number";
+
+    return "";
+  };
 
   const validateForm = () => {
-    const newErrors: { [key: string]: string } = {}
+    const newErrors: { [key: string]: string } = {};
+    const phoneError = validatePhoneNumber(phoneNumber);
+    if (phoneError) newErrors.phoneNumber = phoneError;
+    if (!selectedProvider) newErrors.provider = "Please select a provider";
+    if (!selectedPlan) newErrors.plan = "Please select a plan";
+    if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
 
-    // Validate phone number
-    const phoneError = validatePhoneNumber(phoneNumber)
-    if (phoneError) {
-      newErrors.phoneNumber = phoneError
+    if (!pin) newErrors.amount = "Please enter transaction pin";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const purchaseDatabundle = async () => {
+    // Step 1: Validate form
+    if (!validateForm()) return;
+
+    // Step 2: Confirm required data is present
+    if (!selectedProvider?.slug || !selectedPlan) {
+      Swal.fire({
+        icon: "error",
+        title: "Missing Information",
+        text: "Please ensure you've selected a provider and a data plan.",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
     }
 
-    // Validate provider selection
-    if (!selectedProvider) {
-      newErrors.provider = "Please select a network provider"
+    // Step 3: Map provider slug to service name
+    const slugMap: Record<string, string> = {
+      "mtn-data": "mtn_data",
+      "airtel-data": "airtel_data",
+      "glo-data": "glo_data",
+      "9mobile-data": "9mobile_data",
+    };
+
+    const serviceName = slugMap[selectedProvider.slug];
+    if (!serviceName) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Provider",
+        text: "Unable to match provider with data service.",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
     }
 
-    // Validate plan selection
-    if (!selectedPlan) {
-      newErrors.plan = "Please select a data plan"
-    }
+    // Step 4: Build payload
+    const payload = {
+      amount: selectedPlan.price,
+      service: serviceName,
+      customerId: phoneNumber,
+      billerCode: selectedPlan.code,
+      reference: `Data-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      pin: pin,
+    };
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    // console.log("📦 Purchase payload:", payload);
 
-  const handlePurchase = async () => {
-    if (!validateForm()) return
-
-    setIsProcessing(true)
-
-    // Simulate API call
+    // Step 5: Make request
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      setLoading(true);
+      const response = await fetch("/api/buy-data-bundle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      // Success - you would handle the actual purchase here
-      alert("Data bundle purchase successful!")
+      const data = await response.json();
+      if (!response.ok) throw data;
 
-      // Reset form
-      setPhoneNumber("")
-      setSelectedProvider(null)
-      setSelectedPlan(null)
-    } catch (error) {
-      alert("Purchase failed. Please try again.")
+      Swal.fire({
+        icon: "success",
+        title: "Data Bundle Purchase Successful",
+        confirmButtonColor: "#0f172a",
+      });
+
+      // Clear inputs after successful purchase
+      setPin("");
+      setPhoneNumber("");
+      setSelectedProvider(null);
+      setSelectedPlan(null);
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Databundle Purchase Failed",
+        html: `<strong>${
+          error.message || "Something went wrong"
+        }</strong><br/><small>${error.detail || ""}</small>`,
+        confirmButtonColor: "#dc2626",
+      });
     } finally {
-      setIsProcessing(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const currentPlans = selectedProvider ? dataPlans[selectedProvider.id] || [] : []
+  const getNetworkProviders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/data-bundle-providers");
+      const data = await response.json();
+
+      if (!response.ok)
+        throw new Error(data.error || "Failed to fetch providers");
+
+      const merged = data?.data?.map((provider: any) => {
+        const match = prefixColorMap.find((entry) =>
+          entry.prefix.some((p) => provider.prefixes?.includes(p))
+        );
+        return {
+          ...provider,
+          color: match?.color || "text-gray-600",
+          bgColor: match?.bgColor || "bg-gray-50 border-gray-200",
+        };
+      });
+
+      setProviders(merged);
+    } catch (error: any) {
+      console.error("Fetch error:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  
+
+  const getNetworkDataBundle = async () => {
+    if (!selectedProvider?.slug) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `/api/get-data-bundles?service=${selectedProvider?.slug}`
+      );
+      const data = await response.json();
+      console.log("📦 Bundles data:", data);
+      if (!response.ok)
+        throw new Error(data.error || "Failed to fetch bundles");
+      setBundles(data.data); // Enable if needed
+    } catch (error: any) {
+      console.error("Fetch error:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const cleanNumber = phoneNumber.replace(/\D/g, "");
+    if (cleanNumber.length >= 4) {
+      const prefix = cleanNumber.substring(0, 4);
+      const matchedPrefixData = prefixColorMap.find((entry) =>
+        entry.prefix.includes(prefix)
+      );
+      if (!matchedPrefixData) return;
+
+      const matchedProvider = providers?.find(
+        (provider) =>
+          provider.slug === matchedPrefixData.serviceName ||
+          provider.name.toLowerCase().includes(matchedPrefixData.id)
+      );
+
+      if (matchedProvider && matchedProvider?.name !== selectedProvider?.name) {
+        setSelectedProvider(matchedProvider);
+      }
+    }
+  }, [phoneNumber, providers]);
+
+  useEffect(() => {
+    if (selectedProvider) getNetworkDataBundle();
+  }, [selectedProvider]);
+
+  useEffect(() => {
+    if (user) getNetworkProviders();
+  }, [user]);
+
+    const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "decimal",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  if (loading && !providers) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex flex-col justify-center">
       {/* Header */}
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full mb-4">
-          <Wifi className="w-5 h-5 text-blue-600" />
-          <span className="text-blue-800 font-medium">VTU Data Bundle Purchase</span>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Buy Data Bundle</h1>
-        <p className="text-gray-600">Instant data bundle top-up for all Nigerian networks</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Buy Data Bundle
+        </h1>
+        <p className="text-gray-600">
+          Instant data bundle top-up for all Nigerian networks
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -349,43 +316,47 @@ export default function DataBundlePurchase() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {networkProviders.map((provider) => (
-                  <div
-                    key={provider.id}
-                    onClick={() => {
-                      setSelectedProvider(provider)
-                      setSelectedPlan(null) // Reset plan when provider changes
-                    }}
-                    className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md ${
-                      selectedProvider?.id === provider.id
-                        ? `${provider.bgColor} border-current ${provider.color} shadow-md`
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="w-16 h-16 mx-auto mb-3 relative">
-                        <Image
-                          src={provider.logo || "/placeholder.svg"}
-                          alt={`${provider.name} logo`}
-                          width={64}
-                          height={64}
-                          className="rounded-lg"
-                        />
-                      </div>
-                      <h3 className="font-semibold text-gray-900">{provider.name}</h3>
-                      <p className="text-sm text-gray-500">Data Available</p>
-                    </div>
-                    {selectedProvider?.id === provider.id && (
-                      <div className="absolute -top-2 -right-2">
-                        <div
-                          className={`w-6 h-6 ${provider.color.replace("text-", "bg-")} rounded-full flex items-center justify-center`}
-                        >
-                          <Check className="w-4 h-4 text-white" />
+                {providers?.map((provider: any, index:any) => {
+                  const isSelected = selectedProvider?.name === provider.name;
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() =>
+                        setSelectedProvider(provider)
+                      }
+                      className={`relative p-4 border-2 rounded-md transition-all duration-200 ${
+                        isSelected
+                          ? "bg-gray-100 border-gray-600 text-gray-900 shadow-md"
+                          : "bg-white border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-3 relative">
+                          <Image
+                            src={provider.logo}
+                            alt={`${provider.name} logo`}
+                            width={64}
+                            height={64}
+                            className="rounded-lg"
+                          />
                         </div>
+                        <h3 className="font-semibold text-gray-900 text-sm md:text-base">
+                          {provider.name}
+                        </h3>
+                        
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {isSelected && (
+                        <div className="absolute -top-2 -right-2">
+                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               {errors.provider && (
                 <div className="flex items-center gap-2 mt-3 text-red-600">
@@ -402,7 +373,7 @@ export default function DataBundlePurchase() {
               <CardTitle>Enter Phone Number</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Mobile Number</Label>
                 <div className="relative">
                   <Input
@@ -411,8 +382,9 @@ export default function DataBundlePurchase() {
                     placeholder="0803 123 4567"
                     value={phoneNumber}
                     onChange={(e) => handlePhoneNumberChange(e.target.value)}
-                    className={`pl-12 ${errors.phoneNumber ? "border-red-500" : ""}`}
-                    maxLength={13}
+                    className={`pl-14 ${
+                      errors.phoneNumber ? "border-red-500" : ""
+                    }`}
                   />
                   <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                     <span className="text-gray-500 font-medium">+234</span>
@@ -424,85 +396,47 @@ export default function DataBundlePurchase() {
                     <span className="text-sm">{errors.phoneNumber}</span>
                   </div>
                 )}
-                {selectedProvider && phoneNumber && !errors.phoneNumber && (
-                  <div className="flex items-center gap-2 mt-2 text-green-600">
-                    <Check className="w-4 h-4" />
-                    <span className="text-sm">{selectedProvider.name} number detected</span>
+                {selectedProvider && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-green-600" />
+                    <span>{selectedProvider.name} detected</span>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
+          <div>
+            <Label>Select Plan</Label>
 
-          {/* Data Plans Selection */}
-          {selectedProvider && currentPlans.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wifi className="w-5 h-5" />
-                  Select Data Plan - {selectedProvider.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="daily">Daily</TabsTrigger>
-                    <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                    <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                  </TabsList>
+            <DataPlanSelector
+              plans={bundles || []}
+              selectedPlan={selectedPlan}
+              onSelect={(plan) => setSelectedPlan(plan)}
+            />
+            {errors.plan && (
+              <p className="text-sm text-red-500">{errors.plan}</p>
+            )}
+          </div>
 
-                  {currentPlans.map((category) => (
-                    <TabsContent key={category.id} value={category.id} className="mt-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {category.plans.map((plan) => (
-                          <div
-                            key={plan.id}
-                            onClick={() => handlePlanSelection(plan)}
-                            className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                              selectedPlan?.id === plan.id
-                                ? "border-blue-500 bg-blue-50 text-blue-700"
-                                : "border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-bold text-lg">{plan.size}</h4>
-                                <div className="flex items-center gap-1 text-gray-500">
-                                  <Clock className="w-4 h-4" />
-                                  <span className="text-sm">{plan.validity}</span>
-                                </div>
-                              </div>
-                              <p className="text-2xl font-bold text-gray-900">₦{plan.price.toLocaleString()}</p>
-                              {plan.bonus && <p className="text-sm text-green-600 font-medium">{plan.bonus}</p>}
-                              {plan.description && <p className="text-sm text-gray-600">{plan.description}</p>}
-                            </div>
+          {/* Pin Input */}
+          <div className="border-t pt-4">
+            <Label htmlFor="pin">Transaction Pin</Label>
 
-                            {plan.popular && (
-                              <Badge className="absolute -top-2 left-4 bg-orange-500 text-white text-xs">Popular</Badge>
-                            )}
+            <Input
+              id="pin"
+              type="text"
+              placeholder="Enter Pin here.."
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              className={` ${errors.pin ? "border-red-500" : ""}`}
+            />
+          </div>
 
-                            {selectedPlan?.id === plan.id && (
-                              <div className="absolute -top-2 -right-2">
-                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                                  <Check className="w-4 h-4 text-white" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-
-                {errors.plan && (
-                  <div className="flex items-center gap-2 mt-4 text-red-600">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm">{errors.plan}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          {errors.pin && (
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{errors.pin}</span>
+            </div>
           )}
         </div>
 
@@ -537,7 +471,9 @@ export default function DataBundlePurchase() {
               {phoneNumber && (
                 <div>
                   <p className="text-sm text-gray-600">Phone Number</p>
-                  <p className="font-medium">+234 {phoneNumber.replace(/\D/g, "").substring(1)}</p>
+                  <p className="font-medium">
+                    +234 {phoneNumber.replace(/\D/g, "").substring(1)}
+                  </p>
                 </div>
               )}
 
@@ -546,58 +482,25 @@ export default function DataBundlePurchase() {
                 <div className="space-y-2">
                   <div>
                     <p className="text-sm text-gray-600">Data Plan</p>
-                    <p className="font-medium text-lg">{selectedPlan.size}</p>
+                    <p className="font-medium text-lg">
+                      {selectedPlan.description}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4" />
-                    <span>Valid for {selectedPlan.validity}</span>
-                  </div>
-                  {selectedPlan.bonus && (
-                    <div className="bg-green-50 p-2 rounded border border-green-200">
-                      <p className="text-sm text-green-700 font-medium">{selectedPlan.bonus}</p>
-                    </div>
-                  )}
-                </div>
-              )}
 
-              {/* Pricing */}
-              {selectedPlan && (
-                <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Data Bundle</span>
-                    <span>₦{selectedPlan.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Service Fee</span>
-                    <span className="text-green-600">Free</span>
-                  </div>
-                  <div className="flex justify-between font-bold border-t pt-2">
-                    <span>Total</span>
-                    <span>₦{selectedPlan.price.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Zidcoin Reward */}
-              {selectedPlan && selectedPlan.price >= 1000 && (
-                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                  <div className="flex items-center gap-2 text-yellow-800">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm font-medium">
-                      You'll earn {Math.floor(selectedPlan.price / 1000)} Zidcoin
-                      {Math.floor(selectedPlan.price / 1000) > 1 ? "s" : ""}
-                    </span>
+                    <span>Databundle Amount</span>
+                    <span>₦{formatNumber(selectedPlan.price)}</span>
                   </div>
                 </div>
               )}
 
               {/* Purchase Button */}
               <Button
-                onClick={handlePurchase}
-                disabled={!selectedProvider || !phoneNumber || !selectedPlan || isProcessing}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={purchaseDatabundle}
+                disabled={!phoneNumber || !selectedPlan}
+                className="w-full bg-[#C29307] hover:bg-[#C29307] text-white py-3 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                {isProcessing ? (
+                {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Processing...
@@ -620,5 +523,5 @@ export default function DataBundlePurchase() {
         </div>
       </div>
     </div>
-  )
+  );
 }

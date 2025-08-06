@@ -1,5 +1,5 @@
 "use client";
-import logo from "/public/zidwell-logo.png";
+import logo from "/public/logo.png";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,44 +14,77 @@ import {
   User,
   Menu,
   X,
+  Smartphone,
+  Wifi,
+  Tv,
+  Lightbulb,
 } from "lucide-react";
 import Image from "next/image";
 import { useUserContextData } from "../context/userData";
 
-// const navigationItems = [
-//   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-//   { name: "Fund Account", href: "/services/fund-account", icon: Wallet },
-//   { name: "My Transaction", href: "/transactions", icon: Receipt },
-//   { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
-//   { name: "Legal contract", href: "/services/legal-contract", icon: FileText },
-//   {
-//     name: "Create Invoice", 
-//     href: "/services/create-invoice",
-//     icon: FileSpreadsheet,
-//   },
-//   { name: "AI accountant", href: "/services/ai-accountant", icon: Bot },
-// ];
 const navigationItems = [
-  { name: "Dashboard", 
-    href: "/dashboard", icon: LayoutDashboard },
-  { name: "Fund Account", href: "#", icon: Wallet },
-  { name: "My Transaction", href: "#", icon: Receipt },
-  { name: "Recurring Payments", href: "#", icon: RotateCcw },
-  { name: "Legal contract", href: "#", icon: FileText },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  {
+    name: "Fund Account",
+    href: "/dashboard/services/fund-account",
+    icon: Wallet,
+  },
+  {
+    name: "Airtime Top up",
+    href: "/dashboard/services/buy-airtime",
+    icon: Smartphone,
+  },
+  { name: "Internet Top up", href: "/dashboard/services/buy-data", icon: Wifi },
+  {
+    name: "Electricity Payment",
+    href: "/dashboard/services/buy-power",
+    icon: Lightbulb,
+  },
+  { name: "Pay Cable/TV", href: "/dashboard/services/buy-cable-tv", icon: Tv },
+  {
+    name: "Fund Account",
+    href: "/dashboard/services/fund-account",
+    icon: Wallet,
+  },
+  { name: "My Transaction", href: "/dashboard/transactions", icon: Receipt },
+  // { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
+  {
+    name: "Simple Agreement",
+    href: "/dashboard/services/simple-agreement",
+    icon: FileText,
+  },
   {
     name: "Create Invoice",
-    href: "#",
+    href: "/dashboard/services/create-invoice",
     icon: FileSpreadsheet,
   },
-  { name: "AI accountant", href: "#", icon: Bot },
+  {
+    name: "AI accountant",
+    href: "/dashboard/services/ai-accountant",
+    icon: Bot,
+  },
 ];
+// const navigationItems = [
+//   { name: "Dashboard",
+//     href: "/dashboard", icon: LayoutDashboard },
+//   { name: "Fund Account", href: "#", icon: Wallet },
+//   { name: "My Transaction", href: "#", icon: Receipt },
+//   { name: "Recurring Payments", href: "#", icon: RotateCcw },
+//   { name: "Legal contract", href: "#", icon: FileText },
+//   {
+//     name: "Create Invoice",
+//     href: "#",
+//     icon: FileSpreadsheet,
+//   },
+//   { name: "AI accountant", href: "#", icon: Bot },
+// ];
 
 const preferenceItems = [{ name: "My Profile", href: "#", icon: User }];
 
 export default function DashboardSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { userData } = useUserContextData();
+  const { user } = useUserContextData();
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -86,8 +119,8 @@ export default function DashboardSidebar() {
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className={
           isMobileMenuOpen
-            ? "lg:hidden fixed top-4 right-3 z-50 p-2 bg-gray-800 text-white rounded-lg "
-            : `lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-lg`
+            ? "lg:hidden fixed top-4 right-3 z-50 p-2 bg-gray-900 text-white rounded-lg "
+            : `lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-900 text-white rounded-lg`
         }
       >
         {isMobileMenuOpen ? (
@@ -99,13 +132,13 @@ export default function DashboardSidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-gray-900 overflow-y-auto transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-gray-900 overflow-y-auto transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-hidden ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full w-[300px]">
           {/* Logo and welcome */}
-          <div className="p-6 border-b border-gray-700">
+          <div className="p-5 border-b border-gray-700">
             <div className="flex items-center space-x-3 mb-4">
               <Link href="/dashboard" className="flex items-center">
                 <Image
@@ -113,26 +146,22 @@ export default function DashboardSidebar() {
                   alt="Zidwell Logo"
                   width={32}
                   height={32}
-                  className="mr-2"
+                  className="mr-2 w-16 object-contain"
                 />
                 <h1 className="font-bold text-lg text-white">Zidwell</h1>
               </Link>
             </div>
-            {userData && userData.firstName ? (
+            {user && user.firstName ? (
               <p className="text-gray-400 text-sm">
-                Welcome Back {`${userData.firstName}`}
+                Welcome Back {`${user.firstName}`}
               </p>
             ) : null}
           </div>
 
           {/* Navigation */}
-          <div className="flex-1 px-4 py-6 space-y-2">
-            {navigationItems.map((item) => (
-              <NavItem
-                key={item.name}
-                item={item}
-                isActive={pathname === item.href}
-              />
+          <div className="flex-1 px-2 py-6 space-y-2">
+            {navigationItems.map((item, i) => (
+              <NavItem key={i} item={item} isActive={pathname === item.href} />
             ))}
           </div>
 

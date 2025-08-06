@@ -9,7 +9,8 @@ import {
   Wifi, 
   Calculator,
   Scale,
-  FileText
+  FileText,
+  Receipt
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -32,9 +33,9 @@ const Services = () => {
 
     },
     {
-      icon: <GraduationCap className="h-10 w-10" />,
-      title: "Education",
-      description: "Pay school fees, exam fees, and other educational expenses seamlessly.",
+      icon: <Receipt className="h-10 w-10" />,
+      title: "Reciepts",
+      description: "Create reciepts to backup your transactions.",
       color: "from-blue-500 to-blue-600",
      
     },
@@ -61,22 +62,22 @@ const Services = () => {
     },
     {
       icon: <Scale className="h-10 w-10" />,
-      title: "Legal Contact",
-      description: "Connect with legal professionals for your business needs.",
+      title: "Simple Agreement",
+      description: "Create simple agreement to secure your business dealings.",
       color: "from-gray-500 to-gray-600",
      
     },
     {
       icon: <FileText className="h-10 w-10" />,
       title: "Create Invoice",
-      description: "Generate professional invoices for your business in minutes.",
+      description: "Generate invoices for your clients with a few clicks",
       color: "from-orange-500 to-orange-600",
       
     }
   ];
 
   return (
-    <section id="services" className="py-20 bg-gray-50">
+    <section data-aos="zoom-in" id="services" className="py-20 bg-gray-50">
       <div className="container mx-auto px-4 sm:px-5 lg:px-20 ">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
@@ -90,7 +91,7 @@ const Services = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {services.map((service:any, index) => (
             <Card 
               key={index} 
@@ -112,19 +113,19 @@ const Services = () => {
           ))}
         </div>
 
-        <div className="text-center mt-16">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-5 md:gap-0 md:space-x-8 text-gray-500">
-            <div className="flex items-center flex-col ">
-              <span className="text-3xl font-bold text-gray-900">500K+</span>
-              <span className="ml-2">Bills Paid</span>
+          <div className="text-center mt-16">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-10 md:space-x-8 text-gray-500">
+            <div className="flex items-center">
+              <span className="text-3xl font-bold text-gray-900">10k</span>
+              <span className="ml-2">Transactions</span>
             </div>
-            <div className="flex items-center  flex-col ">
-              <span className="text-3xl font-bold text-gray-900">50K+</span>
-              <span className="ml-2">Happy Users</span>
+            <div className="flex items-center">
+              <span className="text-3xl font-bold text-gray-900">5k</span>
+              <span className="ml-2">Happy users</span>
             </div>
-            <div className="flex items-center  flex-col ">
+            <div className="flex items-center">
               <span className="text-3xl font-bold text-gray-900">99.9%</span>
-              <span className="ml-2">Success Rate</span>
+              <span className="ml-2">Success rate</span>
             </div>
           </div>
         </div>

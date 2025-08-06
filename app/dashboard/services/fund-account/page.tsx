@@ -3,7 +3,7 @@ import DashboardHeader from "@/app/components/dashboard-hearder"
 import FundAccountMethods from "@/app/components/FundAccount" 
 import ProtectedRoute from "@/app/components/ProtectedRoute"
 
-export default function FundAccountPage() {
+export default function page() {
   return (
     <ProtectedRoute>
     <div className="min-h-screen bg-gray-50 fade-in">
@@ -16,7 +16,7 @@ export default function FundAccountPage() {
           <div className="max-w-4xl mx-auto">
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Fund Account</h1>
-              <p className="text-gray-600">Add money to your Zidwell account using various payment methods</p>
+              <p className="text-gray-600">Add money to your Zidwell account instantly</p>
             </div>
 
             <FundAccountMethods />

@@ -13,9 +13,19 @@ import Services from "./components/Services";
 import Testimonials from "./components/Testimonials";
 import AOS from 'aos';
 import { useEffect } from "react";
-
+import 'aos/dist/aos.css'; // Import AOS styles
+import PodcastSection from "./components/Podcast";
 
 const page = () => {
+
+
+
+useEffect(() => {
+  AOS.init({
+    duration: 800, // animation duration in ms
+    once: true,    // whether animation should happen only once
+  });
+}, []);
 
   return (
     <div className="fade-in min-h-screen bg-white">
@@ -23,14 +33,13 @@ const page = () => {
       <Hero />
       <Services />
       <WhyWeDiff />
-      {/* <Pricing /> */}
       <Features />
       {/* <Pricing /> */}
       <Testimonials />
       <Faq />
       <CTA />
       <Contact/>
-      <Podcast/>
+      <PodcastSection/>
       <Footer />
     </div>
   );

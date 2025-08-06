@@ -1,48 +1,36 @@
 "use client";
-
-import { Bell, LogOut } from "lucide-react";
+import Swal from "sweetalert2";
+import {LogOut } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { useUserContextData } from "../context/userData";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/firebaseAuth";
-import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
+
 export default function DashboardHeader() {
-  const router = useRouter();
+ 
 
-  const { userData, user } = useUserContextData();
-  console.log({ userData, user });
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const { logout, user } = useUserContextData();
 
-  const handleLogOut = () => {
-    // 🧹 Clear all local/session storage
-    // localStorage.clear(); // Clear everything in localStorage
-    // sessionStorage.clear(); // Just in case
 
-    // You can also remove specific items like:
-    // localStorage.removeItem("userData");
-    // localStorage.removeItem("userDataTimestamp");
+  
 
-    signOut(auth)
-      .then(() => {
-        // ✅ Redirect to login after clearing
-        // Cookies.remove("authToken");
-        router.push("/auth/login");
-      })
-      .catch((error) => {
-        console.error("Sign out error:", error);
+  const handleLogout = async () => {
+    try {
+      await logout();
+      localStorage.removeItem("invoiceDraft");
+    } catch (error) {
+      console.error("Logout error:", error);
+      Swal.fire({
+        title: "Error",
+        text: "An error occurred while logging out.",
+        icon: "error",
       });
+    }
   };
-
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {userData && (userData.firstName || userData.lastName) ? (
+        {user && (user.firstName || user.lastName) ? (
           <h1 className="text-xl text-center md:text-start w-full font-bold text-gray-900">
-            Hello {`${userData.firstName} ${userData.lastName}`}
+            Hello {`${user.firstName} ${user.lastName}`}
           </h1>
         ) : null}
         {/* <div className="flex items-center justify-center space-x-4">
@@ -60,7 +48,7 @@ export default function DashboardHeader() {
           </Button> */}
 
           <Button
-            onClick={handleLogOut}
+            onClick={handleLogout}
             variant="outline"
             className="cursor-pointer flex items-center space-x-2 bg-transparent"
           >

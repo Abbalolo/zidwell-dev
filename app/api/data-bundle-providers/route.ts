@@ -6,11 +6,12 @@ import axios from 'axios';
 export async function GET(req: NextRequest) {
   try {
     const response = await axios.get(
-      'https://api.paybeta.ng/v1/data-bundle/providers',
+      'https://api.paybeta.ng/v2/data-bundle/providers',
       {
         maxBodyLength: Infinity,
-        headers: {
-          Authorization: `Bearer ${process.env.PAYBETA_API_KEY}`, // if needed
+         headers: {
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
         },
       }
     );

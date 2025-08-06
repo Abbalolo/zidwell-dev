@@ -1,6 +1,6 @@
-import DashboardSidebar from "../components/dashboard-sidebar"
-import DashboardHeader from "../components/dashboard-hearder"
-import TransactionHistory from "../components/transaction-history"
+import DashboardSidebar from "../../components/dashboard-sidebar"
+import DashboardHeader from "../../components/dashboard-hearder"
+import TransactionHistory from "../../components/transaction-history"
 
 export default function TransactionsPage() {
   return (

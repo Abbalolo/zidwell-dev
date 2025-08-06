@@ -7,9 +7,10 @@ export async function GET() {
   try {
     const response = await axios.get('https://api.paybeta.ng/v2/cable/providers', {
       maxBodyLength: Infinity,
-      headers: {
-        Authorization: `Bearer ${process.env.PAYBETA_API_KEY || ''}`, // Optional if required
-      },
+     headers: {
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
+        },
     });
 
     return NextResponse.json(response.data);

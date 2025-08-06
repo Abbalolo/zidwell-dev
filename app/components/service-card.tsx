@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { Button } from "./ui/button"
 import { Card, CardContent } from "./ui/card"
-import { Smartphone, Wifi, Lightbulb, Tv, CreditCard, GraduationCap, Car, Building } from "lucide-react"
+import { Smartphone, Wifi, Lightbulb, Tv, CreditCard, GraduationCap, Car, Building, Scale, Bot } from "lucide-react"
 import { link } from "fs"
 
 const services:any = [
@@ -14,7 +14,7 @@ const services:any = [
     icon: Smartphone,
     color: "bg-green-50 text-green-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    link: "/dashboard/buy-airtime"
+    link: "/dashboard/services/buy-airtime"
   },
   {
     id: 2,
@@ -27,7 +27,7 @@ const services:any = [
   },
   {
     id: 3,
-    title: "Power Payment",
+    title: "Electricity Payment",
     description: "Pay Electricity",
     icon: Lightbulb,
     color: "bg-yellow-50 text-yellow-600",
@@ -41,7 +41,7 @@ const services:any = [
     icon: Tv,
     color: "bg-purple-50 text-purple-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    // link: "/dashboard/services/buy-cable-tv"
+    link: "/dashboard/services/buy-cable-tv"
   },
   {
     id: 5,
@@ -50,25 +50,25 @@ const services:any = [
     icon: CreditCard,
     color: "bg-red-50 text-red-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    // link: "/dashboard/services/create-invoice"
+    link: "/dashboard/services/create-invoice"
   },
   {
     id: 6,
-    title: "Legal Contract",
-    description: "Generate Contract",
-    icon: GraduationCap,
+    title: "Simple Agreement",
+    description: "Generate Agreement",
+    icon: Scale,
     color: "bg-indigo-50 text-indigo-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    // link: "/dashboard/services/legal-contract"
+    link: "/dashboard/services/simple-agreement"
   },
   {
     id: 7,
     title: "Ai Acountant",
     description: "Acounting Assistance",
-    icon: GraduationCap,
+    icon: Bot ,
     color: "bg-indigo-50 text-indigo-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    // link: "/dashboard/services/ai-accountant"
+    link: "/dashboard/services/ai-accountant"
   },
   
 

@@ -13,12 +13,12 @@ import Loader from "../components/Loader";
 
 export default function page() {
 
-  const { userData, loading } = useUserContextData();
+  // const { userData, loading } = useUserContextData();
 
 
 
-if (loading) return <Loader />;
-if (!userData) return <p>No data found.</p>;
+// if (loading) return <Loader />;
+// if (!userData) return <p>No data found.</p>;
 
 
   return (
@@ -31,7 +31,7 @@ if (!userData) return <p>No data found.</p>;
             {/* Welcome Message */}
             <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome to the most reliable platform for your
+                Welcome to <span className="text-[#C29307]">Zidwell,</span> the most reliable platform for your
               </h1>
               <p className="text-xl text-gray-600">
                 Data Bundle, Airtime, Bill Payments...

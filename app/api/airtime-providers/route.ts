@@ -3,16 +3,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const res = await axios.post(
+    const res = await axios.get(
       'https://api.paybeta.ng/v2/airtime/providers',
-      {}, // POST body if needed
       {
-        maxBodyLength: Infinity,
-        headers: {
-          Authorization: `Bearer ${process.env.PAYBETA_API_KEY}`, // if required
-          'Content-Type': 'application/json',
+          headers: {
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
         },
       }
     );

@@ -1,60 +1,47 @@
+// context/UserContext.tsx
 "use client";
 
 import React, {
   createContext,
   useState,
-  ReactNode,
-  useContext,
   useEffect,
+  useContext,
+  ReactNode,
 } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { usePathname, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { get, ref, set } from "firebase/database";
-import { auth, db, database } from "../firebase/firebaseAuth";
+import axios from "axios";
+
+export type PodcastEpisode = {
+  id: string;
+  title: string;
+  creator: string;
+  pubDate: string;
+  link: string;
+  tags?: string[];
+};
 
 // Types
-export interface UserData {
-  uid: string;
+interface User {
+  id: string;
   firstName: string;
   lastName: string;
-  middleName: string;
   email: string;
-  phone: string;
-  profileImageUrl: any;
-  signature: string;
-  birthDate: string;
-  fullAddress: string;
-  yesPoint: number;
-  blocked: any[];
-  idCard: string;
-  createdAt: Date;
-}
-
-export interface BusinessData {
-  uid: string;
-  businessName: string;
-  businessAddress: string;
-  businessPhone: string;
-  businessEmail: string;
-  businessDescription: string;
-  logo: string;
-  businessSocial: string;
-  businessWeb: string;
-  selectedCity: string;
-  selectedState: string;
-  isYesChecked: boolean;
-  isNoChecked: boolean;
-  businessCert: string;
-  createdAt: Date;
+  phone?: string;
+  walletBalance: number;
+  walletId: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankCode: string;
 }
 
 interface UserContextType {
-  user: FirebaseUser | null;
-  userData: UserData | null;
-  businessData: BusinessData | null;
+  user: User | null;
   loading: boolean;
-  setUser: React.Dispatch<React.SetStateAction<FirebaseUser | null>>;
+  episodes: PodcastEpisode[];
+balance: number | null;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  logout: () => Promise<void>;
   isDarkMode: boolean;
   setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
   handleDarkModeToggle: () => void;
@@ -62,110 +49,188 @@ interface UserContextType {
 
 // Context Setup
 const UserContext = createContext<UserContextType | undefined>(undefined);
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
-// Provider
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [businessData] = useState<BusinessData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
 
-  const pathname = usePathname();
+  useEffect(() => {
+    const fetchEpisodes = async () => {
+      try {
+        const res = await fetch("/api/medium-feed");
+        const data = await res.json();
+        // console.log(data)
+        setEpisodes(data);
+      } catch (err) {
+        console.error("Error fetching podcast:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (["/", "/podcasts"].includes(pathname)) {
+      fetchEpisodes();
+    }
+  }, []);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Dark mode helpers
+  // Dark mode
   const applyTheme = (dark: boolean) => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
   };
 
-  const saveUserPreferences = async (uid: string, darkMode: boolean) => {
-    try {
-      await set(ref(database, `userPreferences/${uid}`), { darkMode });
-    } catch (e) {
-      console.error("Saving preferences failed", e);
-    }
-  };
-
-  const loadUserPreferences = async (uid: string) => {
-    try {
-      const snap = await get(ref(database, `userPreferences/${uid}`));
-      return snap.exists() ? !!snap.val().darkMode : false;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleDarkModeToggle = async () => {
+  const handleDarkModeToggle = () => {
     const newVal = !isDarkMode;
     setIsDarkMode(newVal);
     applyTheme(newVal);
-    if (auth.currentUser) await saveUserPreferences(auth.currentUser.uid, newVal);
   };
 
-  // Load userData from cache or Firestore
-const fetchUserData = async (uid: string): Promise<void> => {
-  const userRef = doc(db, "users", uid);
+  const saveUserToFirestore = async (userData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    walletId: string;
+    bankAccountName: string;
+    bankAccountNumber: string;
+    bankCode: string;
+  }) => {
+    try {
+      const response = await axios.post("/api/save-user-db", userData);
 
-  try {
-    setLoading(true);
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      const data = snap.data() as UserData;
-      setUserData(data);
-      console.log("✅ Fetched fresh userData from Firestore:", data);
-    } else {
-      console.warn("❗ No user data found in Firestore for UID:", uid);
+      if (response.status === 200) {
+        console.log("✅ User saved to Firestore");
+      } else {
+        console.error("❌ Firestore saving failed:", response.data.error);
+      }
+    } catch (error: any) {
+      console.error("❌ API error:", error.response?.data || error.message);
     }
-  } catch (err) {
-    console.error("❌ Firestore getDoc error:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
+  // LOGIN (sets secure cookie via API)
+  const login = async (credentials: { email: string; password: string }) => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/paybeta-auth-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
 
-  // Auth + data listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        
-        await fetchUserData(currentUser.uid);
-        const dark = await loadUserPreferences(currentUser.uid);
-        setIsDarkMode(dark);
-        applyTheme(dark);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Login failed");
+
+      const userData: any = {
+        email: data.user?.email,
+        firstName: data.user?.firstName,
+        lastName: data.user?.lastName,
+        phone: data.user?.phone,
+        walletId: data.user?.walletId,
+        bankAccountName: data.user?.bankAccountName,
+        bankName: data.user?.bankName,
+        bankAccountNumber: data.user?.bankAccountNumber,
+        bankCode: data.user?.bankCode,
+      };
+
+      await saveUserToFirestore(userData);
+
+      setUser(data.user);
+    } catch (error: any) {
+      console.error("Login error:", error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // LOGOUT (clears secure cookie via API)
+  const logout = async () => {
+    try {
+      await fetch("/api/paybeta-auth-logout", { method: "POST" });
+      setUser(null);
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  // FETCH USER from secure cookie
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/paybeta-user");
+      const data = await response.json();
+
+      if (response.ok) {
+        setUser(data.user);
+        console.log("User fetched:", data.user);
       } else {
         setUser(null);
-        setUserData(null);
-        setLoading(false);
-
- const cachedUID = localStorage.getItem("cached_uid");
-  if (cachedUID) {
-    localStorage.removeItem(`userData_${cachedUID}`);
-    localStorage.removeItem(`userDataTimestamp_${cachedUID}`);
-    localStorage.removeItem("cached_uid");
-  }
-
         if (pathname.startsWith("/dashboard")) {
           router.push("/auth/login");
         }
       }
-    });
 
-    return () => unsubscribe();
+      // Set dark mode
+      const storedTheme = localStorage.getItem("theme");
+      const dark = storedTheme === "dark";
+      setIsDarkMode(dark);
+      applyTheme(dark);
+    } catch (err) {
+      console.error("Error fetching user:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // BALANCE (only if authenticated)
+  const getWalletBalance = async () => {
+    try {
+      const res = await fetch("/api/wallet-bal", {
+        method: "POST",
+          headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(""),
+      });
+
+      const data = await res.json();
+      const myBalance = data.data.walletBalance;
+      // console.log("walletBallance",data.walletBalance)
+      // console.log("Api Response",data)
+      setBalance(myBalance);
+    } catch (err) {
+      console.error("Wallet balance error:", err);
+    }
+  };
+
+  // On mount, check user via secure cookie
+  useEffect(() => {
+    fetchUser();
   }, []);
+
+  // Only call wallet balance once user is set
+  useEffect(() => {
+
+    if (pathname === "/dashboard") {
+      getWalletBalance();
+
+    }
+  }, [user]);
 
   return (
     <UserContext.Provider
       value={{
         user,
-        userData,
-        businessData,
+        balance,
+        episodes,
         loading,
-        setUser,
+        login,
+        logout,
         isDarkMode,
         setIsDarkMode,
         handleDarkModeToggle,
@@ -177,10 +242,9 @@ const fetchUserData = async (uid: string): Promise<void> => {
 };
 
 // Hook
-export const useUserContextData = (): UserContextType => {
+export const useUserContextData = () => {
   const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUserContextData must be used within a UserProvider");
-  }
+  if (!context)
+    throw new Error("useUserContextData must be used inside UserProvider");
   return context;
 };

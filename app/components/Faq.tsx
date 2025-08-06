@@ -22,9 +22,9 @@ const faqData = [
       "Absolutely. Your funds are handled by licensed partners, and we never touch your money directly. You stay in full control.",
   },
   {
-    question: "What are Zidcoins used for?",
+    question: "What is Zidcoins used for?",
     answer:
-      "Zidcoins act like cashback and rewards. Redeem them, save them, or reinvest them in your business growth.",
+      "Zidcoins is the means of doing all transactions on Zidwell. Every service we offer has a Zidcoin amount attached to it - from contract creation, to receipts, to our ai accountant. Buy Zidcoins from your dashboard and pay with normal bank transfer and enjoy rewards.",
   },
   {
     question: "Can I use Zidwell for multiple business branches or outlets?",
@@ -35,7 +35,7 @@ const faqData = [
   {
     question: "How do I fund my Zidwell Wallet?",
     answer:
-      "Zidcoins act like cashback and rewards. Redeem them, save them, or reinvest them in your business growth.",
+      "You do all transactions on Zidwell with Zidcoins. You buy Zidcoins from your dashboard and pay with normal bank transfer and enjoy rewards.",
   },
   {
     question: "What happens if a bill payment fails?",
@@ -70,7 +70,7 @@ function FaqItem({
 
   return (
     <section
-    id="faq"
+    
       className=" bg-white/10 border border-gray-400 backdrop-blur-md rounded-xl px-5 py-3 cursor-pointer transition-all duration-300 ease-in-out"
       onClick={() => setOpen(!open)}
     >
@@ -85,7 +85,7 @@ function FaqItem({
 
 function Faq() {
   return (
-    <section className="md:px-48 md:py-14 py-10 p-6">
+    <section id="faq" data-aos="fade-down" className="md:px-48 md:py-14 py-10 p-6 bg-gray-50">
       <div className="flex flex-col justify-start gap-3 w-full  py-10">
         <h1 className="text-[32px] md:text-[40px]  text-center  font-bold ">
           Frequently Asked <span className="text-[#C29307]">Questions</span>

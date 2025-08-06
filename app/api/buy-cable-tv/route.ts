@@ -10,18 +10,18 @@ export async function POST(req: Request) {
     const response = await axios.post(
       'https://api.paybeta.ng/v2/cable/purchase',
       {
-        service: body.service, // e.g., 'dstv'
-        smartCardNumber: body.smartCardNumber, // e.g., '8216167618'
-        amount: body.amount, // e.g., 500
-        packageCode: body.packageCode, // e.g., 'COMPLE36'
-        customerName: body.customerName, // e.g., 'JOHN DOE'
-        reference: body.reference, // e.g., '1752763325'
+        service: body.service, 
+        smartCardNumber: body.smartCardNumber, 
+        amount: body.amount, 
+        packageCode: body.packageCode, 
+        customerName: body.customerName, 
+        reference: body.reference, 
       },
       {
         maxBodyLength: Infinity,
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.PAYBETA_API_KEY || ''}`, // optional if API key is required
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
         },
       }
     );
@@ -29,6 +29,11 @@ export async function POST(req: Request) {
     return NextResponse.json(response.data);
   } catch (error: any) {
     console.error('Cable purchase error:', error.response?.data || error.message);
+       if (error.response?.data) {
+      return NextResponse.json(error.response.data, {
+        status: 400,
+      });
+    }
     return NextResponse.json(
       { error: 'Failed to complete cable purchase' },
       { status: 500 }

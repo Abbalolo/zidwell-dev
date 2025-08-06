@@ -1,25 +1,42 @@
-// app/api/data/mtn/route.ts
-
-import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
+import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("paybeta_token")?.value;
+  
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+  
+  const service = req.nextUrl.searchParams.get("service");
+
+  if (!service) {
+    return NextResponse.json(
+      { error: "Missing service parameter in query string" },
+      { status: 400 }
+    );
+  }
+
   try {
     const response = await axios.get(
-      'https://api.paybeta.ng/v2/data-bundle/list?service=mtn_data',
+      `https://api.paybeta.ng/v2/data-bundle/list?service=${service}`,
       {
-        maxBodyLength: Infinity,
         headers: {
-          Authorization: `Bearer ${process.env.PAYBETA_API_KEY}`, // Optional, if required
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
+           "Authorization": `Bearer ${token}`
         },
       }
     );
 
+
     return NextResponse.json(response.data);
   } catch (error: any) {
-    console.error('Error fetching MTN data list:', error.response?.data || error.message);
+    console.error("Error fetching data list:", error.response?.data || error.message);
     return NextResponse.json(
-      { error: 'Failed to fetch MTN data bundle list' },
+      { error: "Failed to fetch data bundle list" },
       { status: 500 }
     );
   }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import { Button } from "./ui/button";
-import logo from "/public/zidwell-logo.png";
+import logo from "/public/logo.png";
 import Link from "next/link";
 import { useUserContextData } from "../context/userData";
 
@@ -50,13 +50,14 @@ const Header = () => {
     { name: "Services", href: "services" },
     { name: "Features", href: "features" },
     { name: "Testimonial", href: "testimonials" },
-    { name: "Podcast", href: "podcast" },
+    { name: "Academy", href: "podcast" },
     { name: "Faq", href: "faq" },
     { name: "Contact", href: "contact" },
   ];
 
   return (
     <header
+      data-aos="fade-down"
       className={`fixed top-0 w-full bg-white/95 backdrop-blur-md z-50 transition-all duration-300 ${
         hasScrolled ? "border-b border-gray-200 shadow-sm" : "border-none"
       }`}
@@ -70,7 +71,7 @@ const Header = () => {
               alt="Zidwell Logo"
               width={32}
               height={32}
-              className="mr-2"
+              className=" w-20 object-contain"
             />
             <h1 className="font-bold text-lg">Zidwell</h1>
           </Link>
@@ -143,12 +144,7 @@ const Header = () => {
                 </button>
               ))}
 
-
-
-
               <div className="pt-4 pb-3 border-t border-gray-200">
-
-
                 {user ? (
                   <Button
                     className="cursor-pointer bg-[#C29307] text-white hover:bg-[#a87e06] w-full"
@@ -157,26 +153,22 @@ const Header = () => {
                     Dashboard
                   </Button>
                 ) : (
-
-                <div className="flex flex-col space-y-2">
-                  <Button
-                    onClick={() => router.push("/auth/login")}
-                    variant="ghost"
-                    className="cursor-pointer justify-start"
-                  >
-                    Sign In
-                  </Button>
-                  <Button
-                    onClick={() => router.push("/auth/signup")}
-                    className="cursor-pointer bg-[#C29307] text-white hover:bg-[#a87e06]"
-                  >
-                    Register
-                  </Button>
-                </div>
-                )
-                }
-
-                
+                  <div className="flex flex-col space-y-2">
+                    <Button
+                      onClick={() => router.push("/auth/login")}
+                      variant="ghost"
+                      className="cursor-pointer justify-start"
+                    >
+                      Sign In
+                    </Button>
+                    <Button
+                      onClick={() => router.push("/auth/signup")}
+                      className="cursor-pointer bg-[#C29307] text-white hover:bg-[#a87e06]"
+                    >
+                      Register
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

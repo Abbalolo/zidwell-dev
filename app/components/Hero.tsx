@@ -6,7 +6,7 @@ import { ArrowRight, Zap, Shield } from "lucide-react";
 const Hero = () => {
   const router = useRouter();
   return (
-    <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 ">
+    <section data-aos="face-down" className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 ">
       {/* background design */}
       <div className="absolute h-full inset-0 bg-patterns"></div>
       
@@ -16,7 +16,7 @@ const Hero = () => {
           <div className="mb-8">
             <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
               <Zap className="w-4 h-4 mr-2" />
-             Fast finance tools for modern Nigerian businesses
+             Smart finance tools for Nigerian businesses
             </span>
           </div>
           

@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 const CTA = () => {
   const router = useRouter();
   return (
-    <section className="py-20 bg-[#C29307]">
+    <section data-aos="fade-down" className="py-20 bg-[#C29307]">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-4xl mx-auto">
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">

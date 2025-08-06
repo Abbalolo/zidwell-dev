@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown, Search, Download } from "lucide-react"
 import { Button } from "./ui/button" 
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Input } from "./ui/input"
+import axios from "axios"
 
 type TransactionStatus = "Success" | "Pending" | "Failed"
 
@@ -100,6 +101,29 @@ export default function TransactionHistory() {
     const matchesFilter = filter === "All transactions" || transaction.status === filter
     return matchesSearch && matchesFilter
   })
+
+
+  const getTransaction = async () => {
+
+    try{
+
+      const response = await fetch("/api/bill-transactions")
+      const data = await response.json()
+
+      if (!response.ok) throw new Error(data.error || "Failed to fetch transaction");
+
+      console.log("my bills transactions data" ,data)
+
+    } catch(error) {
+      console.log("Unable to get transactions", error)
+    }
+
+
+  }
+
+// useEffect(() => {
+// getTransaction()
+// }, [])
 
   return (
     <Card className="bg-white shadow-sm">

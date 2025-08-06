@@ -1,0 +1,287 @@
+"use client";
+import { useState } from "react";
+import { ArrowLeft, Save, Download, Send, Loader2 } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/app/components/ui/card";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Textarea } from "@/app/components/ui/textarea";
+import DashboardSidebar from "@/app/components/dashboard-sidebar";
+import DashboardHeader from "@/app/components/dashboard-hearder";
+import { useRouter } from "next/navigation";
+import { useUserContextData } from "@/app/context/userData";
+import Swal from "sweetalert2"; // Import SweetAlert2 for custom alerts
+
+const Page = () => {
+  const [contractTitle, setContractTitle] = useState("Untitled Contract");
+  const [signeeEmail, setSigneeEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [contractContent, setContractContent] = useState("");
+  const [status, setStatus] = useState("draft");
+  const [errors, setErrors] = useState({
+    contractTitle: "",
+    signeeEmail: "",
+    contractContent: "",
+    status: "",
+  });
+  const router = useRouter();
+  const { user } = useUserContextData();
+
+  // Basic validation function
+  const validateInputs = () => {
+    const newErrors = {
+      contractTitle: "",
+      signeeEmail: "",
+      contractContent: "",
+      status: "",
+    };
+
+    if (!contractTitle.trim())
+      newErrors.contractTitle = "Contract title is required.";
+    if (signeeEmail.trim() === user?.email) {
+      newErrors.signeeEmail =
+        "Sorry, the signee email address cannot be the same as the initiator's email address.";
+    }
+    if (!signeeEmail.trim())
+      newErrors.signeeEmail = "Signee email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signeeEmail))
+      newErrors.signeeEmail = "Invalid email format.";
+    if (!contractContent.trim())
+      newErrors.contractContent = "Contract content cannot be empty.";
+    if (status === "") newErrors.status = "Please select a status."; // Validate that status is selected
+
+    setErrors(newErrors);
+
+    // Return true if there are no errors, otherwise return false
+    return !Object.values(newErrors).some((error) => error);
+  };
+
+  const handleSave = () => {
+    console.log({
+      title: contractTitle,
+      content: contractContent,
+      message: "Contract saved as draft.",
+    });
+  };
+
+  const handleDownload = () => {
+    console.log({
+      title: contractTitle,
+      message: "Downloading contract as PDF...",
+    });
+  };
+
+  const handleSend = async () => {
+    if (!validateInputs()) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Failed",
+        text: "Please correct the errors before sending the contract.",
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: "Sending contract...",
+      text: "Please wait while we send your contract for signature.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading(); // Show loading spinner
+      },
+    });
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/send-contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signeeEmail,
+          contractText: contractContent,
+          initiatorEmail: user?.email,
+          contractTitle,
+          status,
+        }),
+      });
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: "Contract sent for signature successfully!",
+        });
+
+        setLoading(false);
+        router.push("/dashboard/services/simple-agreement");
+      } else {
+        const errorData = await res.json();
+        Swal.fire({
+          icon: "error",
+          title: "Failed to send",
+          text: errorData.message || "Unknown error",
+        });
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while sending the contract.",
+      });
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50 fade-in">
+        <DashboardSidebar />
+        <div className="lg:ml-64">
+          <DashboardHeader />
+
+          {/* Header */}
+          <div className="border-b bg-card">
+            <div className="container mx-auto px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => router.back()}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">
+                      New Contract
+                    </h1>
+                    <p className="text-muted-foreground">
+                      Create a contract from scratch
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* <Button variant="outline" onClick={handleSave}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Draft
+                  </Button> */}
+                  {/* <Button variant="outline" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button> */}
+
+                   <Button
+                    disabled={loading}
+                    className="bg-[#C29307] hover:bg-[#b28a06] text-white flex items-center"
+                    onClick={handleSend}
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    Send for Signature
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="container mx-auto px-6 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Contract Details */}
+              <div className="lg:col-span-1">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Contract Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="title">Contract Title</Label>
+                      <Input
+                        id="title"
+                        value={contractTitle}
+                        onChange={(e) => setContractTitle(e.target.value)}
+                        placeholder="Enter contract title"
+                      />
+                      {errors.contractTitle && (
+                        <p className="text-red-500 text-sm">
+                          {errors.contractTitle}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="signeeEmail">Signee Email</Label>
+                      <Input
+                        id="signeeEmail"
+                        value={signeeEmail}
+                        onChange={(e) => setSigneeEmail(e.target.value)}
+                        placeholder="Enter signee email"
+                      />
+                      {errors.signeeEmail && (
+                        <p className="text-red-500 text-sm">
+                          {errors.signeeEmail}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <select
+                        id="status"
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="w-full p-2 border rounded-md bg-background"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="pending">Pending Review for Signature</option>
+                       
+                      </select>
+                      {errors.status && (
+                        <p className="text-red-500 text-sm">{errors.status}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Contract Editor */}
+              <div className="lg:col-span-2">
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle>Contract Content</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={contractContent}
+                      onChange={(e) => setContractContent(e.target.value)}
+                      placeholder="Enter your contract content here..."
+                      className="min-h-[600px] font-mono text-sm"
+                    />
+                    {errors.contractContent && (
+                      <p className="text-red-500 text-sm">
+                        {errors.contractContent}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Page;

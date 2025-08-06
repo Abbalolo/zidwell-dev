@@ -10,16 +10,15 @@ export async function POST(req: NextRequest) {
     const response = await axios.post(
       'https://api.paybeta.ng/v2/electricity/validate',
       {
-        service: body.service, // e.g., "ikeja-electric"
+        service: body.service, 
         meterNumber: body.meterNumber,
-        meterType: body.meterType, // e.g., "prepaid"
+        meterType: body.meterType,
       },
       {
         maxBodyLength: Infinity,
-        headers: {
-          'Content-Type': 'application/json',
-          // Optionally add Authorization header:
-          // Authorization: `Bearer ${process.env.PAYBETA_API_KEY}`,
+       headers: {
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
         },
       }
     );

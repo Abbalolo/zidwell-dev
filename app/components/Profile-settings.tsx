@@ -125,7 +125,7 @@ export default function ProfileSettings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const { userData, user } = useUserContextData();
+  const { user } = useUserContextData();
 const [currentPassword, setCurrentPassword] = useState("");
 const [newPassword, setNewPassword] = useState("");
 const [confirmPassword, setConfirmPassword] = useState("");
@@ -143,21 +143,21 @@ const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     // Fetch user data from context or local storage if needed
-    if (userData) {
+    if (user) {
       setProfile({
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        phone: userData.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
         // businessName: userData.businessName || "",
         // businessType: userData.businessType || "",
-        address: userData.fullAddress || "",
+        // address: user.fullAddress || "",
         // city: userData.city || "",
         // state: userData.state || "",
         // country: userData.country || "",
       });
     }
-  }, [userData]);
+  }, [user]);
 
 
  const changeUserPassword = async () => {
@@ -175,87 +175,87 @@ const [confirmPassword, setConfirmPassword] = useState("");
     });
   }
 
-  if (user) {
-    try {
-      if (user.email) {
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
-        await updatePassword(user, newPassword);
+  // if (user) {
+  //   try {
+  //     if (user.email) {
+  //       const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  //       await reauthenticateWithCredential(user, credential);
+  //       await updatePassword(user, newPassword);
 
-        // Reset fields
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
+  //       // Reset fields
+  //       setCurrentPassword("");
+  //       setNewPassword("");
+  //       setConfirmPassword("");
 
-        Swal.fire({
-          icon: "success",
-          title: "Password updated successfully",
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "User email is not available",
-        });
-      }
-    } catch (error) {
-      console.error("Error updating password:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error updating password",
-        text: (error as Error).message,
-      });
-    }
-  } else {
-    Swal.fire({
-      icon: "warning",
-      title: "No authenticated user found",
-    });
-  }
+  //       Swal.fire({
+  //         icon: "success",
+  //         title: "Password updated successfully",
+  //       });
+  //     } else {
+  //       Swal.fire({
+  //         icon: "error",
+  //         title: "User email is not available",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating password:", error);
+  //     Swal.fire({
+  //       icon: "error",
+  //       title: "Error updating password",
+  //       text: (error as Error).message,
+  //     });
+  //   }
+  // } else {
+  //   Swal.fire({
+  //     icon: "warning",
+  //     title: "No authenticated user found",
+  //   });
+  // }
 };
 
-const updateProfileInfo = async (event: FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
-  // setIsLoading(true);
+// const updateProfileInfo = async (event: FormEvent<HTMLFormElement>) => {
+//   event.preventDefault();
+//   // setIsLoading(true);
 
-  if (!user?.uid) {
-    console.error("No authenticated user found");
-    Swal.fire({
-      icon: "error",
-      title: "No authenticated user found",
-    });
-    // setIsLoading(false);
-    return;
-  }
+//   if (!user?.uid) {
+//     console.error("No authenticated user found");
+//     Swal.fire({
+//       icon: "error",
+//       title: "No authenticated user found",
+//     });
+//     // setIsLoading(false);
+//     return;
+//   }
 
-  try {
-    const userDocRef = doc(db, "users", user.uid);
-    // await updateDoc(userDocRef, {
-    //   phone,
-    //   fullAddress,
-    //   birthDate,
-    //   nin,
-    // });
+//   try {
+//     const userDocRef = doc(db, "users", user.uid);
+//     // await updateDoc(userDocRef, {
+//     //   phone,
+//     //   fullAddress,
+//     //   birthDate,
+//     //   nin,
+//     // });
 
-    console.log("Profile information updated successfully");
+//     console.log("Profile information updated successfully");
 
-    Swal.fire({
-      icon: "success",
-      title: "Profile information updated successfully",
-    });
+//     Swal.fire({
+//       icon: "success",
+//       title: "Profile information updated successfully",
+//     });
 
-    // setIsLoading(false);
-  } catch (error) {
-    console.error("Error updating profile information:", error);
+//     // setIsLoading(false);
+//   } catch (error) {
+//     console.error("Error updating profile information:", error);
 
-    Swal.fire({
-      icon: "error",
-      title: "Error updating profile information",
-      text: (error as Error).message,
-    });
+//     Swal.fire({
+//       icon: "error",
+//       title: "Error updating profile information",
+//       text: (error as Error).message,
+//     });
 
-    // setIsLoading(false);
-  }
-};
+//     // setIsLoading(false);
+//   }
+// };
 
   return (
     <div className="space-y-6">
@@ -276,22 +276,22 @@ const updateProfileInfo = async (event: FormEvent<HTMLFormElement>) => {
               </Button>
             </div>
             <div className="text-center md:text-left flex-1">
-              {userData && (userData.firstName || userData.lastName) ? (
+              {user && (user.firstName || user.lastName) ? (
                 <h2 className="text-xl text-center md:text-start w-full font-bold text-gray-900">
-                  Hello {`${userData.firstName} ${userData.lastName}`}
+                  Hello {`${user.firstName} ${user.lastName}`}
                 </h2>
               ) : null}
               <p className="text-gray-600">{profile.businessName}</p>
               <p className="text-sm text-gray-500">{profile.email}</p>
               <div className="flex items-center gap-2 mt-2 justify-center md:justify-start">
-                {user && user?.emailVerified ? (
+                {/* {user && user?.emailVerified ? (
                   <Badge
                     variant="secondary"
                     className="bg-green-100 text-green-800"
                   >
                     Verified Account
                   </Badge>
-                ) : null}
+                ) : null} */}
 
                 <Badge
                   variant="secondary"

@@ -2,25 +2,36 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get("paybeta_token")?.value;
+    
+      if (!token) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
+
+
     const body = await req.json();
 
     const response = await axios.post(
-      'https://api.paybeta.ng/v2/data-bundle/purchase',
+      'https://api.paybeta.ng/v1/wallet/payment',
       {
-        service: body.service, // e.g., "mtn_data"
-        amount: body.amount,   // e.g., 1000
-        phoneNumber: body.phoneNumber, // e.g., "08060000000"
-        code: body.code,       // e.g., "MT1"
-        reference: body.reference, // e.g., "1752763325"
+        amount: body.amount,   
+        service: body.service,
+        customerId: body.customerId,
+        billerCode: body.billerCode,       
+        reference: body.reference,
+        pin: body.pin,
       },
       {
         maxBodyLength: Infinity,
         headers: {
-          Authorization: `Bearer ${process.env.PAYBETA_API_KEY}`, // Optional if required
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
+           "Authorization": `Bearer ${token}`
         },
       }
     );
@@ -28,6 +39,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(response.data);
   } catch (error: any) {
     console.error('Error purchasing data:', error.response?.data || error.message);
+    
+      if (error.response?.data) {
+      return NextResponse.json(error.response.data, {
+        status: 400,
+      });
+    }
+
     return NextResponse.json(
       { error: 'Failed to purchase data bundle' },
       { status: 500 }

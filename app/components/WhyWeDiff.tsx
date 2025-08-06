@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 
 const WhyWeDiff = () => {
   return (
-    <section className="py-20 bg-gradient-to-br from-background via-muted/20 to-background">
+    <section data-aos="fade-up" className="py-20 bg-gradient-to-br from-background via-muted/20 to-background">
       <div className="container mx-auto px-4 lg:px-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-foreground mb-4">
@@ -33,10 +33,10 @@ const WhyWeDiff = () => {
               
               <div className="space-y-4 text-muted-foreground">
                 <p className="font-semibold text-primary">
-                  ZelPoints Rewards System
+                  Zidcoins Rewards System
                 </p>
                 <p>
-                  Earn 1 ZidPoint for every ₦1,000 spent on bills
+                  Earn 1 Zidcoin for every ₦1,000 spent on bills
                 </p>
                 <p>
                   Convert points to cash, airtime, or investment opportunities
@@ -98,7 +98,7 @@ const WhyWeDiff = () => {
               </div>
               
               <h3 className="text-2xl font-bold text-foreground mb-4">
-                AI Assistant - ZidBot
+                AI Assistant - Ziddy
               </h3>
               
               <div className="space-y-4 text-muted-foreground">
@@ -106,18 +106,19 @@ const WhyWeDiff = () => {
                   Your Personal Finance Helper
                 </p>
                 <p>
-                  Get smart bill payment reminders and insights
+                 Get your business accounting done in minutes
                 </p>
                 <p>
-                  Analyze spending patterns in simple terms
+                 Get simple analysis of your business income and expenses 
+
                 </p>
                 <p className="text-sm font-medium text-foreground">
-                  Complex finances made simple!
+                 Ziddy makes complex things simple
                 </p>
               </div>
 
               <Button className="mt-6 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white">
-                Meet ZidBot
+                Meet Ziddy
               </Button>
             </CardContent>
           </Card>
@@ -126,7 +127,7 @@ const WhyWeDiff = () => {
         {/* How It Works Steps */}
         <div className="bg-gradient-to-r from-muted/50 to-muted/30 rounded-3xl p-8 md:p-12">
           <h3 className="text-3xl font-bold text-center text-foreground mb-12">
-            How ZidPay Works
+            How Zidwell Works
           </h3>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -143,7 +144,8 @@ const WhyWeDiff = () => {
                 <Shield className="w-8 h-8 text-primary-foreground" />
               </div>
               <h4 className="text-xl font-semibold text-foreground mb-2">2. Pay Securely</h4>
-              <p className="text-muted-foreground">Use bank transfer, card, or wallet with bank-level security</p>
+              <p className="text-muted-foreground">Load your zidcoin wallet with simple bank transfer 
+</p>
             </div>
             
             <div className="text-center group">
@@ -151,7 +153,7 @@ const WhyWeDiff = () => {
                 <Zap className="w-8 h-8 text-primary-foreground" />
               </div>
               <h4 className="text-xl font-semibold text-foreground mb-2">3. Earn & Learn</h4>
-              <p className="text-muted-foreground">Get ZidPoints, insights, and financial tips instantly</p>
+              <p className="text-muted-foreground">Earn bonuses  as you pay bills - easy pizzy</p>
             </div>
           </div>
         </div>

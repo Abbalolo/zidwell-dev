@@ -1,19 +1,170 @@
+// const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+//   e.preventDefault();
+//   const validationErrors = validateForm();
+//   if (Object.keys(validationErrors).length > 0) {
+//     setErrors(validationErrors);
+//     return;
+//   }
+
+//   setLoading(true);
+//   const { firstName, lastName, email, password, phone } = formData;
+
+//   try {
+//     const userCred = await createUserWithEmailAndPassword(
+//       auth,
+//       email,
+//       password
+//     );
+//     const user = userCred.user;
+
+//     // await sendEmailVerification(user, {
+//     //   url: "http://localhost:3000//auth/authentication-action",
+//     //   handleCodeInApp: true,
+//     // });
+
+//     await sendVerification(email);
+
+//     await updateProfile(user, { displayName: `${firstName} ${lastName}` });
+
+//     // await setDoc(doc(db, "users", user.uid), {
+//     //   uid: user.uid,
+//     //   email: user.email,
+//     //   firstName: firstName.trim(),
+//     //   lastName: lastName.trim(),
+//     //   phone: phone.trim(),
+//     //   zidCoin: 30,
+//     //   subscription: "inActive",
+//     //   emailVerified: false,
+//     //   createdAt: new Date().toISOString(),
+//     // });
+
+//     console.log({ title: "Please verify your email to access the app." });
+//     Swal.fire({
+//       title: "Check your email to verify your account",
+//       text: "Please verify your email to access the app",
+//       icon: "success",
+//     });
+//     router.push("/auth/login");
+//   } catch (error: any) {
+//     if (error.code === "auth/email-already-in-use") {
+//       Swal.fire({
+//         title: "Oops?",
+//         text: "Email is already in use.",
+//         icon: "warning",
+//       });
+//       console.log({
+//         variant: "destructive",
+//         title: "Email is already in use.",
+//       });
+//     } else {
+//       Swal.fire({
+//         icon: "error",
+//         title: "Oops...",
+//         text: "An error occurred during sign-up.",
+//       });
+//       console.log({
+//         variant: "destructive",
+//         title: "An error occurred during sign-up.",
+//       });
+//     }
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+//   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+//   event.preventDefault();
+//   const newErrors: { [key: string]: string } = {};
+
+//   if (!email || !/^[\w-.]+@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
+//     newErrors.email = "Please enter a valid email address";
+//   }
+//   if (!password) {
+//     newErrors.password = "Please enter a password";
+//   }
+
+//   if (Object.keys(newErrors).length > 0) {
+//     setErrors(newErrors);
+//     return;
+//   }
+
+//   setLoading(true);
+//   try {
+//     const userCredential = await signInWithEmailAndPassword(
+//       auth,
+//       email,
+//       password
+//     );
+//     const user = userCredential.user;
+
+//     if (!user.emailVerified) {
+//       await sendEmailVerification(user);
+//       Swal.fire({
+//         icon: "error",
+//         title: "Oops...",
+//         text: "Something went wrong!",
+//         footer:
+//           "You need to verify your email to log in. A verification email has been sent.",
+//       });
+//       setErrors({
+//         email:
+//           "You need to verify your email to log in. A verification email has been sent.",
+//       });
+//       setShowVerifyButton(true);
+//       await signOut(auth);
+//       return;
+//     }
+
+//     const userRef = doc(db, "users", user.uid);
+//     // const admin = await checkAdminStatus();
+
+//     // if (admin) {
+//     //   Cookies.set("isAdmin", "true");
+//     // }
+
+//     await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
+
+//     setIsLogin(true);
+//     setErrors({});
+//     Swal.fire({
+//       title: "Success!",
+//       icon: "success",
+
+//     });
+//     router.push(redirectTo);
+//     // Cookies.set("authToken", idToken, { path: "/", expires: 1 });
+//   } catch (error: any) {
+//     console.error(error.message);
+
+//     // Firebase error codes: https://firebase.google.com/docs/auth/admin/errors
+//     if (error.code === "auth/invalid-login-credentials") {
+//       setErrors({ password: "Invalid email or password" });
+//       Swal.fire({
+//         icon: "error",
+//         title: "Oops...",
+//         text: "Invalid email or password",
+
+//       });
+//     } else {
+//       setErrors({ password: "An unexpected error occurred" });
+//       Swal.fire({
+//         icon: "error",
+//         title: "Oops...",
+//         text: "Something went wrong!",
+//         footer: "Please try again later.",
+//       });
+//     }
+//   } finally {
+//     setLoading(false);
+//   }
+// };
 "use client";
 import Swal from "sweetalert2";
 import { useState, FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import logo from "/public/zidwell-logo.png";
+import logo from "/public/logo.png";
 import { useRouter } from "next/navigation";
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  sendEmailVerification,
-} from "firebase/auth";
-import { auth } from "@/app/firebase/firebaseAuth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "@/app/firebase/firebaseAuth";
-import Cookies from "js-cookie";
 
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -26,23 +177,18 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
+import { useUserContextData } from "@/app/context/userData";
+import axios from "axios";
 
-// Dummy admin check function
-const checkAdminStatus = async (): Promise<boolean> => {
-  return true;
-};
-
-const page = () => {
+const Page = () => {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
-  const [isLogin, setIsLogin] = useState(false);
-  const [showVerifyButton, setShowVerifyButton] = useState(false);
 
-  const redirectTo = "/dashboard";
+  const { login } = useUserContextData(); // Assuming you have a login function in your context
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,103 +207,27 @@ const page = () => {
     }
 
     setLoading(true);
+
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+      await login({ email, password });
 
-
-      if (!user.emailVerified) {
-        await sendEmailVerification(user);
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: "Something went wrong!",
-          footer:
-            "You need to verify your email to log in. A verification email has been sent.",
-        });
-        setErrors({
-          email:
-            "You need to verify your email to log in. A verification email has been sent.",
-        });
-        setShowVerifyButton(true);
-        await signOut(auth);
-        return;
-      }
-
-      const userRef = doc(db, "users", user.uid);
-      // const admin = await checkAdminStatus();
-
-      // if (admin) {
-      //   Cookies.set("isAdmin", "true");
-      // }
-
-      await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
-
-      setIsLogin(true);
       setErrors({});
       Swal.fire({
-        title: "Success!",
+        title: "Login Successful!",
         icon: "success",
-      
       });
-      router.push(redirectTo);
-      // Cookies.set("authToken", idToken, { path: "/", expires: 1 });
+      router.push("/dashboard");
     } catch (error: any) {
-      console.error(error.message);
-
-      // Firebase error codes: https://firebase.google.com/docs/auth/admin/errors
-      if (error.code === "auth/invalid-login-credentials") {
-        setErrors({ password: "Invalid email or password" });
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: "Invalid email or password",
-          
-        });
-      } else {
-        setErrors({ password: "An unexpected error occurred" });
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: "Something went wrong!",
-          footer: "Please try again later.",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCheckVerification = async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      await currentUser.reload();
-      if (currentUser.emailVerified) {
-        router.push(redirectTo);
-        Swal.fire({
-          title: "Success!",
-          icon: "success",
-          draggable: true,
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: "Something went wrong!",
-          footer: "Email is not verified yet. Please check your inbox.",
-        });
-      }
-    } else {
+      console.error("Login error:", error.message);
       Swal.fire({
         icon: "error",
         title: "Oops...",
-        text: "Something went wrong!",
-        footer: "Please log in again.",
+        text: error.message || "Something went wrong!",
+        footer: "Please try again later.",
       });
+      setErrors({ password: error.message || "Login error" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -244,20 +314,6 @@ const page = () => {
             </Button>
           </form>
 
-          {showVerifyButton && (
-            <div className="text-center mt-4">
-              <p className="text-sm text-gray-600 mb-2">
-                After verifying your email, click below to continue.
-              </p>
-              <Button
-                onClick={handleCheckVerification}
-                className="bg-green-600 text-white"
-              >
-                I've Verified My Email
-              </Button>
-            </div>
-          )}
-
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don&apos;t have an account?{" "}
@@ -275,4 +331,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

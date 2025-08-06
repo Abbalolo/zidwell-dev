@@ -1,0 +1,24 @@
+import DashboardHeader from "@/app/components/dashboard-hearder";
+import DashboardSidebar from "@/app/components/dashboard-sidebar";
+import ElectricityBills from "@/app/components/PowerElectricity";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+
+export default function page() {
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardSidebar />
+
+        <div className="lg:ml-64">
+          <DashboardHeader />
+
+          <main className="p-6">
+            <div className="max-w-6xl mx-auto">
+              <ElectricityBills />
+            </div>
+          </main>
+        </div>
+      </div>
+    </ProtectedRoute>
+  );
+}

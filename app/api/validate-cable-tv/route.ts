@@ -10,14 +10,14 @@ export async function POST(req: Request) {
     const response = await axios.post(
       'https://api.paybeta.ng/v2/cable/validate',
       {
-        service: body.service, // e.g., 'gotv'
-        smartCardNumber: body.smartCardNumber, // e.g., '8072916698'
+        service: body.service,
+        smartCardNumber: body.smartCardNumber, 
       },
       {
         maxBodyLength: Infinity,
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.PAYBETA_API_KEY || ''}`, // Optional if API key required
+          "Content-Type": "application/json",
+          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
         },
       }
     );
