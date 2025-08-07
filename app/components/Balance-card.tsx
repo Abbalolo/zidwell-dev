@@ -13,7 +13,7 @@ export default function BalanceCard() {
 const {user,balance} = useUserContextData();
 const router = useRouter()
 
-console.log("user balance:", balance);
+// console.log("user balance:", balance);
 
  const formatNumber = (value: any) => {
     return new Intl.NumberFormat("en-US", {
@@ -31,7 +31,7 @@ console.log("user balance:", balance);
             <p className="text-gray-500 text-sm mb-2">Total Balance</p>
             <div className="flex items-center justify-center space-x-3">
               <h2 className="text-3xl font-bold text-gray-900">
-                Available Balance: ₦ {showBalance ? formatNumber(balance) : "*****"}
+                Available Balance: ₦ {showBalance ? formatNumber(user?.walletBalance) : "*****"}
               </h2>
               <Button
                 variant="ghost"

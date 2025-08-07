@@ -10,6 +10,8 @@ import React, {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
+import { signInWithCustomToken } from "firebase/auth";
+import { auth } from "../firebase/firebaseAuth";
 
 export type PodcastEpisode = {
   id: string;
@@ -114,40 +116,50 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // LOGIN (sets secure cookie via API)
-  const login = async (credentials: { email: string; password: string }) => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/paybeta-auth-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
+ const login = async (credentials: { email: string; password: string }) => {
+  try {
+    setLoading(true);
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Login failed");
+    const response = await fetch("/api/paybeta-auth-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
 
-      const userData: any = {
-        email: data.user?.email,
-        firstName: data.user?.firstName,
-        lastName: data.user?.lastName,
-        phone: data.user?.phone,
-        walletId: data.user?.walletId,
-        bankAccountName: data.user?.bankAccountName,
-        bankName: data.user?.bankName,
-        bankAccountNumber: data.user?.bankAccountNumber,
-        bankCode: data.user?.bankCode,
-      };
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Login failed");
 
-      await saveUserToFirestore(userData);
+    const userData: any = {
+      email: data.user?.email,
+      firstName: data.user?.firstName,
+      lastName: data.user?.lastName,
+      phone: data.user?.phone,
+      walletId: data.user?.walletId,
+      bankAccountName: data.user?.bankAccountName,
+      bankName: data.user?.bankName,
+      bankAccountNumber: data.user?.bankAccountNumber,
+      bankCode: data.user?.bankCode,
+    };
 
-      setUser(data.user);
-    } catch (error: any) {
-      console.error("Login error:", error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ Save user data to Firestore (optional)
+    await saveUserToFirestore(userData);
+
+    // ✅ Sign in to Firebase using the custom token returned from backend
+    const firebaseCustomToken = data.firebaseCustomToken;
+    if (!firebaseCustomToken) throw new Error("No Firebase token received");
+
+    await signInWithCustomToken(auth, firebaseCustomToken);
+    // console.log("✅ Logged into Firebase Auth with custom token");
+
+    setUser(data.user);
+    console.log("✅ User logged in:", data.user);
+  } catch (error: any) {
+    console.error("Login error:", error.message);
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+};
 
   // LOGOUT (clears secure cookie via API)
   const logout = async () => {
@@ -190,23 +202,23 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // BALANCE (only if authenticated)
-  const getWalletBalance = async () => {
-    try {
-      const res = await fetch("/api/wallet-bal", {
-        method: "POST",
-          headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(""),
-      });
+  // const getWalletBalance = async () => {
+  //   try {
+  //     const res = await fetch("/api/wallet-bal", {
+  //       method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(""),
+  //     });
 
-      const data = await res.json();
-      const myBalance = data.data.walletBalance;
-      // console.log("walletBallance",data.walletBalance)
-      // console.log("Api Response",data)
-      setBalance(myBalance);
-    } catch (err) {
-      console.error("Wallet balance error:", err);
-    }
-  };
+  //     const data = await res.json();
+  //     const myBalance = data.data.walletBalance;
+  //     // console.log("walletBallance",data.walletBalance)
+  //     // console.log("Api Response",data)
+  //     setBalance(myBalance);
+  //   } catch (err) {
+  //     console.error("Wallet balance error:", err);
+  //   }
+  // };
 
   // On mount, check user via secure cookie
   useEffect(() => {
@@ -214,13 +226,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Only call wallet balance once user is set
-  useEffect(() => {
+  // useEffect(() => {
 
-    if (pathname === "/dashboard") {
-      getWalletBalance();
+  //   if (pathname === "/dashboard") {
+  //     getWalletBalance();
 
-    }
-  }, [user]);
+  //   }
+  // }, [user]);
 
   return (
     <UserContext.Provider
