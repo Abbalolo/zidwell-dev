@@ -1,5 +1,6 @@
-import { dbAdmin } from "@/app/firebase/firebaseAdmin";
+// app/api/save-user/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import supabase from "@/app/supabase/supabase";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,36 +21,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const docId = email.toLowerCase();
+    const { data, error } = await supabase
+      .from("users")
+      .upsert(
+        {
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          phone,
+          walletId,
+          bankAccountName,
+          bankAccountNumber,
+          loginAt: new Date().toISOString(),
+        },
+        { onConflict: "email" } // ensures update if email exists
+      );
 
-    await dbAdmin.collection("users").doc(docId).set(
-      {
-        email,
-        firstName,
-        lastName,
-        phone,
-        walletId,
-        bankAccountName,
-        bankAccountNumber,
-        bankCode,
-        // zidCoin: 30,
-        // subscription: "inActive",
-        loginAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-
-    return NextResponse.json({ success: true }, { status: 200 });
-
-  } catch (error: any) {
-    console.error("❌ Firestore Error:", error);
-
-    if (error.response?.data) {
-      return NextResponse.json(error.response.data, { status: 400 });
+    if (error) {
+      console.error("❌ Supabase Error:", error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    return NextResponse.json({ success: true, data }, { status: 200 });
+
+  } catch (error: any) {
+    console.error("❌ Unexpected Error:", error.message);
     return NextResponse.json(
-      { error: "Failed to save user to Firestore" },
+      { error: "Failed to save user to Supabase" },
       { status: 500 }
     );
   }

@@ -100,15 +100,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     walletId: string;
     bankAccountName: string;
     bankAccountNumber: string;
-    bankCode: string;
+   
   }) => {
     try {
       const response = await axios.post("/api/save-user-db", userData);
 
       if (response.status === 200) {
-        console.log("✅ User saved to Firestore");
+        console.log("✅ User saved to Supabase");
       } else {
-        console.error("❌ Firestore saving failed:", response.data.error);
+        console.error("❌ Supabase saving failed:", response.data.error);
       }
     } catch (error: any) {
       console.error("❌ API error:", error.response?.data || error.message);

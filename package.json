@@ -40,6 +40,7 @@
     "@react-pdf-viewer/core": "^3.12.0",
     "@react-pdf-viewer/print": "^3.12.0",
     "@react-pdf/renderer": "^4.3.0",
+    "@supabase/supabase-js": "^2.54.0",
     "aos": "^2.3.4",
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",

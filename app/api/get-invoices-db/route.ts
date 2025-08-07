@@ -1,8 +1,8 @@
-// /api/get-invoices-db/route.ts
-import { NextResponse } from 'next/server';
-import { dbAdmin } from '@/app/firebase/firebaseAdmin';
+// app/api/get-invoices-db/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import supabase from '@/app/supabase/supabase';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { userEmail } = await req.json();
 
@@ -10,21 +10,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'User email is required' }, { status: 400 });
     }
 
-    const snapshot = await dbAdmin
-      .collection('invoices')
-      .where('createdBy', '==', userEmail)
-      .orderBy('sentAt', 'desc') 
-      .get();
+    const { data: invoices, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('createdBy', userEmail)
+      .order('sentAt', { ascending: false });
 
-
-    const invoices = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    if (error) {
+      console.error('❌ Supabase fetch error:', error.message);
+      return NextResponse.json({ message: 'Failed to fetch invoices' }, { status: 500 });
+    }
 
     return NextResponse.json({ invoices }, { status: 200 });
-  } catch (error) {
-    console.error('Error fetching invoices:', error);
+
+  } catch (error: any) {
+    console.error('❌ Server error:', error.message);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
