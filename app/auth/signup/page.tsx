@@ -9,34 +9,12 @@ import axios from "axios";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/app/components/ui/card";
+
 import { Eye, EyeOff } from "lucide-react";
-import logo from "/public/logo.png";
-import mobileBg from "../../../public/zidwell-bg-mobile.jpg";
-import ZidwellWelcomeModal from "@/app/components/ZidwellWelcome";
+import logo from "@/public/logo.png";
+
 import Carousel from "@/app/components/Carousel";
-import image1 from "../../../public/zid-pic/image1.jpg";
-import image2 from "../../../public/zid-pic/image2.jpg";
-import image3 from "../../../public/zid-pic/image3.jpg";
-import image4 from "../../../public/zid-pic/image4.jpg";
-import image5 from "../../../public/zid-pic/image5.jpg";
-import image6 from "../../../public/zid-pic/image6.jpg";
-import image8 from "../../../public/zid-pic/image8.jpg";
-import image9 from "../../../public/zid-pic/image9.jpg";
-import image10 from "../../../public/zid-pic/image10.jpg";
-import image11 from "../../../public/zid-pic/image11.jpg";
-import image12 from "../../../public/zid-pic/image12.jpg";
-import image13 from "../../../public/zid-pic/image13.jpg";
-import image14 from "../../../public/zid-pic/image14.jpg";
-import image15 from "../../../public/zid-pic/image15.jpg";
-import image16 from "../../../public/zid-pic/image16.jpg";
-import image17 from "../../../public/zid-pic/image17.jpg";
+
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -60,6 +38,25 @@ export default function RegisterPage() {
 
   const [isMobile, setIsMobile] = useState(false);
 
+
+   const images = [
+  "/zid-pic/image1.jpg",
+  "/zid-pic/image2.jpg",
+  "/zid-pic/image3.jpg",
+  "/zid-pic/image4.jpg",
+  "/zid-pic/image5.jpg",
+  "/zid-pic/image6.jpg",
+  "/zid-pic/image8.jpg",
+  "/zid-pic/image9.jpg",
+  "/zid-pic/image10.jpg",
+  "/zid-pic/image11.jpg",
+  "/zid-pic/image12.jpg",
+  "/zid-pic/image13.jpg",
+  "/zid-pic/image14.jpg",
+  "/zid-pic/image15.jpg",
+  "/zid-pic/image16.jpg",
+  "/zid-pic/image17.jpg",
+];
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -94,24 +91,7 @@ export default function RegisterPage() {
     },
   };
 
-  const images = [
-    image1,
-    image2,
-    image3,
-    image4,
-    image5,
-    image6,
-    image8,
-    image9,
-    image10,
-    image11,
-    image12,
-    image13,
-    image14,
-    image15,
-    image16,
-    image17,
-  ];
+  
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -163,6 +143,28 @@ export default function RegisterPage() {
     }
   };
 
+  const saveUserToSupabase = async (userData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    walletId: string;
+    bankAccountName: string;
+    bankAccountNumber: string;
+  }) => {
+    try {
+      const response = await axios.post("/api/save-user-db", userData);
+
+      if (response.status === 200) {
+        console.log("✅ User saved to Supabase");
+      } else {
+        console.error("❌ Supabase saving failed:", response.data.error);
+      }
+    } catch (error: any) {
+      console.error("❌ API error:", error.response?.data || error.message);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const validationErrors = validateForm();
@@ -175,7 +177,7 @@ export default function RegisterPage() {
     const { firstName, lastName, email, password, phone, bvn, pin } = formData;
 
     try {
-      await sendVerification(email);
+      // await sendVerification(email);
 
       const paybetaData = {
         first_name: firstName,
@@ -191,6 +193,20 @@ export default function RegisterPage() {
         "/api/paybeta-auth-register",
         paybetaData
       );
+
+      const userData: any = {
+        email: response.data.emailAddress,
+        firstName: response.data.firstName,
+        lastName: response.data.lastName,
+        phone: phone,
+        walletId: response.data.walletId,
+        bankAccountName: response.data.bankAccountName,
+        bankName: response.data.bankName,
+        bankAccountNumber: response.data.bankAccountNumber,
+      };
+
+      // ✅ Save user data to Supabase (optional)
+      await saveUserToSupabase(userData);
 
       // console.log("✅ Paybeta response:", response.data);
 
@@ -220,13 +236,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen fade-in">
+    <div className="lg:flex lg:justify-between bg-gray-50 fade-in">
       <div
-        className="lg:w-[50%] flex justify-center px-6 py-8 fade-in bg-cover bg-center min-h-screen"
+        className="lg:w-[50%] min-h-screen md:h-full flex justify-center  items-center px-6 md:py-8 fade-in bg-cover bg-center"
         style={
           isMobile
             ? {
-                backgroundImage: `url(${mobileBg.src})`,
+                backgroundImage: `url("/zidwell-bg-mobile.jpg")`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }
@@ -236,18 +252,18 @@ export default function RegisterPage() {
         <form
           data-aos="fade-down"
           onSubmit={handleSubmit}
-          className="space-y-4 flex flex-col justify-center  w-full  p-6 md:border md:border-gray-200 rounded-lg md:shadow-md bg-white"
+          className="space-y-2 flex flex-col justify-center  w-full  p-6 md:border rounded-lg md:shadow-md bg-gray-50"
         >
           <div className="mb-8 text-center">
             {/* Logo and Brand */}
             <div className="flex items-center justify-center mb-2">
-              <Image
-                src={logo}
-                alt="Zidwell Logo"
-                width={32}
-                height={32}
-                className=" w-20 object-contain"
-              />
+             <Image
+  src={logo}
+  alt="Zidwell Logo"
+  width={32}
+  height={32}
+  className="w-20 object-contain"
+/>
               <h1 className="font-bold text-lg">Zidwell</h1>
             </div>
 
@@ -295,6 +311,7 @@ export default function RegisterPage() {
                 id="email"
                 name="email"
                 type="email"
+                placeholder="Email address"
                 value={formData.email}
                 onChange={handleChange}
               />
@@ -424,7 +441,7 @@ export default function RegisterPage() {
               </Button>
             )}
             {currentStep < 4 ? (
-              <Button type="button" onClick={nextStep}>
+              <Button type="button" className="bg-[#C29307]" onClick={nextStep}>
                 Next
               </Button>
             ) : (

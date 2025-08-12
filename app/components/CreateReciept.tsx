@@ -1,0 +1,436 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { TabsContent } from "./ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { useUserContextData } from "../context/userData";
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
+import { Label } from "./ui/label";
+import ReceiptPreview from "./previews/RecieptPreview";
+import { Plus } from "lucide-react";
+
+interface ReceiptItem {
+  item: string;
+  quantity: number;
+  price: number;
+}
+
+interface ReceiptForm {
+  name: string;
+  email: string;
+  receiptId: string;
+  bill_to: string;
+  from: string;
+  issue_date: string;
+  customer_note: string;
+  // amount_paid: string;
+
+  payment_for: string;
+  receipt_items: ReceiptItem[];
+}
+
+function CreateReceipt() {
+  const router = useRouter();
+  const { user } = useUserContextData();
+
+  const [form, setForm] = useState<ReceiptForm>({
+    name: "",
+    email: "",
+    receiptId: "",
+    bill_to: "",
+    from: "",
+    issue_date: "",
+    customer_note: "",
+    // amount_paid: "",
+
+    payment_for: "",
+    receipt_items: [],
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const generateReceiptId = () => {
+    const datePart = new Date().getFullYear();
+    const randomPart = Math.floor(1000 + Math.random() * 9000);
+    return `REP-${datePart}-${randomPart}`;
+  };
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        receiptId: generateReceiptId(),
+        issue_date: today,
+        from:
+          user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.email || "",
+      }));
+    }
+  }, [user]);
+
+  const updateReceiptItem = (
+    index: number,
+    field: keyof ReceiptItem,
+    value: string | number
+  ) => {
+    const items: any = [...form.receipt_items];
+    items[index][field] = field === "item" ? String(value) : Number(value);
+    setForm((prev) => ({ ...prev, receipt_items: items }));
+  };
+
+  const addReceiptItem = () => {
+    setForm((prev) => ({
+      ...prev,
+      receipt_items: [
+        ...prev.receipt_items,
+        { item: "", quantity: 1, price: 0 },
+      ],
+    }));
+  };
+
+  const removeReceiptItem = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      receipt_items: prev.receipt_items.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" })); // clear error while typing
+  };
+
+  const validateForm = () => {
+    let newErrors: Record<string, string> = {};
+
+    if (!form.name.trim()) newErrors.name = "Customer name is required.";
+    if (!form.email.trim()) {
+      newErrors.email = "Customer email is required.";
+    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+      newErrors.email = "Invalid email format.";
+    }
+
+    if (form.email.trim() === user?.email) {
+      newErrors.email = "Customer email cannot be initiator email.";
+    }
+    if (!form.receiptId.trim())
+      newErrors.receiptId = "Receipt number is required.";
+    if (!form.from.trim()) newErrors.from = "From field is required.";
+    if (!form.bill_to.trim()) newErrors.bill_to = "Bill To is required.";
+    if (!form.issue_date.trim())
+      newErrors.issue_date = "Receipt date is required.";
+    if (!form.customer_note.trim())
+      newErrors.customer_note = "Customer note is required";
+    if (!form.payment_for.trim())
+      newErrors.payment_for = "Payment description is required.";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveReceipt = async () => {
+    try {
+      if (!user?.email) {
+        return Swal.fire({
+          icon: "warning",
+          title: "Unauthorized",
+          text: "You must be logged in to send a receipt.",
+        });
+      }
+
+      const payload = {
+        data: form,
+        initiatorName: user ? `${user.firstName} ${user.lastName}` : "",
+        initiatorEmail: user?.email || "",
+        receiptId: form.receiptId || generateReceiptId(),
+      };
+
+      const res = await fetch("/api/send-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+
+      Swal.fire({
+        icon: "success",
+        title: "Receipt Saved!",
+        text: "Your receipt was successfully saved.",
+        confirmButtonColor: "#3085d6",
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to Send Receipt",
+        text: (err as Error)?.message || "An unexpected error occurred.",
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    console.log("form data", form);
+    setLoading(true);
+    await handleSaveReceipt();
+    setForm({
+      name: "",
+      email: "",
+      receiptId: "",
+      bill_to: "",
+      from: "",
+      issue_date: "",
+      customer_note: "",
+      payment_for: "",
+      receipt_items: [],
+    });
+    setLoading(false);
+    router.refresh();
+  };
+
+  return (
+    <TabsContent value="create" className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Receipt</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Customer Name */}
+            <div>
+              <Label>Customer Name</Label>
+              <Input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Customer name"
+              />
+              {errors.name && (
+                <p className="text-red-500 text-sm">{errors.name}</p>
+              )}
+            </div>
+
+            {/* Customer Email */}
+            <div>
+              <Label>Customer Email</Label>
+              <Input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Customer email address"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Receipt Number */}
+            <div>
+              <Label>Receipt Number</Label>
+              <Input
+                name="receiptId"
+                value={form.receiptId}
+                onChange={handleChange}
+              />
+              {errors.receiptId && (
+                <p className="text-red-500 text-sm">{errors.receiptId}</p>
+              )}
+            </div>
+
+            {/* From */}
+            <div>
+              <Label>From</Label>
+              <Input name="from" value={form.from} onChange={handleChange} />
+              {errors.from && (
+                <p className="text-red-500 text-sm">{errors.from}</p>
+              )}
+            </div>
+
+            {/* Bill To */}
+            <div>
+              <Label>Bill To</Label>
+              <Input
+                name="bill_to"
+                value={form.bill_to}
+                onChange={handleChange}
+                placeholder="Customer business or email"
+              />
+              {errors.bill_to && (
+                <p className="text-red-500 text-sm">{errors.bill_to}</p>
+              )}
+            </div>
+
+            {/* Receipt Date */}
+            <div>
+              <Label>Receipt Date</Label>
+              <Input
+                type="date"
+                name="issue_date"
+                value={form.issue_date}
+                onChange={handleChange}
+              />
+              {errors.issue_date && (
+                <p className="text-red-500 text-sm">{errors.issue_date}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label className="block text-sm font-medium mb-2">
+              Receipt Items
+            </Label>
+            <div className="space-y-3">
+              {form.receipt_items.map((item, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-12 gap-2 items-center"
+                >
+                  <div className="col-span-5">
+                    <Input
+                      placeholder="Description"
+                      value={item.item}
+                      onChange={(e) =>
+                        updateReceiptItem(index, "item", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateReceiptItem(
+                          index,
+                          "quantity",
+                          Number(e.target.value)
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      placeholder="Rate"
+                      value={item.price}
+                      onChange={(e) =>
+                        updateReceiptItem(
+                          index,
+                          "price",
+                          Number(e.target.value)
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      placeholder="Amount"
+                      value={item.quantity * item.price}
+                      disabled
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeReceiptItem(index)}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addReceiptItem}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Item
+              </Button>
+            </div>
+          </div>
+
+          {/* Amount Paid */}
+          {/* <div>
+              <Label>Amount Paid</Label>
+              <Input
+                name="amount_paid"
+                value={form.amount_paid}
+                onChange={handleChange}
+                placeholder="paid amount "
+              />
+              {errors.amount_paid && (
+                <p className="text-red-500 text-sm">{errors.amount_paid}</p>
+              )}
+            </div> */}
+
+          {/* Payment For */}
+          <div>
+            <Label>Payment For</Label>
+            <Input
+              name="payment_for"
+              value={form.payment_for}
+              onChange={handleChange}
+              placeholder="payment description"
+            />
+            {errors.payment_for && (
+              <p className="text-red-500 text-sm">{errors.payment_for}</p>
+            )}
+          </div>
+
+          <div>
+            <Label className="block text-sm font-medium mb-2">
+              Customer Note
+            </Label>
+            <textarea
+              name="customer_note"
+              value={form.customer_note}
+              onChange={handleChange}
+              className="w-full p-3 border rounded-md h-24"
+              placeholder="Additional notes..."
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              onClick={handleSubmit}
+              className="bg-[#C29307] hover:bg-[#C29307]"
+            >
+              {loading ? "Processing..." : "Create Receipt"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPreview(true)}
+            >
+              Preview
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {showPreview && (
+        <ReceiptPreview form={form} onClose={() => setShowPreview(false)} />
+      )}
+    </TabsContent>
+  );
+}
+
+export default CreateReceipt;

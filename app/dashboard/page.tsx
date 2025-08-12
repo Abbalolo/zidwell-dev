@@ -8,32 +8,25 @@ import DashboardSidebar from "../components/dashboard-sidebar";
 import ReferralSection from "../components/referral-section";
 import ServiceCards from "../components/service-card";
 import TransactionHistory from "../components/transaction-history";
-import { useUserContextData } from "../context/userData";
-import Loader from "../components/Loader";
+
 
 export default function page() {
 
-  // const { userData, loading } = useUserContextData();
-
-
-
-// if (loading) return <Loader />;
-// if (!userData) return <p>No data found.</p>;
-
+ 
 
   return (
-    <div className="min-h-screen bg-gray-50 fade-in">
+    <div className="min-h-screen bg-gray-50 fade-in overflow-x-hidden">
       <DashboardSidebar />
       <div className="lg:ml-64">
         <DashboardHeader />
-        <main className="p-6">
+        <main className="p-5">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Welcome Message */}
             <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="md:text-3xl text-xl  font-bold text-gray-900 mb-2">
                 Welcome to <span className="text-[#C29307]">Zidwell,</span> the most reliable platform for your
               </h1>
-              <p className="text-xl text-gray-600">
+              <p className="md:text-xl text-gray-600">
                 Data Bundle, Airtime, Bill Payments...
               </p>
             </div>
@@ -51,7 +44,7 @@ export default function page() {
             <TransactionHistory />
 
             {/* Referral Section */}
-            <ReferralSection />
+            {/* <ReferralSection /> */}
           </div>
         </main>
       </div>

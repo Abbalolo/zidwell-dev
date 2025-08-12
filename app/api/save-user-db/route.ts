@@ -14,13 +14,15 @@ export async function POST(req: NextRequest) {
       walletId,
       bankAccountName,
       bankAccountNumber,
-      bankCode,
+      bankName,
     } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
+
+   
     const { data, error } = await supabase
       .from("users")
       .upsert(
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest) {
           lastName,
           phone,
           walletId,
+          bankName,
           bankAccountName,
           bankAccountNumber,
           loginAt: new Date().toISOString(),

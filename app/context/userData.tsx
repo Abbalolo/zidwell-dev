@@ -10,8 +10,8 @@ import React, {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
-import { signInWithCustomToken } from "firebase/auth";
-import { auth } from "../firebase/firebaseAuth";
+
+import supabase from "../supabase/supabase";
 
 export type PodcastEpisode = {
   id: string;
@@ -41,7 +41,6 @@ interface UserContextType {
   user: User | null;
   loading: boolean;
   episodes: PodcastEpisode[];
-balance: number | null;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   isDarkMode: boolean;
@@ -54,7 +53,6 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
@@ -92,31 +90,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     applyTheme(newVal);
   };
 
-  const saveUserToFirestore = async (userData: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    walletId: string;
-    bankAccountName: string;
-    bankAccountNumber: string;
-   
-  }) => {
-    try {
-      const response = await axios.post("/api/save-user-db", userData);
-
-      if (response.status === 200) {
-        console.log("✅ User saved to Supabase");
-      } else {
-        console.error("❌ Supabase saving failed:", response.data.error);
-      }
-    } catch (error: any) {
-      console.error("❌ API error:", error.response?.data || error.message);
-    }
-  };
-
+ 
   // LOGIN (sets secure cookie via API)
- const login = async (credentials: { email: string; password: string }) => {
+
+
+const login = async (credentials: { email: string; password: string }) => {
   try {
     setLoading(true);
 
@@ -129,30 +107,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || "Login failed");
 
-    const userData: any = {
-      email: data.user?.email,
-      firstName: data.user?.firstName,
-      lastName: data.user?.lastName,
-      phone: data.user?.phone,
-      walletId: data.user?.walletId,
-      bankAccountName: data.user?.bankAccountName,
-      bankName: data.user?.bankName,
-      bankAccountNumber: data.user?.bankAccountNumber,
-      bankCode: data.user?.bankCode,
-    };
+    const { user, supabaseToken } = data;
 
-    // ✅ Save user data to Firestore (optional)
-    await saveUserToFirestore(userData);
+ 
+    localStorage.setItem("supabaseToken", supabaseToken);
 
-    // ✅ Sign in to Firebase using the custom token returned from backend
-    const firebaseCustomToken = data.firebaseCustomToken;
-    if (!firebaseCustomToken) throw new Error("No Firebase token received");
+   
+    setUser(user);
 
-    await signInWithCustomToken(auth, firebaseCustomToken);
-    // console.log("✅ Logged into Firebase Auth with custom token");
-
-    setUser(data.user);
-    console.log("✅ User logged in:", data.user);
+    // console.log("✅ User logged in:", user);
   } catch (error: any) {
     console.error("Login error:", error.message);
     throw error;
@@ -160,6 +123,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }
 };
+
+
 
   // LOGOUT (clears secure cookie via API)
   const logout = async () => {
@@ -181,19 +146,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
       if (response.ok) {
         setUser(data.user);
-        console.log("User fetched:", data.user);
+        // console.log("User fetched:", data.user);
       } else {
         setUser(null);
-        if (pathname.startsWith("/dashboard")) {
-          router.push("/auth/login");
-        }
+        
       }
 
       // Set dark mode
-      const storedTheme = localStorage.getItem("theme");
-      const dark = storedTheme === "dark";
-      setIsDarkMode(dark);
-      applyTheme(dark);
+      // const storedTheme = localStorage.getItem("theme");
+      // const dark = storedTheme === "dark";
+      // setIsDarkMode(dark);
+      // applyTheme(dark);
     } catch (err) {
       console.error("Error fetching user:", err);
     } finally {
@@ -201,44 +164,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // BALANCE (only if authenticated)
-  // const getWalletBalance = async () => {
-  //   try {
-  //     const res = await fetch("/api/wallet-bal", {
-  //       method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(""),
-  //     });
+ 
 
-  //     const data = await res.json();
-  //     const myBalance = data.data.walletBalance;
-  //     // console.log("walletBallance",data.walletBalance)
-  //     // console.log("Api Response",data)
-  //     setBalance(myBalance);
-  //   } catch (err) {
-  //     console.error("Wallet balance error:", err);
-  //   }
-  // };
 
   // On mount, check user via secure cookie
-  useEffect(() => {
+ useEffect(() => {
+  if (pathname.includes("/dashboard")) {
     fetchUser();
-  }, []);
+  }
+}, [pathname]);
 
-  // Only call wallet balance once user is set
-  // useEffect(() => {
-
-  //   if (pathname === "/dashboard") {
-  //     getWalletBalance();
-
-  //   }
-  // }, [user]);
 
   return (
     <UserContext.Provider
       value={{
         user,
-        balance,
         episodes,
         loading,
         login,

@@ -3,9 +3,10 @@ import DashboardHeader from "@/app/components/dashboard-hearder"
 import InvoiceManager from "@/app/components/InvoiceGen" 
 import ProtectedRoute from "@/app/components/ProtectedRoute"
 
-export default function InvoicePage() {
+export default function page() {
+   
   return (
-    <ProtectedRoute>
+
 
     <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
@@ -26,6 +27,6 @@ export default function InvoicePage() {
       </div>
     </div>
 
-    </ProtectedRoute>
+   
   )
 }

@@ -6,7 +6,7 @@ import ProtectedRoute from "@/app/components/ProtectedRoute";
 
 export default function page() {
   return (
-    <ProtectedRoute>
+    
 <div className="min-h-screen bg-gray-50">
       <DashboardSidebar />
 
@@ -20,7 +20,7 @@ export default function page() {
         </main>
       </div>
     </div>
-    </ProtectedRoute>
+   
     
   )
 }

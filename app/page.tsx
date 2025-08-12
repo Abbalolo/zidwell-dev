@@ -28,7 +28,7 @@ useEffect(() => {
 }, []);
 
   return (
-    <div className="fade-in min-h-screen bg-white">
+    <div className="fade-in min-h-screen">
       <Header />
       <Hero />
       <Services />

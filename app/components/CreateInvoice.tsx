@@ -5,10 +5,12 @@ import { TabsContent } from "./ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, Router } from "lucide-react";
 import InvoicePreview from "./previews/InvoicePreview";
 import { useUserContextData } from "../context/userData";
 import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
+import { Label } from "./ui/label";
 
 interface InvoiceItem {
   item: string;
@@ -20,39 +22,40 @@ interface InvoiceForm {
   name: string;
   email: string;
   message: string;
-  invoiceId: string;
-  billTo: string;
+  invoice_id: string;
+  bill_to: string;
   from: string;
-  issueDate: string;
-  dueDate: string;
-  deliveryDue: string;
-  deliveryIssue: string;
-  deliveryTime: string;
-  customerNote: string;
-  accountNumber: string;
-  accountName: string;
-  accountToPayName: string;
-  invoiceItems: InvoiceItem[];
+  issue_date: string;
+  due_date: string;
+  delivery_due: string;
+  delivery_issue: string;
+  delivery_time: string;
+  customer_note: string;
+  account_number: string;
+  account_name: string;
+  account_to_pay_name: string;
+  invoice_items: InvoiceItem[];
 }
 
 function CreateInvoice() {
+  const router = useRouter();
   const [form, setForm] = useState<InvoiceForm>({
     name: "",
     email: "",
     message: "",
-    invoiceId: "",
-    billTo: "",
+    invoice_id: "",
+    bill_to: "",
     from: "",
-    issueDate: "",
-    dueDate: "",
-    deliveryDue: "",
-    deliveryIssue: "",
-    deliveryTime: "",
-    customerNote: "",
-    accountNumber: "",
-    accountName: "",
-    accountToPayName: "",
-    invoiceItems: [{ item: "", quantity: 1, price: 0 }],
+    issue_date: "",
+    due_date: "",
+    delivery_due: "",
+    delivery_issue: "",
+    delivery_time: "",
+    customer_note: "",
+    account_number: "",
+    account_name: "",
+    account_to_pay_name: "",
+    invoice_items: [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -97,22 +100,25 @@ function CreateInvoice() {
     field: keyof InvoiceItem,
     value: string | number
   ) => {
-    const items: any = [...form.invoiceItems];
+    const items: any = [...form.invoice_items];
     items[index][field] = field === "item" ? String(value) : Number(value);
-    setForm((prev) => ({ ...prev, invoiceItems: items }));
+    setForm((prev) => ({ ...prev, invoice_items: items }));
   };
 
   const addInvoiceItem = () => {
     setForm((prev) => ({
       ...prev,
-      invoiceItems: [...prev.invoiceItems, { item: "", quantity: 1, price: 0 }],
+      invoice_items: [
+        ...prev.invoice_items,
+        { item: "", quantity: 1, price: 0 },
+      ],
     }));
   };
 
   const removeInvoiceItem = (index: number) => {
     setForm((prev) => ({
       ...prev,
-      invoiceItems: prev.invoiceItems.filter((_, i) => i !== index),
+      invoice_items: prev.invoice_items.filter((_, i) => i !== index),
     }));
   };
 
@@ -135,8 +141,8 @@ function CreateInvoice() {
       setForm((prev) => ({
         ...prev,
         invoiceId: generateInvoiceId(),
-        issueDate: today,
-        dueDate: getDueDate(14),
+        issue_date: today,
+        due_date: getDueDate(14),
         from:
           user.firstName && user.lastName
             ? `${user.firstName} ${user.lastName}`
@@ -156,12 +162,14 @@ function CreateInvoice() {
       }
 
       const payload = {
-        ...form,
-        createdBy: user.email,
-        invoiceId: form.invoiceId || generateInvoiceId(),
+        data: form ,
+        initiatorName: user ? `${user.firstName} ${user.lastName}` : "",
+        initiatorEmail: user?.email || "",
+        invoiceId: form?.invoice_id || generateInvoiceId(),
       };
+      
 
-      const res = await fetch("/api/save-invoice-db", {
+      const res = await fetch("/api/send-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -188,28 +196,30 @@ function CreateInvoice() {
 
   const handleSubmit = async () => {
     setLoading(true);
-    console.log("Submitted Invoice Form", form);
+    // console.log("Submitted Invoice Form", form);
 
     await handleSaveInvoice();
     setForm({
       name: "",
       email: "",
       message: "",
-      invoiceId: "",
-      billTo: "",
+      invoice_id: "",
+      bill_to: "",
       from: "",
-      issueDate: "",
-      dueDate: "",
-      deliveryDue: "",
-      deliveryIssue: "",
-      deliveryTime: "",
-      customerNote: "",
-      accountNumber: "",
-      accountName: "",
-      accountToPayName: "",
-      invoiceItems: [{ item: "", quantity: 1, price: 0 }],
+      issue_date: "",
+      due_date: "",
+      delivery_due: "",
+      delivery_issue: "",
+      delivery_time: "",
+      customer_note: "",
+      account_number: "",
+      account_name: "",
+      account_to_pay_name: "",
+    
+      invoice_items: [],
     });
     setLoading(false);
+    router.refresh();
   };
 
   useEffect(() => {
@@ -227,11 +237,11 @@ function CreateInvoice() {
           <CardTitle>Create New Invoice</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Client Name
-              </label>
+              </Label>
               <Input
                 name="name"
                 value={form.name}
@@ -240,9 +250,9 @@ function CreateInvoice() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Client Email
-              </label>
+              </Label>
               <Input
                 type="email"
                 name="email"
@@ -252,18 +262,18 @@ function CreateInvoice() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Invoice Number
-              </label>
+              </Label>
               <Input
                 name="invoiceId"
-                value={form.invoiceId}
+                value={form.invoice_id}
                 onChange={handleChange}
                 placeholder="INV-2024-001"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">From</label>
+              <Label className="block text-sm font-medium mb-2">From</Label>
               <Input
                 name="from"
                 value={form.from}
@@ -272,63 +282,63 @@ function CreateInvoice() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Bill To</label>
+              <Label className="block text-sm font-medium mb-2">Bill To</Label>
               <Input
-                name="billTo"
-                value={form.billTo}
+                name="bill_to"
+                value={form.bill_to}
                 onChange={handleChange}
                 placeholder="Customer business or email"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Invoice Date
-              </label>
+              </Label>
               <Input
                 type="date"
-                name="issueDate"
-                value={form.issueDate}
+                name="issue_date"
+                value={form.issue_date}
                 onChange={handleChange}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Due Date</label>
+              <Label className="block text-sm font-medium mb-2">Due Date</Label>
               <Input
                 type="date"
-                name="dueDate"
-                value={form.dueDate}
+                name="due_date"
+                value={form.due_date}
                 onChange={handleChange}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Delivery Issue Date
-              </label>
+              </Label>
               <Input
                 type="date"
-                name="deliveryIssue"
-                value={form.deliveryIssue}
+                name="delivery_issue"
+                value={form.delivery_issue}
                 onChange={handleChange}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Delivery Due Date
-              </label>
+              </Label>
               <Input
                 type="date"
-                name="deliveryDue"
-                value={form.deliveryDue}
+                name="delivery_due"
+                value={form.delivery_due}
                 onChange={handleChange}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Delivery Time
-              </label>
+              </Label>
               <Input
-                name="deliveryTime"
-                value={form.deliveryTime}
+                name="delivery_time"
+                value={form.delivery_time}
                 onChange={handleChange}
                 placeholder="e.g. 3 Days"
               />
@@ -336,11 +346,11 @@ function CreateInvoice() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <Label className="block text-sm font-medium mb-2">
               Invoice Items
-            </label>
+            </Label>
             <div className="space-y-3">
-              {form.invoiceItems.map((item, index) => (
+              {form.invoice_items.map((item, index) => (
                 <div
                   key={index}
                   className="grid grid-cols-12 gap-2 items-center"
@@ -414,7 +424,7 @@ function CreateInvoice() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Message</label>
+            <Label className="block text-sm font-medium mb-2">Message</Label>
             <Input
               name="message"
               value={form.message}
@@ -424,37 +434,38 @@ function CreateInvoice() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <Label className="block text-sm font-medium mb-2">
               Customer Note
-            </label>
+            </Label>
             <textarea
-              name="customerNote"
-              value={form.customerNote}
+              name="customer_note"
+              value={form.customer_note}
               onChange={handleChange}
               className="w-full p-3 border rounded-md h-24"
               placeholder="Additional notes..."
             />
           </div>
+
           <div className="flex md:flex-row flex-col gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Bank Account Number
-              </label>
+              </Label>
               <Input
-                name="accountNumber"
-                value={form.accountNumber}
+                name="account_number"
+                value={form.account_number}
                 onChange={handleChange}
                 placeholder="2257555555"
               />
             </div>
 
             <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">
+              <Label className="block text-sm font-medium mb-2">
                 Account to Pay Name
-              </label>
+              </Label>
               <Input
-                name="accountToPayName"
-                value={form.accountToPayName}
+                name="account_to_pay_name"
+                value={form.account_to_pay_name}
                 onChange={handleChange}
                 placeholder="josh emmanuel"
               />
@@ -462,18 +473,18 @@ function CreateInvoice() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <Label className="block text-sm font-medium mb-2">
               Bank Account Name
-            </label>
+            </Label>
             <Input
-              name="accountName"
-              value={form.accountName}
+              name="account_name"
+              value={form.account_name}
               onChange={handleChange}
               placeholder="GTB,UBA etc.."
             />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col md:flex-row gap-3">
             <Button
               onClick={handleSubmit}
               disabled={!form}
@@ -485,7 +496,7 @@ function CreateInvoice() {
                   Processing...
                 </div>
               ) : (
-                <div className="flex items-center gap-2">Create Invoice</div>
+                <div className="flex items-center gap-2">Generate Invoice</div>
               )}
             </Button>
 

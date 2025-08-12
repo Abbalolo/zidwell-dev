@@ -1,10 +1,103 @@
+# Zidwell Next.js Project
+## Description
+
+**Zidwell** is a modern web application built with Next.js, designed to provide a seamless platform for managing podcasts, digital signatures, and user authentication. The app integrates with third-party services such as Paybeta and Supabase to offer secure wallet management, password resets, and real-time data handling. Users can sign up, manage their profiles, reset wallet PINs, and access a dashboard for podcasts and platform services—all within a responsive and user-friendly interface.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## Project Structure
+```
+.
+├── .env
+├── .gitignore
+├── components.json
+├── logo.txt
+├── netlify.toml
+├── next-env.d.ts
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── README.md
+├── tsconfig.json
+├── .next/
+├── app/
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── api/
+│   │   ├── reset-password/
+│   │   │   └── route.ts
+│   │   ├── reset-password-code/
+│   │   │   └── route.ts
+│   │   └── ...other API routes
+│   ├── auth/
+│   │   └── signup/
+│   │       └── page.tsx
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   └── ...other UI components
+│   │   ├── Navbar.tsx
+│   │   ├── Footer.tsx
+│   │   ├── Sidebar.tsx
+│   │   └── Form.tsx
+│   ├── context/
+│   │   ├── AuthContext.tsx
+│   │   └── ThemeContext.tsx
+│   ├── dashboard/
+│   │   └── index.tsx
+│   ├── hook/
+│   │   └── useLegacy.ts
+│   ├── hooks/
+│   │   ├── useAuth.ts
+│   │   ├── useFetch.ts
+│   │   └── usePodcast.ts
+│   ├── platform-services/
+│   │   ├── paybeta.ts
+│   │   └── supabase.ts
+│   ├── podcasts/
+│   │   ├── [id]/
+│   │   │   └── page.tsx
+│   │   ├── create/
+│   │   │   └── page.tsx
+│   │   └── edit/
+│   │       └── [id]/
+│   │           └── page.tsx
+│   ├── sign/
+│   │   └── sign-document/
+│   │       └── page.tsx
+│   ├── signee-page/
+│   │   └── signee-dashboard/
+│   │       └── page.tsx
+│   └── supabase/
+│       ├── client.ts
+│       └── auth.ts
+├── lib/
+│   ├── middleware.ts
+│   ├── utils.ts
+│   └── constants.ts
+├── public/
+│   ├── images/
+│   │   ├── logo.png
+│   │   └── ...other images
+│   └── robots.txt
+```
 
-First, run the development server:
+## Key Configuration
 
-```bash
+- **TypeScript:** Strict mode enabled, paths aliasing (see `tsconfig.json`).
+- **UI Library:** [shadcn/ui](https://ui.shadcn.com/) with Tailwind CSS.
+- **API Routes:** Located in `app/api/`, using Next.js Route Handlers.
+- **Environment Variables:** Managed in `.env` (e.g., `PAYBETA_API_KEY`).
+- **Deployment:** Configured for Netlify via `netlify.toml`.
+
+## Scripts
+
+Run the development server:
+
+```sh
 npm run dev
 # or
 yarn dev
@@ -14,23 +107,268 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Notable Files
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- [`app/api/reset-password/route.ts`](app/api/reset-password/route.ts): Handles wallet PIN reset via Paybeta API.
+- [`app/api/reset-password-code/route.ts`](app/api/reset-password-code/route.ts): Handles reset code submission.
+- [`app/auth/signup/page.tsx`](app/auth/signup/page.tsx): Signup page with UI and logic.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## Project Structure Explained
 
-To learn more about Next.js, take a look at the following resources:
+### Root Files
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **.env**  
+  Stores environment variables (API keys, secrets, etc.) used throughout the app.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **.gitignore**  
+  Specifies files and folders Git should ignore (e.g., `node_modules`, build output).
 
-## Deploy on Vercel
+- **components.json**  
+  Configuration for UI components and path aliases (used by shadcn/ui).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **logo.txt**  
+  ASCII or text logo for the project (optional, for branding or fun).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **netlify.toml**  
+  Configuration for deploying the app on Netlify (build settings, redirects, etc.).
+
+- **next-env.d.ts**  
+  TypeScript definitions required by Next.js.
+
+- **next.config.ts**  
+  Next.js configuration file (custom settings, plugins, etc.).
+
+- **package.json**  
+  Lists dependencies, scripts, and project metadata.
+
+- **postcss.config.mjs**  
+  Configuration for PostCSS (used with Tailwind CSS).
+
+- **README.md**  
+  Project documentation (what you’re reading now).
+
+- **tsconfig.json**  
+  TypeScript configuration (compiler options, path aliases).
+
+---
+
+### Folders
+
+#### app/
+
+Main source folder for your Next.js application.
+
+- **favicon.ico**  
+  App icon shown in browser tabs.
+
+- **globals.css**  
+  Global CSS styles for the entire app.
+
+- **layout.tsx**  
+  Root layout component (wraps all pages, sets up providers, etc.).
+
+- **page.tsx**  
+  Main landing page of the application.
+
+- **api/**  
+  Contains API route handlers (serverless functions).  
+  - **reset-password/route.ts**: Handles wallet PIN reset requests.  
+  - **reset-password-code/route.ts**: Handles reset code verification.  
+  - *(other API routes as needed)*
+
+- **auth/**  
+  Authentication-related pages.  
+  - **signup/page.tsx**: Signup form and logic.
+
+- **components/**  
+  Reusable React components (buttons, forms, modals, etc.).
+
+- **context/**  
+  React context providers for global state management (e.g., authentication, theme).
+
+- **dashboard/**  
+  Dashboard pages for logged-in users (analytics, user info, etc.).
+
+- **hook/**  
+  (Legacy) Custom React hooks. Consider merging with `hooks/`.
+
+- **hooks/**  
+  Custom React hooks for shared logic (API calls, state, etc.).
+
+- **platform-services/**  
+  Integrations with external or internal platform services.
+
+- **podcasts/**  
+  Pages and components related to podcast management.
+
+- **sign/**  
+  Pages for digital signature features.
+
+- **signee-page/**  
+  Pages for users who are signees (e.g., signing documents).
+
+- **supabase/**  
+  Integration with Supabase (database, authentication, etc.).
+
+---
+
+#### lib/
+
+- **middleware.ts**  
+  Custom middleware for request handling, authentication, or logging.
+
+---
+
+#### public/
+
+- Static assets (images, fonts, etc.) served directly by Next.js.
+
+---
+
+### Aliases
+
+- `@/components` → `app/components`
+- `@/lib` → `lib`
+- `@/hooks` → `app/hooks`
+- `@/app/components/ui` → UI components
+
+---
+
+## How to Use
+
+- **Add new pages:** Create a new folder or file in `app/`.
+- **Add new API routes:** Create a new folder in `app/api/` with a `route.ts` file.
+- **Add shared logic:** Place reusable hooks in `app/hooks/`.
+- **Add UI components:** Place them in `app/components/`.
+
+---
+
+This structure helps keep your code organized, scalable, and easy for new developers to understand and contribute.
+
+## Aliases
+
+Defined in [`components.json`](components.json) and `tsconfig.json`:
+
+- `@/components` → `app/components`
+- `@/lib` → `lib`
+- `@/hooks` → `app/hooks`
+- `@/app/components/ui` → UI components
+
+### Additional Folders and Files
+
+#### app/components/
+
+- **ui/**  
+  Contains UI primitives and components (buttons, inputs, modals) often imported from or styled with shadcn/ui.
+- **Navbar.tsx, Footer.tsx, Sidebar.tsx**  
+  Common layout/navigation components used across pages.
+- **Form.tsx**  
+  Reusable form component for handling user input.
+
+#### app/context/
+
+- **AuthContext.tsx**  
+  Provides authentication state and methods to the app.
+- **ThemeContext.tsx**  
+  Manages light/dark mode or other theming options.
+
+#### app/hooks/ and app/hook/
+
+- **useAuth.ts**  
+  Custom hook for authentication logic (login, logout, user info).
+- **useFetch.ts**  
+  Custom hook for fetching data from APIs.
+- **usePodcast.ts**  
+  Podcast-specific logic (fetching, creating, updating podcasts).
+
+#### app/platform-services/
+
+- **paybeta.ts**  
+  Functions for interacting with the Paybeta API (wallet, payments).
+- **supabase.ts**  
+  Functions for interacting with Supabase (database, auth).
+
+#### app/podcasts/
+
+- **[id]/page.tsx**  
+  Dynamic route for viewing a specific podcast.
+- **create/page.tsx**  
+  Page for creating a new podcast.
+- **edit/[id]/page.tsx**  
+  Page for editing an existing podcast.
+
+#### app/sign/ and app/signee-page/
+
+- **sign-document/page.tsx**  
+  Page for signing documents.
+- **signee-dashboard/page.tsx**  
+  Dashboard for signees to view and manage documents.
+
+#### app/supabase/
+
+- **client.ts**  
+  Initializes and exports the Supabase client for use throughout the app.
+- **auth.ts**  
+  Helper functions for Supabase authentication.
+
+#### lib/
+
+- **utils.ts**  
+  Utility functions used across the app (formatting, validation, etc.).
+- **constants.ts**  
+  Shared constants (API endpoints, config values).
+
+#### public/
+
+- **images/**  
+  Stores static images (logos, banners, avatars).
+- **robots.txt**  
+  SEO file for search engine crawling rules.
+
+---
+
+### Development & Contribution
+
+- **Install dependencies:**  
+  ```sh
+  npm install
+  ```
+- **Run the development server:**  
+  ```sh
+  npm run dev
+  ```
+- **Build for production:**  
+  ```sh
+  npm run build
+  ```
+- **Run tests:**  
+  ```sh
+  npm test
+  ```
+
+---
+
+### Best Practices
+
+- **Component Reusability:**  
+  Place shared UI elements in `app/components/` for easy reuse.
+- **Separation of Concerns:**  
+  Keep API logic in `app/api/`, UI in `app/components/`, and business logic in hooks or services.
+- **Environment Variables:**  
+  Store sensitive keys in `.env` and never commit them to version control.
+- **Type Safety:**  
+  Use TypeScript interfaces and types for props, API responses, and context values.
+
+---
+
+### Getting Help
+
+- **Code comments:**  
+  Most files include comments explaining their purpose and usage.
+- **Ask teammates:**  
+  If something is unclear, reach out to the team or check the documentation in this README.
+
+---
+
+This documentation should help any developer quickly understand the structure and purpose of each part of the codebase.

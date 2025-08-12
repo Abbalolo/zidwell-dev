@@ -4,6 +4,7 @@ import puppeteer from "puppeteer";
 
 import fs from "fs";
 import path from "path";
+import { transporter } from "@/lib/node-mailer";
 
 const logoPath = path.join(process.cwd(), "public", "logo.png");
 const logoBuffer = fs.readFileSync(logoPath);
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     </head>
     <body>
       <div class="bg-white w-full max-w-4xl rounded-xl shadow-2xl mx-auto my-8 overflow-hidden max-h-[95vh] flex flex-col">
-        <div class="bg-blue-700 px-8 py-6 flex justify-between items-center">
+        <div class="bg-gray-200 px-8 py-6 flex justify-between items-center">
        <img src="${base64Logo}" alt="Logo" class="h-8 w-8 mr-2" />
           <div>
             <h1 class="text-2xl font-bold text-white">INVOICE</h1>
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
                 <div class="space-y-3 text-sm">
                   <div class="flex justify-between">
                     <span class="text-gray-500 font-medium">Invoice #:</span>
-                    <span class="font-semibold text-blue-600">#${
+                    <span class="font-semibold text-gray-600">#${
                       invoice.invoiceId || "12345"
                     }</span>
                   </div>
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">From</h2>
                 <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.from || "Your Business\nLagos, NG"
+                  invoice.initiator_name || "Your Business\nLagos, NG"
                 }</p>
               </div>
               <div class="bg-gray-50 p-6 rounded-lg border">
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
           </div>
 
           <div class="mb-8">
-            <div class="bg-blue-100 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <div class="bg-blue-100 border-l-4 border-gray-500 p-6 rounded-r-lg">
               <h3 class="font-semibold text-gray-800 mb-2">Message</h3>
               <p class="text-gray-700 leading-relaxed">${
                 invoice.customerNote ||
@@ -159,7 +160,7 @@ export async function POST(request: Request) {
           </div>
 
           <div class="flex justify-end mb-8">
-            <div class="bg-blue-700 p-6 rounded-lg text-white min-w-80">
+            <div class="bg-gray-200 p-6 rounded-lg text-white min-w-80">
               <div class="space-y-3">
                 <div class="flex justify-between text-lg gap-2">
                   <span>Subtotal:</span>
@@ -228,14 +229,7 @@ export async function POST(request: Request) {
     const pdfBuffer = Buffer.from(pdfBytes);
     await browser.close();
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
+ 
     const recipients = [
       {
         email: email,
@@ -243,7 +237,7 @@ export async function POST(request: Request) {
         text: `Dear Partner,\n\nPlease find attached a copy of the invoice sent to the client for your records.\n\nBest regards,\nZidwell Team`,
       },
       {
-        email: invoice.email,
+        email: invoice.signee_email,
         subject: "Your Invoice from Zidwell",
         text: `Dear ${
           invoice.billTo || "Client"

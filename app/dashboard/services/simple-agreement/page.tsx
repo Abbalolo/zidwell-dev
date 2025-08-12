@@ -2,8 +2,10 @@ import DashboardSidebar from "@/app/components/dashboard-sidebar";
 import DashboardHeader from "@/app/components/dashboard-hearder";
 import ContractGen from "@/app/components/ContractGen";
 
-export default function LegalPage() {
+export default function ContactPage() {
+
   return (
+
     <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 

@@ -312,26 +312,22 @@ const ValidateMeterNumber = async () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {powerProvider?.data.map((provider: any) => {
-                  const isDisabled = provider.status !== true;
+                
                   const isSelected = selectedProvider?.name === provider.name;
 
                   return (
                     <div
                       key={provider.id}
                       onClick={() =>
-                        !isDisabled && setSelectedProvider(provider)
+                       setSelectedProvider(provider)
                       }
                       className={`relative p-4 border-2 rounded-md transition-all duration-200 ${
                         isSelected
                           ? "bg-gray-100 border-gray-600 text-gray-900 shadow-md"
                           : "bg-white border-gray-200 hover:border-gray-300"
-                      } ${
-                        isDisabled
-                          ? "opacity-50 cursor-not-allowed pointer-events-none"
-                          : "cursor-pointer hover:shadow-md"
-                      }`}
+                      } `}
                     >
                       <div className="text-center">
                         <div className="w-16 h-16 mx-auto mb-3 relative">
@@ -351,7 +347,7 @@ const ValidateMeterNumber = async () => {
                         </p>
                       </div>
 
-                      {isSelected && !isDisabled && (
+                      {isSelected && (
                         <div className="absolute -top-2 -right-2">
                           <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                             <Check className="w-4 h-4 text-white" />

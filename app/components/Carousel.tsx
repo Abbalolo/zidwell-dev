@@ -42,7 +42,8 @@ const Carousel: React.FC<CarouselProps> = ({
               src={slide}
               alt={`slide-${index}`}
               className="w-full h-full object-cover"
-              placeholder="blur"
+              width={500} 
+              height={500}
               
             />
           </div>

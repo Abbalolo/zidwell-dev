@@ -1,51 +1,53 @@
-import { dbAdmin } from '@/app/firebase/firebaseAdmin';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+// app/api/invoice/[id]/route.ts
 
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
+import { NextRequest, NextResponse } from "next/server";
+import supabase from "@/app/supabase/supabase";
 
-// ✅ GET a single invoice by ID
 export async function GET(
   req: NextRequest,
-  { params }: any
+  { params }: { params: Promise<{ id: any }> }
 ) {
-  try {
-    const invoiceId = params.id;
-    const docRef = dbAdmin.collection('invoices').doc(invoiceId);
-    const doc = await docRef.get();
+const id = (await params).id;
 
-    if (!doc.exists) {
-      return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
-    }
 
-    return NextResponse.json({ id: doc.id, ...doc.data() });
-  } catch (error) {
-    console.error('Error fetching invoice:', error);
-    return NextResponse.json({ message: 'Failed to fetch invoice' }, { status: 500 });
+
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+    
+
+
+  if (error || !data) {
+    return NextResponse.json({ message: "Invoice not found" }, { status: 404 });
   }
+
+  return NextResponse.json(data);
 }
 
-// ✅ PATCH a single invoice by ID
 export async function PATCH(
   req: NextRequest,
-  { params }: any
+  { params }: { params: Promise<{ id: any }> }
 ) {
-  try {
-    const invoiceId = params.id;
-    const updates = await req.json();
+   const id = (await params).id;
+  const updates = await req.json();
 
-    await dbAdmin.collection('invoices').doc(invoiceId).update({
+  const { error } = await supabase
+    .from("invoices")
+    .update({
       ...updates,
-      updatedAt: new Date().toISOString(),
-    });
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
 
-    return NextResponse.json({ message: 'Invoice updated successfully' });
-  } catch (error) {
-    console.error('Error updating invoice:', error);
-    return NextResponse.json({ message: 'Failed to update invoice' }, { status: 500 });
+  if (error) {
+    return NextResponse.json(
+      { message: "Failed to update invoice" },
+      { status: 500 }
+    );
   }
+
+  return NextResponse.json({ message: "Invoice updated successfully" });
 }

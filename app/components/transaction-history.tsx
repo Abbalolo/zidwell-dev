@@ -131,7 +131,7 @@ export default function TransactionHistory() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 className="text-2xl font-bold text-gray-900">Transaction History</h2>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -139,7 +139,7 @@ export default function TransactionHistory() {
                 placeholder="Search transactions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="pl-10 md:w-64 w-full"
               />
             </div>
 
@@ -159,11 +159,7 @@ export default function TransactionHistory() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Export Button */}
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
+           
           </div>
         </div>
       </CardHeader>

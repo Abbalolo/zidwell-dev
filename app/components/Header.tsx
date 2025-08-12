@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import { Button } from "./ui/button";
-import logo from "/public/logo.png";
+
 import Link from "next/link";
 import { useUserContextData } from "../context/userData";
 
@@ -67,7 +67,7 @@ const Header = () => {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src={logo}
+              src="/logo.png"
               alt="Zidwell Logo"
               width={32}
               height={32}

@@ -11,8 +11,8 @@ import Swal from "sweetalert2";
 
 interface Contract {
   id: string;
-  contractTitle: string;
-  contractText: string;
+  contract_title: string;
+  contract_text: string;
   status: string;
 }
 
@@ -84,9 +84,9 @@ export default function EditContractPage({
 
       <Input
         placeholder="Contract Title"
-        value={contract.contractTitle}
+        value={contract.contract_title}
         onChange={(e) =>
-          setContract({ ...contract, contractTitle: e.target.value })
+          setContract({ ...contract, contract_title: e.target.value })
         }
         className="mb-4"
       />
@@ -94,9 +94,9 @@ export default function EditContractPage({
       <Textarea
         placeholder="Contract Text"
         rows={20}
-        value={contract.contractText}
+        value={contract.contract_text}
         onChange={(e) =>
-          setContract({ ...contract, contractText: e.target.value })
+          setContract({ ...contract, contract_text: e.target.value })
         }
         className="mb-4"
       />

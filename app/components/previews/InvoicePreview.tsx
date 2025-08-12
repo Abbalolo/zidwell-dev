@@ -2,7 +2,7 @@
 import { X } from "lucide-react";
 import Image from "next/image";
 import React from "react";
-import logo from "/public/logo.png";
+
 interface InvoiceItem {
   item: string;
   quantity: number;
@@ -10,31 +10,58 @@ interface InvoiceItem {
 }
 
 interface InvoiceForm {
-  name: string;
-  email: string;
+  signee_name: string;
+  signee_email: string;
   message: string;
-  invoiceId: string;
-  billTo: string;
-  from: string;
-  issueDate: string;
-  dueDate: string;
-  deliveryDue: string;
-  deliveryIssue: string;
-  deliveryTime: string;
-  customerNote: string;
-  invoiceItems: InvoiceItem[];
+  invoice_id: string;
+  bill_to: string;
+  initiator_name: string;
+  issue_date: string;
+  due_date: string;
+  delivery_due: string;
+  delivery_issue: string;
+  delivery_time: string;
+  customer_note: string;
+  account_number: string;
+  account_name: string;
+  signed_at: string;
+  created_at: string;
+  account_to_pay_name: string;
+  invoice_items: InvoiceItem[];
 }
 
 type Props = {
-  form: InvoiceForm;
+  form: any;
   onClose: () => void;
   isPdf?: boolean;
 };
 
 const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
+  const safeForm = {
+    ...form,
+    signee_name: form.signee_name || "N/A",
+    signee_email: form.signee_email || "N/A",
+    message: form.message || "No message provided",
+    invoice_id: form.invoice_id || "N/A",
+    bill_to: form.bill_to || "N/A",
+    from: form.initiator_name || "N/A",
+    issue_date: form.issue_date || "N/A",
+    due_date: form.due_date || "N/A",
+    delivery_due: form.delivery_due || "N/A",
+    delivery_issue: form.delivery_issue || "N/A",
+    delivery_time: form.delivery_time || "N/A",
+    customer_note: form.customer_note || "No customer notes",
+    account_number: form.account_number || "N/A",
+    account_name: form.account_name || "N/A",
+    created_at: form.created_at || "N/A",
+    signed_at: form.signed_at || "N/A",
+    account_to_pay_name: form.account_to_pay_name || "N/A",
+    invoice_items: Array.isArray(form.invoice_items) ? form.invoice_items : [],
+  };
+
   const calculateTotal = () => {
-    return form.invoiceItems.reduce(
-      (total, item) => total + item.quantity * item.price,
+    return safeForm.invoice_items.reduce(
+      (total:any, item:any) => total + item.quantity * item.price,
       0
     );
   };
@@ -46,6 +73,17 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
       maximumFractionDigits: 2,
     }).format(value);
   };
+const formattedDate = (date:string) => {
+const formattedCreatedAt = date
+  ? new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  : "N/A";
+  return formattedCreatedAt
+}
+  
 
   return (
     <div
@@ -56,7 +94,7 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
         {/* Header */}
         <div className="bg-invoice-header px-8 py-6 flex justify-between items-center">
           <Image
-            src={logo}
+            src="/logo.png"
             alt="Zidwell Logo"
             width={32}
             height={32}
@@ -70,22 +108,6 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
               Professional Invoice Document
             </p>
           </div>
-
-          {isPdf && (
-            <button
-              onClick={onClose}
-              className="text-invoice-header-foreground/80 hover:text-invoice-header-foreground p-2 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <X size={24} />
-            </button>
-          )}
-
-          <button
-            onClick={onClose}
-            className="text-invoice-header-foreground/80 hover:text-invoice-header-foreground p-2 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <X size={24} />
-          </button>
           <button
             onClick={onClose}
             className="text-invoice-header-foreground/80 hover:text-invoice-header-foreground p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -109,28 +131,32 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
                       Invoice #:
                     </span>
                     <span className="font-semibold text-invoice-accent">
-                      #{form.invoiceId}
+                      #{safeForm.invoice_id}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-invoice-subtle font-medium">
                       Issue Date:
                     </span>
-                    <span className="text-foreground">{form.issueDate}</span>
+                    <span className="text-foreground">
+                      {safeForm.issue_date}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-invoice-subtle font-medium">
                       Due Date:
                     </span>
                     <span className="text-foreground font-medium">
-                      {form.dueDate}
+                      {safeForm.due_date}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-invoice-subtle font-medium">
                       Delivery:
                     </span>
-                    <span className="text-foreground">{form.deliveryTime}</span>
+                    <span className="text-foreground">
+                      {safeForm.delivery_time}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -142,7 +168,7 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
                   From
                 </h2>
                 <div className="text-foreground leading-relaxed whitespace-pre-line">
-                  {form.from}
+                  {safeForm.from}
                 </div>
               </div>
 
@@ -151,24 +177,22 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
                   Bill To
                 </h2>
                 <div className="text-foreground leading-relaxed whitespace-pre-line">
-                  {form.billTo}
+                  {safeForm.bill_to}
                 </div>
               </div>
             </div>
           </div>
-
           {/* Message Section */}
-          {form.message && (
+          {safeForm.message && (
             <div className="mb-8">
               <div className="bg-accent/20 border-l-4 border-invoice-accent p-6 rounded-r-lg">
                 <h3 className="font-semibold text-foreground mb-2">Message</h3>
                 <p className="text-foreground leading-relaxed">
-                  {form.message}
+                  {safeForm.message}
                 </p>
               </div>
             </div>
           )}
-
           {/* Items Table */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-foreground mb-6">
@@ -193,12 +217,14 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {form.invoiceItems.map((item, i) => (
+                  {safeForm.invoice_items.map((item:any, i:any) => (
                     <tr
                       key={i}
                       className="border-b border-invoice-table-border last:border-b-0 hover:bg-invoice-section/50 transition-colors"
                     >
-                      <td className="p-4 text-foreground">{item.item}</td>
+                      <td className="p-4 text-foreground">
+                        {item.item || "N/A"}
+                      </td>
                       <td className="p-4 text-center text-foreground">
                         {item.quantity}
                       </td>
@@ -214,7 +240,6 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
               </table>
             </div>
           </div>
-
           {/* Total Section */}
           <div className="flex justify-end mb-8">
             <div className="bg-invoice-header p-6 rounded-lg text-invoice-header-foreground min-w-80">
@@ -232,16 +257,28 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
               </div>
             </div>
           </div>
-
           {/* Customer Note */}
-          {form.customerNote && (
+          {safeForm.customer_note && (
             <div className="bg-invoice-section p-6 rounded-lg border border-invoice-table-border">
               <h3 className="font-semibold text-foreground mb-3">
                 Customer Notes
               </h3>
               <p className="text-invoice-subtle leading-relaxed">
-                {form.customerNote}
+                {safeForm.customer_note}
               </p>
+            </div>
+          )}
+          {safeForm.initiator_name && safeForm.created_at && (
+            <div className="flex gap-2 space-y-3 mt-5">
+              <p>Initiator: {safeForm.initiator_name}</p>
+              <p>Date:{formattedDate(safeForm.created_at)}</p>
+            </div>
+          )}
+
+          {safeForm.signee_name && safeForm.signed_at && (
+            <div className="flex gap-2 space-y-3">
+              <p>Signee: {safeForm.signee_name}</p>
+              <p>Date: {formattedDate(safeForm.signed_at)}</p>
             </div>
           )}
 

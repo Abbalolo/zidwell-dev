@@ -1,5 +1,6 @@
+// /app/api/get-contracts/route.ts
 import { NextResponse } from 'next/server';
-import { dbAdmin } from '@/app/firebase/firebaseAdmin';
+import supabase from '@/app/supabase/supabase'; // Import your Supabase client
 
 export async function POST(req: Request) {
   try {
@@ -9,18 +10,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'User email is required' }, { status: 400 });
     }
 
-    const snapshot = await dbAdmin
-      .collection('contracts')
-      .where('initiatorEmail', '==', userEmail) 
-      .orderBy('createdAt', 'desc')
-      .get();
+    const { data, error } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('initiator_email', userEmail)
+      .order('created_at', { ascending: false });
 
-    const contracts = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    if (error) {
+      console.error('Supabase error:', error.message);
+      return NextResponse.json({ message: 'Failed to fetch contracts' }, { status: 500 });
+    }
 
-    return NextResponse.json({ contracts }, { status: 200 });
+    return NextResponse.json({ contracts: data }, { status: 200 });
   } catch (error) {
     console.error('Error fetching contracts:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

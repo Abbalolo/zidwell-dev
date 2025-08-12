@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Invoice } from "./InvoiceGen";
 import InvoicePreview from "./previews/InvoicePreview";
 import { useRouter } from "next/navigation";
 import { useUserContextData } from "../context/userData";
@@ -32,27 +31,58 @@ interface InvoiceItem {
   price: number;
 }
 
-interface InvoiceForm {
-  name: string;
+ interface Invoice {
+  invoice_id: string;
+  created_by: string;
   email: string;
-  message: string;
-  invoiceId: string;
-  billTo: string;
+  signee_name: string;
+  signee_email: string;
+  initiator_name: string;
+  signed_at: string;
+  name: string;
+  customer_note: string;
+  delivery_due: string;
+  delivery_issue: string;
+  delivery_time: string;
+  invoice_number: string;
   from: string;
-  issueDate: string;
-  dueDate: string;
-  deliveryDue: string;
-  deliveryIssue: string;
-  deliveryTime: string;
-  customerNote: string;
-  accountNumber: string;
-  accountName: string;
-  accountToPayName: string;
-  invoiceItems: InvoiceItem[];
+  bill_to: string;
+  account_number: string;
+  account_name: string;
+  account_to_pay_name: string;
+  message: string;
+  issue_date: string;
+  due_date: string;
+  created_at: any;
+  status: string;
+  invoice_items: InvoiceItem[];
+}
+
+interface InvoiceForm {
+  signing_link: string,
+  signee_name: string;
+  email: string;
+  initiator_name: string;
+  message: string;
+  invoice_id: string;
+  bill_to: string;
+  from: string;
+  issue_date: string;
+  due_date: string;
+  delivery_due: string;
+  delivery_issue: string;
+  delivery_time: string;
+  customer_note: string;
+  account_number: string;
+  account_name: string;
+  created_at: string;
+  signed_at: string;
+  account_to_pay_name: string;
+  invoice_items: InvoiceItem[];
 }
 
 type Props = {
-  invoices: Invoice[];
+  invoices: any[];
   selectedStatus: string;
   searchTerm: string;
 };
@@ -63,11 +93,11 @@ const InvoiceList: React.FC<Props> = ({
   searchTerm,
 }) => {
   const statusColors: Record<string, string> = {
-    Paid: "bg-green-100 text-green-800",
-    Pending: "bg-yellow-100 text-yellow-800",
-    Overdue: "bg-red-100 text-red-800",
-    Draft: "bg-gray-100 text-gray-800",
-    sent: "bg-blue-100 text-blue-800",
+    paid: "bg-green-100 text-green-800",
+    pending: "bg-yellow-100 text-yellow-800",
+    overdue: "bg-red-100 text-red-800",
+    draft: "bg-gray-100 text-gray-800",
+    signed: "bg-blue-100 text-blue-800",
   };
 
   const formatNumber = (value: number) => {
@@ -78,10 +108,14 @@ const InvoiceList: React.FC<Props> = ({
     }).format(value);
   };
 
-  const filteredInvoices = invoices.filter((invoice) => {
+  const filteredInvoices = invoices?.filter((invoice) => {
+    const billTo = invoice.bill_to || "";
+    const invoiceNumber = invoice.invoice_number || "";
+    const search = searchTerm?.toLowerCase() || "";
+
     const matchesSearch =
-      invoice.billTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      billTo.toLowerCase().includes(search) ||
+      invoiceNumber.toLowerCase().includes(search);
 
     const matchesStatus =
       selectedStatus === "All" || invoice.status === selectedStatus;
@@ -97,7 +131,7 @@ const InvoiceList: React.FC<Props> = ({
   const router = useRouter();
 
   const [base64Logo, setBase64Logo] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const loadLogo = async () => {
       const logo = await getBase64Logo();
@@ -110,7 +144,7 @@ const InvoiceList: React.FC<Props> = ({
   // Place this function outside the component or loop
   const downloadPdf = async (invoice: InvoiceForm) => {
     const totalAmount =
-      invoice.invoiceItems?.reduce(
+      invoice.invoice_items?.reduce(
         (sum, item) => sum + item.quantity * item.price,
         0
       ) || 0;
@@ -119,6 +153,31 @@ const InvoiceList: React.FC<Props> = ({
       style: "currency",
       currency: "NGN",
     }).format(totalAmount);
+
+    const formattedCreatedAt = invoice.created_at
+  ? new Date(invoice.created_at).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  : "N/A";
+    const formattedSignedAt = invoice.created_at
+  ? new Date(invoice.signed_at).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  : "N/A";
+
+     const signedSection = invoice.signee_name && invoice.signed_at
+    ? `
+      <div class="signatures">
+        <p>Signee: ${invoice.signee_name}</p>
+        <p>Date: ${formattedSignedAt}</p>
+      </div>
+    `
+    : '';
+
 
     const fullHtml = `
     <!DOCTYPE html>
@@ -136,6 +195,12 @@ const InvoiceList: React.FC<Props> = ({
         }
         .no-print {
           display: none;
+        }
+
+        .signatures{
+        display:flex;
+        gap: 20px;
+        margin-top: 20px;
         }
       </style>
     </head>
@@ -158,25 +223,25 @@ const InvoiceList: React.FC<Props> = ({
                   <div class="flex justify-between">
                     <span class="text-gray-500 font-medium">Invoice #:</span>
                     <span class="font-semibold text-blue-600">#${
-                      invoice.invoiceId || "12345"
+                      invoice.invoice_id || "12345"
                     }</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-gray-500 font-medium">Issue Date:</span>
                     <span class="text-gray-800">${
-                      invoice.issueDate || "N/A"
+                      invoice.issue_date || "N/A"
                     }</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-gray-500 font-medium">Due Date:</span>
                     <span class="text-gray-800">${
-                      invoice.dueDate || "N/A"
+                      invoice.due_date || "N/A"
                     }</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-gray-500 font-medium">Delivery:</span>
                     <span class="text-gray-800">${
-                      invoice.deliveryIssue || "Standard"
+                      invoice.delivery_issue || "Standard"
                     }</span>
                   </div>
                 </div>
@@ -187,13 +252,13 @@ const InvoiceList: React.FC<Props> = ({
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">From</h2>
                 <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.from || "Your Business\nLagos, NG"
+                  invoice.initiator_name || "Your Business\nLagos, NG"
                 }</p>
               </div>
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Bill To</h2>
                 <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.billTo || "Client Name\nAbuja, NG"
+                  invoice.bill_to || "Client Name\nAbuja, NG"
                 }</p>
               </div>
             </div>
@@ -203,7 +268,7 @@ const InvoiceList: React.FC<Props> = ({
             <div class="bg-gray-100 border-l-4 border-gray-300 p-6 rounded-r-lg">
               <h3 class="font-semibold text-gray-800 mb-2">Message</h3>
               <p class="text-gray-700 leading-relaxed">${
-                invoice.customerNote ||
+                invoice.customer_note ||
                 "Thanks for your business. Payment due in 14 days."
               }</p>
             </div>
@@ -223,7 +288,7 @@ const InvoiceList: React.FC<Props> = ({
                 </thead>
                 <tbody>
                   ${
-                    invoice.invoiceItems
+                    invoice.invoice_items
                       ?.map(
                         (item) => `
                       <tr class="border-b hover:bg-gray-50">
@@ -269,19 +334,19 @@ const InvoiceList: React.FC<Props> = ({
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Account Name</h2>
                 <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.accountToPayName
+                  invoice.account_to_pay_name
                 }</p>
               </div>
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Bank Account Name</h2>
                 <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.accountName
+                  invoice.account_name
                 }</p>
               </div>
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Bank Account Number</h2>
                 <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.accountNumber
+                  invoice.account_number
                 }</p>
               </div>
             </div>
@@ -290,10 +355,21 @@ const InvoiceList: React.FC<Props> = ({
           <div class="bg-gray-50 p-6 rounded-lg border">
             <h3 class="font-semibold text-gray-800 mb-3">Customer Notes</h3>
             <p class="text-gray-600 leading-relaxed">${
-              invoice.customerNote ||
+              invoice.customer_note ||
               "Please contact us for any issues with this invoice."
             }</p>
           </div>
+
+
+          <div class="signatures">
+        <p>Initiator: ${invoice.initiator_name}</p>
+          <p>Date: ${formattedCreatedAt}</p>
+       </div>
+
+             ${signedSection}
+
+
+         
 
           <div class="mt-8 pt-6 border-t text-center">
             <p class="text-gray-500 text-sm">
@@ -324,7 +400,7 @@ const InvoiceList: React.FC<Props> = ({
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `invoice-${invoice.invoiceId || "download"}.pdf`;
+      a.download = `invoice-${invoice.invoice_id || "download"}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       setProcessing(false);
@@ -342,7 +418,7 @@ const InvoiceList: React.FC<Props> = ({
       text: "How would you like to send the invoice?",
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: `<i class="fa-regular fa-envelope"></i> Send via Email`,
+      confirmButtonText: `<i class="fa-regular fa-envelope"></i> Send Invoice via Email`,
       cancelButtonText: `<i class="fa-brands fa-whatsapp"></i> Send via WhatsApp`,
       customClass: {
         cancelButton: "whatsapp-button",
@@ -387,7 +463,7 @@ const InvoiceList: React.FC<Props> = ({
       }
     } else if (result.dismiss === Swal.DismissReason.cancel) {
       // Send via WhatsApp
-      const invoiceUrl = `${process.env.NEXT_PUBLIC_DEV_URL}/invoices/${invoice.invoiceId}`;
+      const invoiceUrl = invoice.signing_link
       const message = `Here is your invoice: ${invoiceUrl}`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, "_blank");
@@ -395,11 +471,12 @@ const InvoiceList: React.FC<Props> = ({
     }
   };
 
+
   return (
     <div className="space-y-4">
       {filteredInvoices.map((invoice) => {
-        const totalAmount = invoice.invoiceItems?.reduce(
-          (sum, item) => sum + item.quantity * item.price,
+        const totalAmount = invoice.invoice_items?.reduce(
+          (sum:any, item:any) => sum + item.quantity * item.price,
           0
         );
 
@@ -411,7 +488,7 @@ const InvoiceList: React.FC<Props> = ({
                   <div className="flex flex-wrap items-center gap-3 mb-2">
                     {/* <div id="pdf-container" className="">yayayayayya</div> */}
                     <h3 className="font-semibold text-lg">
-                      {invoice.invoiceId}
+                      {invoice.invoice_id}
                     </h3>
                     <Badge
                       className={
@@ -423,24 +500,27 @@ const InvoiceList: React.FC<Props> = ({
                     </Badge>
                   </div>
                   <p className="text-gray-900 font-medium mb-1">
-                    {invoice.billTo}
+                    {invoice.bill_to}
                   </p>
                   <p className="text-gray-600 mb-2">{invoice.message}</p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                     <span>
-                      Date: {new Date(invoice.issueDate).toLocaleDateString()}
+                      Date: {new Date(invoice.issue_date).toLocaleDateString()}
                     </span>
                     <span>
-                      Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                      Due: {new Date(invoice.due_date).toLocaleDateString()}
                     </span>
-                    {invoice.sentAt && (
+                    {invoice.created_at && (
                       <span>
-                        Sent:{" "}
-                        {new Date(invoice.sentAt).toLocaleDateString("en-GB", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        Signed Date:{" "}
+                        {new Date(invoice.created_at).toLocaleDateString(
+                          "en-GB",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
                       </span>
                     )}
                     <span className="font-semibold text-gray-900">
@@ -458,6 +538,9 @@ const InvoiceList: React.FC<Props> = ({
                     <Eye className="w-4 h-4 mr-1" />
                     View
                   </Button>
+
+                  {invoice.status !== "signed" &&
+                  <>
                   <Button
                     onClick={() =>
                       router.push(
@@ -470,7 +553,8 @@ const InvoiceList: React.FC<Props> = ({
                     <Edit className="w-4 h-4 mr-1" />
                     Edit
                   </Button>
-                  <Button
+
+                   <Button
                     onClick={() => sendInvoiceEmail(invoice)}
                     variant="outline"
                     size="sm"
@@ -483,6 +567,11 @@ const InvoiceList: React.FC<Props> = ({
                     )}
                     Send
                   </Button>
+                  </>
+
+                  }
+                  
+                 
                   <Button
                     onClick={() => downloadPdf(invoice)}
                     variant="outline"

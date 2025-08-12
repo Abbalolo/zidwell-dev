@@ -1,6 +1,5 @@
 import { Github, Twitter, Linkedin, Mail, Code } from "lucide-react";
 import Image from "next/image";
-import logo from "/public/logo.png";
 
 const Footer = () => {
   return (
@@ -10,7 +9,7 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="mb-4 flex items-center">
               <Image
-                src={logo}
+                src="/logo.png"
                 alt="Zidwell Logo"
                 className="w-10 h-10 md:w-14 md:h-14 mr-2"
               />

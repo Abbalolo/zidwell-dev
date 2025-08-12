@@ -182,7 +182,6 @@ export default function AirtimePurchase() {
   const purchaseAirtime = async () => {
     if (!validateForm()) return;
 
-
     const payload = {
       amount: finalAmount,
       service: selectedProvider?.slug,
@@ -201,7 +200,7 @@ export default function AirtimePurchase() {
       });
 
       const data = await response.json();
-   
+
       if (!response.ok) throw data;
 
       Swal.fire({
@@ -272,7 +271,6 @@ export default function AirtimePurchase() {
     );
   }
 
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -297,15 +295,12 @@ export default function AirtimePurchase() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {providers?.map((provider: any, i) => {
-                 
                   const isSelected = selectedProvider?.name === provider.name;
 
                   return (
                     <div
                       key={i}
-                      onClick={() =>
-                        setSelectedProvider(provider)
-                      }
+                      onClick={() => setSelectedProvider(provider)}
                       className={`relative p-4 border-2 rounded-md transition-all duration-200 ${
                         isSelected
                           ? "bg-gray-100 border-gray-600 text-gray-900 shadow-md"
@@ -325,7 +320,6 @@ export default function AirtimePurchase() {
                         <h3 className="font-semibold text-gray-900">
                           {provider.name}
                         </h3>
-                       
                       </div>
 
                       {isSelected && (
@@ -515,7 +509,10 @@ export default function AirtimePurchase() {
                 <div className="flex justify-between text-sm">
                   <span>Wallet balance after</span>
                   <span className="text-green-600">
-                    -₦{finalAmount.toLocaleString()}
+                    ₦
+                    {(
+                      (user?.walletBalance || 0) - (finalAmount || 0)
+                    ).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between font-bold border-t pt-2">

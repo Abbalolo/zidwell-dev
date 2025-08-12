@@ -5,27 +5,25 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useUserContextData();
+  const { user, loading: userLoading } = useUserContextData();
   const router = useRouter();
   const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    // Once loading finishes
-    if (!loading) {
+    if (!userLoading) {
       if (!user) {
-        // 👇 Redirect to login if unauthenticated
-        router.replace("/auth/login");
+        router.push("/auth/login");
       } else {
-        setHasChecked(true); // ✅ Ready to render protected content
+        setHasChecked(true);
       }
     }
-  }, [user, loading, router]);
+  }, [user, userLoading, router]);
 
-  // 👇 Still checking auth
-  if (loading || (!user && !hasChecked)) {
-    return null; // prevent flicker or render
+  if (userLoading || (!user && !hasChecked)) {
+    return null; // still loading or redirecting
   }
 
+  // User is authenticated, render children
   return <>{children}</>;
 };
 

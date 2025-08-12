@@ -24,9 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
 import { useUserContextData } from "../context/userData";
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase/firebaseAuth";
 
 const businessCategories = [
   { label: "Fintech", value: "Fintech" },
@@ -126,9 +123,9 @@ export default function ProfileSettings() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { user } = useUserContextData();
-const [currentPassword, setCurrentPassword] = useState("");
-const [newPassword, setNewPassword] = useState("");
-const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleProfileChange = (field: keyof any, value: string) => {
     setProfile((prev: any) => ({ ...prev, [field]: value }));
@@ -159,103 +156,102 @@ const [confirmPassword, setConfirmPassword] = useState("");
     }
   }, [user]);
 
+  const changeUserPassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return Swal.fire({
+        icon: "warning",
+        title: "Please fill in all password fields",
+      });
+    }
 
- const changeUserPassword = async () => {
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return Swal.fire({
-      icon: "warning",
-      title: "Please fill in all password fields",
-    });
-  }
+    if (newPassword !== confirmPassword) {
+      return Swal.fire({
+        icon: "error",
+        title: "New password and confirmation do not match",
+      });
+    }
 
-  if (newPassword !== confirmPassword) {
-    return Swal.fire({
-      icon: "error",
-      title: "New password and confirmation do not match",
-    });
-  }
+    // if (user) {
+    //   try {
+    //     if (user.email) {
+    //       const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    //       await reauthenticateWithCredential(user, credential);
+    //       await updatePassword(user, newPassword);
 
-  // if (user) {
-  //   try {
-  //     if (user.email) {
-  //       const credential = EmailAuthProvider.credential(user.email, currentPassword);
-  //       await reauthenticateWithCredential(user, credential);
-  //       await updatePassword(user, newPassword);
+    //       // Reset fields
+    //       setCurrentPassword("");
+    //       setNewPassword("");
+    //       setConfirmPassword("");
 
-  //       // Reset fields
-  //       setCurrentPassword("");
-  //       setNewPassword("");
-  //       setConfirmPassword("");
+    //       Swal.fire({
+    //         icon: "success",
+    //         title: "Password updated successfully",
+    //       });
+    //     } else {
+    //       Swal.fire({
+    //         icon: "error",
+    //         title: "User email is not available",
+    //       });
+    //     }
+    //   } catch (error) {
+    //     console.error("Error updating password:", error);
+    //     Swal.fire({
+    //       icon: "error",
+    //       title: "Error updating password",
+    //       text: (error as Error).message,
+    //     });
+    //   }
+    // } else {
+    //   Swal.fire({
+    //     icon: "warning",
+    //     title: "No authenticated user found",
+    //   });
+    // }
+  };
 
-  //       Swal.fire({
-  //         icon: "success",
-  //         title: "Password updated successfully",
-  //       });
-  //     } else {
-  //       Swal.fire({
-  //         icon: "error",
-  //         title: "User email is not available",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error updating password:", error);
+  // const updateProfileInfo = async (event: FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
+  //   // setIsLoading(true);
+
+  //   if (!user?.uid) {
+  //     console.error("No authenticated user found");
   //     Swal.fire({
   //       icon: "error",
-  //       title: "Error updating password",
+  //       title: "No authenticated user found",
+  //     });
+  //     // setIsLoading(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const userDocRef = doc(db, "users", user.uid);
+  //     // await updateDoc(userDocRef, {
+  //     //   phone,
+  //     //   fullAddress,
+  //     //   birthDate,
+  //     //   nin,
+  //     // });
+
+  //     console.log("Profile information updated successfully");
+
+  //     Swal.fire({
+  //       icon: "success",
+  //       title: "Profile information updated successfully",
+  //     });
+
+  //     // setIsLoading(false);
+  //   } catch (error) {
+  //     console.error("Error updating profile information:", error);
+
+  //     Swal.fire({
+  //       icon: "error",
+  //       title: "Error updating profile information",
   //       text: (error as Error).message,
   //     });
+
+  //     // setIsLoading(false);
   //   }
-  // } else {
-  //   Swal.fire({
-  //     icon: "warning",
-  //     title: "No authenticated user found",
-  //   });
-  // }
-};
-
-// const updateProfileInfo = async (event: FormEvent<HTMLFormElement>) => {
-//   event.preventDefault();
-//   // setIsLoading(true);
-
-//   if (!user?.uid) {
-//     console.error("No authenticated user found");
-//     Swal.fire({
-//       icon: "error",
-//       title: "No authenticated user found",
-//     });
-//     // setIsLoading(false);
-//     return;
-//   }
-
-//   try {
-//     const userDocRef = doc(db, "users", user.uid);
-//     // await updateDoc(userDocRef, {
-//     //   phone,
-//     //   fullAddress,
-//     //   birthDate,
-//     //   nin,
-//     // });
-
-//     console.log("Profile information updated successfully");
-
-//     Swal.fire({
-//       icon: "success",
-//       title: "Profile information updated successfully",
-//     });
-
-//     // setIsLoading(false);
-//   } catch (error) {
-//     console.error("Error updating profile information:", error);
-
-//     Swal.fire({
-//       icon: "error",
-//       title: "Error updating profile information",
-//       text: (error as Error).message,
-//     });
-
-//     // setIsLoading(false);
-//   }
-// };
+  // };
 
   return (
     <div className="space-y-6">
@@ -488,16 +484,13 @@ const [confirmPassword, setConfirmPassword] = useState("");
                 </div>
                 <div>
                   <Label htmlFor="businessType">Business Type</Label>
-<select className="w-full p-2 border rounded-md">
-  {businessCategories.map((category) => (
-    <option key={category.value} value={category.value}>
-      {category.label}
-    </option>
-  ))}
-</select>
-
-
-               
+                  <select className="w-full p-2 border rounded-md">
+                    {businessCategories.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -557,123 +550,143 @@ const [confirmPassword, setConfirmPassword] = useState("");
           </Card>
         </TabsContent>
 
-       <TabsContent value="security" className="space-y-6">
-  {/* Change Password */}
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Key className="w-5 h-5" />
-        Change Password
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      {/* Current Password */}
-      <div>
-        <Label htmlFor="currentPassword">Current Password</Label>
-        <div className="relative">
-          <Input
-            type={showCurrentPassword ? "text" : "password"}
-            id="currentPassword"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            placeholder="Enter your current password"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3"
-            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-          >
-            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </Button>
-        </div>
-      </div>
+        <TabsContent value="security" className="space-y-6">
+          {/* Change Password */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current Password */}
+              <div>
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showCurrentPassword ? "text" : "password"}
+                    id="currentPassword"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
 
-      {/* New Password */}
-      <div>
-        <Label htmlFor="newPassword">New Password</Label>
-        <div className="relative">
-          <Input
-            type={showNewPassword ? "text" : "password"}
-            id="newPassword"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Enter your new password"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3"
-            onClick={() => setShowNewPassword(!showNewPassword)}
-          >
-            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </Button>
-        </div>
-      </div>
+              {/* New Password */}
+              <div>
+                <Label htmlFor="newPassword">New Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showNewPassword ? "text" : "password"}
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter your new password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
 
-      {/* Confirm Password */}
-      <div>
-        <Label htmlFor="confirmPassword">Confirm New Password</Label>
-        <div className="relative">
-          <Input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm new password"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-          >
-            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </Button>
-        </div>
-      </div>
+              {/* Confirm Password */}
+              <div>
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
 
-      {/* Update Button */}
-      <Button onClick={changeUserPassword}>Update Password</Button>
-    </CardContent>
-  </Card>
+              {/* Update Button */}
+              <Button onClick={changeUserPassword}>Update Password</Button>
+            </CardContent>
+          </Card>
 
-  {/* Two-Factor Authentication */}
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Shield className="w-5 h-5" />
-        Two-Factor Authentication
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="font-medium">Enable 2FA</h4>
-          <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
-        </div>
-        <Switch
-          checked={security.twoFactorEnabled}
-          onCheckedChange={(checked) => handleSecurityChange("twoFactorEnabled", checked)}
-        />
-      </div>
-      {security.twoFactorEnabled && (
-        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-          <p className="text-sm text-green-800">
-            Two-factor authentication is enabled. You'll receive a code via SMS when logging in.
-          </p>
-          <Button variant="outline" size="sm" className="mt-2 bg-transparent">
-            View Recovery Codes
-          </Button>
-        </div>
-      )}
-    </CardContent>
-  </Card>
-</TabsContent>
-
+          {/* Two-Factor Authentication */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Two-Factor Authentication
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Enable 2FA</h4>
+                  <p className="text-sm text-gray-600">
+                    Add an extra layer of security to your account
+                  </p>
+                </div>
+                <Switch
+                  checked={security.twoFactorEnabled}
+                  onCheckedChange={(checked) =>
+                    handleSecurityChange("twoFactorEnabled", checked)
+                  }
+                />
+              </div>
+              {security.twoFactorEnabled && (
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-800">
+                    Two-factor authentication is enabled. You'll receive a code
+                    via SMS when logging in.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 bg-transparent"
+                  >
+                    View Recovery Codes
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
           <Card>

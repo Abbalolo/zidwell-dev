@@ -6,8 +6,8 @@ import { Button } from "../ui/button";
 interface ContractsPreviewProps {
   isOpen: boolean;
   contract: {
-    contractTitle?: string;
-    contractText?: string;
+    contract_title?: string;
+    contract_text?: string;
     description?: string;
   } | null;
   onClose: () => void;
@@ -38,6 +38,7 @@ const ContractsPreview: React.FC<ContractsPreviewProps> = ({
   }, [isOpen, onClose]);
 
   if (!isOpen || !contract) return null;
+  console.log("Contract Preview:", contract);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
@@ -47,14 +48,14 @@ const ContractsPreview: React.FC<ContractsPreviewProps> = ({
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">
-            {contract.contractTitle || "Untitled Contract"}
+            {contract.contract_title || "Untitled Contract"}
           </h2>
           <Button variant="ghost" onClick={onClose}>
             ✕
           </Button>
         </div>
         <p className="whitespace-pre-line text-sm text-gray-700">
-          {contract.contractText ||
+          {contract.contract_text ||
             contract.description ||
             "No content available."}
         </p>

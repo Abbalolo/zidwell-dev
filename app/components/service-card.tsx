@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { Button } from "./ui/button"
 import { Card, CardContent } from "./ui/card"
-import { Smartphone, Wifi, Lightbulb, Tv, CreditCard, GraduationCap, Car, Building, Scale, Bot } from "lucide-react"
+import { Smartphone, Wifi, Lightbulb, Tv, CreditCard, Scale, Bot, Receipt, FileSpreadsheet } from "lucide-react"
 import { link } from "fs"
 
 const services:any = [
@@ -54,6 +54,15 @@ const services:any = [
   },
   {
     id: 6,
+    title: "Create Receipt",
+    description: "Generate Receipt",
+    icon: Receipt,
+    color: "bg-red-50 text-red-600",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/services/create-receipt"
+  },
+  {
+    id: 7,
     title: "Simple Agreement",
     description: "Generate Agreement",
     icon: Scale,
@@ -62,13 +71,13 @@ const services:any = [
     link: "/dashboard/services/simple-agreement"
   },
   {
-    id: 7,
-    title: "Ai Acountant",
-    description: "Acounting Assistance",
-    icon: Bot ,
-    color: "bg-indigo-50 text-indigo-600",
+    id: 8,
+    title: "Tax Filling",
+    description: "File your tax",
+    icon: FileSpreadsheet ,
+    color: "bg-gray-50 text-gray-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    link: "/dashboard/services/ai-accountant"
+    link: "/dashboard/services/tax-filling"
   },
   
 
@@ -77,25 +86,26 @@ const services:any = [
 export default function ServiceCards() {
   const router = useRouter()
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2  lg:grid-cols-4 md:gap-6 gap-3">
       {services.map((service :any) => (
         <Card
+         onClick={() => router.push(service.link)}
           key={service.id}
-          className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100"
+          className=" shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100"
         >
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center space-y-4">
               {/* Icon */}
               <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${service.color}`}>
-                <service.icon className="w-8 h-8" />
+                <service.icon className="md:w-8 md:h-8 w-5 h-5" />
               </div>
 
               {/* Title */}
-              <h3 className="font-semibold text-gray-900 text-lg">{service.title}</h3>
+              <h3 className="font-semibold text-gray-900 text-sm md:text-lg">{service.title}</h3>
 
               {/* Action Button */}
               <Button
-                className={`w-full text-white  text-sm py-2 px-4 rounded-lg cursor-pointer ${service.buttonColor}`}
+                className={`w-full text-white  text-sm py-2 px-4 rounded-lg cursor-pointer ${service.buttonColor} hidden md:block`}
                 onClick={() => router.push(service.link)}
               >
                 {service.description}

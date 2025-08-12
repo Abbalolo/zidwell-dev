@@ -5,7 +5,7 @@ import ProtectedRoute from "@/app/components/ProtectedRoute"
 
 export default function AIAccountantPage() {
   return (
-    <ProtectedRoute>
+ 
     <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
@@ -24,6 +24,6 @@ export default function AIAccountantPage() {
         </main>
       </div>
     </div>
-    </ProtectedRoute>
+
   )
 }

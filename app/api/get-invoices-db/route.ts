@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     const { data: invoices, error } = await supabase
       .from('invoices')
       .select('*')
-      .eq('createdBy', userEmail)
-      .order('sentAt', { ascending: false });
+      .eq('initiator_email', userEmail)
+      .order('sent_at', { ascending: false });
 
     if (error) {
       console.error('❌ Supabase fetch error:', error.message);

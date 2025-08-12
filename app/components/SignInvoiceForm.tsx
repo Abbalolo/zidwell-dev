@@ -5,44 +5,64 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import { Button } from "./ui/button";
 
-export default function SignForm({
+export default function SignInvoiceForm({
   token,
   signeeEmail,
+  signeeName,
 }: {
   token: string;
   signeeEmail: string;
+  signeeName: string;
 }) {
   const [name, setName] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [signed, setSigned] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [nameError, setNameError] = useState("");
+  const [codeError, setCodeError] = useState("");
+
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Name",
-        text: "Please type your full name to sign the contract.",
-      });
-      return;
+    setNameError("");
+    setCodeError("");
+
+    const trimmedName = name.trim();
+    const trimmedCode = verificationCode.trim();
+
+    let hasError = false;
+
+    if (!trimmedName) {
+      setNameError("Please enter your full name.");
+      hasError = true;
+    } else if (trimmedName.toLowerCase() !== signeeName.toLowerCase()) {
+      setNameError(`Name does not match the expected signee name `);
+      hasError = true;
     }
 
-    if (!verificationCode.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Verification Code",
-        text: "Please enter the verification code you received by email.",
-      });
-      return;
+    if (!trimmedCode) {
+      setCodeError("Verification code is required.");
+      hasError = true;
     }
+    if (trimmedCode.length !== 6) {
+      setCodeError("Wrong verification code.");
+      hasError = true;
+    }
+
+    if (hasError) return;
 
     setLoading(true);
 
     try {
-      const res = await fetch("/api/sign-contracts", {
+      const res = await fetch("/api/sign-invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name, signeeEmail, signeeName: name.trim() , verificationCode }),
+        body: JSON.stringify({
+          token,
+          name: trimmedName,
+          signeeEmail,
+          signeeName,
+          verificationCode: trimmedCode,
+        }),
       });
 
       const data = await res.json();
@@ -51,23 +71,22 @@ export default function SignForm({
         setSigned(true);
         Swal.fire({
           icon: "success",
-          title: "Contract Signed",
-          text: "You have successfully signed the contract.",
+          title: "Invoice Signed",
+          text: "You have successfully signed the invoice.",
         });
       } else {
         Swal.fire({
           icon: "error",
           title: "Signing Failed",
-          text:
-            data.message || "Failed to sign the contract. Please try again.",
+          text: data.message || "Failed to sign the invoice. Please try again.",
         });
       }
     } catch (err) {
-      console.error(err);
+      // console.error(err);
       Swal.fire({
         icon: "error",
-        title: "Error",
-        text: "An unexpected error occurred.",
+        title: "Unexpected Error",
+        text: "Something went wrong while signing. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -75,13 +94,11 @@ export default function SignForm({
   };
 
   if (signed) {
-    return (
-      <p className="text-green-600 font-semibold">Thank you for signing.</p>
-    );
+    return <p className="text-green-600 font-semibold">✅ Thank you for signing.</p>;
   }
 
   return (
-    <div>
+    <div className="mt-8">
       <label className="block mb-2 font-semibold">
         Type your full name to sign:
       </label>
@@ -89,9 +106,10 @@ export default function SignForm({
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="border rounded px-3 py-2 w-full mb-4"
+        className={`border rounded px-3 py-2 w-full mb-1 ${nameError ? "border-red-500" : ""}`}
         placeholder="Your Full Name"
       />
+      {nameError && <p className="text-red-500 text-sm mb-3">{nameError}</p>}
 
       <label className="block mb-2 font-semibold">
         Enter verification code:
@@ -100,9 +118,10 @@ export default function SignForm({
         type="text"
         value={verificationCode}
         onChange={(e) => setVerificationCode(e.target.value)}
-        className="border rounded px-3 py-2 w-full mb-4"
+        className={`border rounded px-3 py-2 w-full mb-1 ${codeError ? "border-red-500" : ""}`}
         placeholder="Verification Code"
       />
+      {codeError && <p className="text-red-500 text-sm mb-3">{codeError}</p>}
 
       <Button
         disabled={loading}
@@ -114,7 +133,7 @@ export default function SignForm({
         ) : (
           <Send className="h-4 w-4 mr-2" />
         )}
-        Sign Contract
+        Sign Invoice
       </Button>
     </div>
   );

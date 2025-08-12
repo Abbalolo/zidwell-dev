@@ -101,7 +101,7 @@ export default function ContractGen() {
   };
 
   const filteredContracts = contracts?.filter((contract) => {
-    const title = contract.contractTitle || "";
+    const title = contract.contract_title || "";
     const status = contract.status || "";
     const matchesSearch = title
       .toLowerCase()
@@ -112,8 +112,12 @@ export default function ContractGen() {
   });
 
   const handleDownload = async (contract: any) => {
-    if (!contract.contractText?.trim()) {
-      Swal.fire("Empty Contract", "This contract has no text to download.", "warning");
+    if (!contract.contract_text?.trim()) {
+      Swal.fire(
+        "Empty Contract",
+        "This contract has no text to download.",
+        "warning"
+      );
       return;
     }
 
@@ -125,10 +129,10 @@ export default function ContractGen() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contractTitle: contract.contractTitle,
-          contractText: contract.contractText,
-          signeeName: contract.signeeName,
-          signedAt: contract.signedAt,
+          contract_title: contract.contract_title,
+          contract_text: contract.contract_text,
+          signee_name: contract.signee_name,
+          signed_at: contract.signed_at,
         }),
       });
 
@@ -147,7 +151,11 @@ export default function ContractGen() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      Swal.fire("Error", "An error occurred while generating the PDF.", "error");
+      Swal.fire(
+        "Error",
+        "An error occurred while generating the PDF.",
+        "error"
+      );
     } finally {
       setLoadingMap((prev) => ({ ...prev, [contract.id]: false }));
     }
@@ -199,10 +207,10 @@ export default function ContractGen() {
 
           <div className="space-y-4">
             {filteredContracts?.map((contract) => {
-              const title = contract.contractTitle || "Untitled Contract";
+              const title = contract.contract_title || "Untitled Contract";
               const status = contract.status || "draft";
-              const createdAt = contract.createdAt?.toDate?.() || new Date();
-              const sentAt = contract.sentAt?.toDate?.() || new Date();
+              const createdAt = contract.created_at?.toDate?.() || new Date();
+              const sentAt = contract.sent_at?.toDate?.() || new Date();
               const isDownloading = loadingMap[contract.id];
 
               return (
@@ -221,9 +229,13 @@ export default function ContractGen() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>Issue Date: {createdAt.toLocaleDateString()}</span>
+                          <span>
+                            Issue Date: {createdAt.toLocaleDateString()}
+                          </span>
                           {status === "signed" && (
-                            <span>Sent Date: {sentAt.toLocaleDateString()}</span>
+                            <span>
+                              Sent Date: {sentAt.toLocaleDateString()}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -256,7 +268,7 @@ export default function ContractGen() {
                           onClick={() => handleDownload(contract)}
                           variant="outline"
                           size="sm"
-                          disabled={!!isDownloading}
+                          disabled={status === "pending"}
                         >
                           <Download className="w-4 h-4 mr-1" />
                           {isDownloading ? "Downloading..." : "Download"}

@@ -1,5 +1,5 @@
 "use client";
-import logo from "/public/logo.png";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -55,9 +55,14 @@ const navigationItems = [
     icon: FileSpreadsheet,
   },
   {
-    name: "AI accountant",
-    href: "/dashboard/services/ai-accountant",
-    icon: Bot,
+    name: "Create Receipt",
+    href: "/dashboard/services/create-receipt",
+    icon: Receipt,
+  },
+  {
+    name: "Tax Filling",
+    href: "/dashboard/services/tax-filling",
+    icon: FileSpreadsheet,
   },
 ];
 // const navigationItems = [
@@ -75,7 +80,9 @@ const navigationItems = [
 //   { name: "AI accountant", href: "#", icon: Bot },
 // ];
 
-const preferenceItems = [{ name: "My Profile", href: "#", icon: User }];
+const preferenceItems = [
+  { name: "My Profile", href: "/dashboard/profi", icon: User },
+];
 
 export default function DashboardSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -138,7 +145,7 @@ export default function DashboardSidebar() {
             <div className="flex items-center space-x-3 mb-4">
               <Link href="/dashboard" className="flex items-center">
                 <Image
-                  src={logo}
+                  src="/logo.png"
                   alt="Zidwell Logo"
                   width={32}
                   height={32}

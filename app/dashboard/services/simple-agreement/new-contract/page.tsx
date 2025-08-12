@@ -18,6 +18,7 @@ import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2"; // Import SweetAlert2 for custom alerts
 
 const Page = () => {
+    
   const [contractTitle, setContractTitle] = useState("Untitled Contract");
   const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);

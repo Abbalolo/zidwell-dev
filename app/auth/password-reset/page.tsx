@@ -4,10 +4,9 @@ import React, { FormEvent, useState } from "react";
 import { Label } from "@/app/components/ui/label";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "next/navigation";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/app/firebase/firebaseAuth";
 
-function PasswordReset() {
+
+const PasswordReset = () => {
   const [email, setEmail] = useState<string>("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState<boolean>(false);
@@ -34,29 +33,29 @@ function PasswordReset() {
     setErrors({});
     setLoading(true);
 
-    try {
-      await sendPasswordResetEmail(auth, email, {
-        url: "http://localhost:3000/auth/login",
-      });
+    // try {
+    //   await sendPasswordResetEmail(auth, email, {
+    //     url: "http://localhost:3000/auth/login",
+    //   });
 
-      Swal.fire({
-        title: `Password reset email sent to:, ${email}`,
-        icon: "success",
-      });
-      console.log("Password reset email sent to:", email);
-      // router.push("/auth/password-reset/succeed");
-    } catch (error) {
-      Swal.fire({
-        title: `Failed to send password reset email. Please try again later.`,
-        icon: "error",
-      });
-      console.error("Error sending password reset email:", error);
-      setErrors({
-        general: "Failed to send password reset email. Please try again later.",
-      });
-    } finally {
-      setLoading(false);
-    }
+    //   Swal.fire({
+    //     title: `Password reset email sent to:, ${email}`,
+    //     icon: "success",
+    //   });
+    //   console.log("Password reset email sent to:", email);
+    //   // router.push("/auth/password-reset/succeed");
+    // } catch (error) {
+    //   Swal.fire({
+    //     title: `Failed to send password reset email. Please try again later.`,
+    //     icon: "error",
+    //   });
+    //   console.error("Error sending password reset email:", error);
+    //   setErrors({
+    //     general: "Failed to send password reset email. Please try again later.",
+    //   });
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (

@@ -83,19 +83,19 @@ function generateContractHTML(
       <body>
         <div class="container">
           <img class="logo" src="${base64Logo}" alt="Zidwell Logo" />
-          <h1>${contract.contractTitle || "Contract Agreement"}</h1>
-          <div class="content">${(contract.contractText || "").replace(
+          <h1>${contract.contract_title || "Contract Agreement"}</h1>
+          <div class="content">${(contract.contract_text || "").replace(
             /\n/g,
             "<br>"
           )}</div>
 
           <div class="signatures">
           <p class="">Signee Signature:  ${
-            contract.signeeName || "Contract Signature"
+            contract.signee_name || "Contract Signature"
           }</p>
-         <p class="">Signee Date:  ${new Date(
-           contract.signedAt._seconds * 1000
-         ).toLocaleDateString()}</p>
+       <p class="">
+  Signee Date: ${new Date(contract.signed_at).toLocaleDateString()}
+</
 
           </div>
           <footer>
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     const html = generateContractHTML(contract, base64Logo, base64Watermark);
     const pdfBuffer = await generatePdfBufferFromHtml(html);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
