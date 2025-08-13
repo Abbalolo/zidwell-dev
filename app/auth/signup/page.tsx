@@ -215,15 +215,16 @@ export default function RegisterPage() {
     } catch (error: any) {
       console.error(
         "Registration error:",
-        error.response?.data || error.message
+        error.response?.data.details.errors.email
       );
 
       Swal.fire({
         icon: "error",
         title: "Oops...",
         text:
-          // error.response?.data?.error ||
-          "An error occurred during sign-up. Please try again.",
+         error.response?.data.details.errors.email
+          //  ||
+          // "An error occurred during sign-up. Please try again.",
       });
     } finally {
       setLoading(false);
