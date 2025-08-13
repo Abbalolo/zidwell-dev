@@ -12,6 +12,8 @@ const Footer = () => {
                 src="/logo.png"
                 alt="Zidwell Logo"
                 className="w-10 h-10 md:w-14 md:h-14 mr-2"
+                width={500}
+                height={500}
               />
               <h1 className="font-bold text-3xl">Zidwell</h1>
             </div>

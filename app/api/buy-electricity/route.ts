@@ -11,11 +11,10 @@ export async function POST(req: NextRequest) {
       'https://api.paybeta.ng/v2/electricity/purchase',
       {
         service: body.service, 
-        meterNumber: body.meterNumber,
-        meterType: body.meterType, 
+        customerId: body.meterNumber,
+        billerCode: body.meterType, 
         amount: body.amount,
-        customerName: body.customerName,
-        customerAddress: body.customerAddress,
+        pin: body.pin,
         reference: body.reference,
       },
       {

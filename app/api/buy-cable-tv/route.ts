@@ -11,10 +11,10 @@ export async function POST(req: Request) {
       'https://api.paybeta.ng/v2/cable/purchase',
       {
         service: body.service, 
-        smartCardNumber: body.smartCardNumber, 
+        customerId: body.smartCardNumber, 
         amount: body.amount, 
-        packageCode: body.packageCode, 
-        customerName: body.customerName, 
+        billerCode: body.packageCode, 
+        pin: body.customerName, 
         reference: body.reference, 
       },
       {

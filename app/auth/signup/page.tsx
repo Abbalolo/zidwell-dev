@@ -15,7 +15,6 @@ import logo from "@/public/logo.png";
 
 import Carousel from "@/app/components/Carousel";
 
-
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -38,25 +37,24 @@ export default function RegisterPage() {
 
   const [isMobile, setIsMobile] = useState(false);
 
-
-   const images = [
-  "/zid-pic/image1.jpg",
-  "/zid-pic/image2.jpg",
-  "/zid-pic/image3.jpg",
-  "/zid-pic/image4.jpg",
-  "/zid-pic/image5.jpg",
-  "/zid-pic/image6.jpg",
-  "/zid-pic/image8.jpg",
-  "/zid-pic/image9.jpg",
-  "/zid-pic/image10.jpg",
-  "/zid-pic/image11.jpg",
-  "/zid-pic/image12.jpg",
-  "/zid-pic/image13.jpg",
-  "/zid-pic/image14.jpg",
-  "/zid-pic/image15.jpg",
-  "/zid-pic/image16.jpg",
-  "/zid-pic/image17.jpg",
-];
+  const images = [
+    "/zid-pic/image1.jpg",
+    "/zid-pic/image2.jpg",
+    "/zid-pic/image3.jpg",
+    "/zid-pic/image4.jpg",
+    "/zid-pic/image5.jpg",
+    "/zid-pic/image6.jpg",
+    "/zid-pic/image8.jpg",
+    "/zid-pic/image9.jpg",
+    "/zid-pic/image10.jpg",
+    "/zid-pic/image11.jpg",
+    "/zid-pic/image12.jpg",
+    "/zid-pic/image13.jpg",
+    "/zid-pic/image14.jpg",
+    "/zid-pic/image15.jpg",
+    "/zid-pic/image16.jpg",
+    "/zid-pic/image17.jpg",
+  ];
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -90,8 +88,6 @@ export default function RegisterPage() {
       subtitle: "Accept our terms and you’re good to go 🚀",
     },
   };
-
-  
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -211,8 +207,7 @@ export default function RegisterPage() {
       // console.log("✅ Paybeta response:", response.data);
 
       Swal.fire({
-        title: "Check your email to verify your account",
-        text: "Please verify your email to access the app",
+        title: "Successfully register account",
         icon: "success",
       });
       // setShowModal(true);
@@ -227,7 +222,7 @@ export default function RegisterPage() {
         icon: "error",
         title: "Oops...",
         text:
-          error.response?.data?.error ||
+          // error.response?.data?.error ||
           "An error occurred during sign-up. Please try again.",
       });
     } finally {
@@ -257,13 +252,13 @@ export default function RegisterPage() {
           <div className="mb-8 text-center">
             {/* Logo and Brand */}
             <div className="flex items-center justify-center mb-2">
-             <Image
-  src={logo}
-  alt="Zidwell Logo"
-  width={32}
-  height={32}
-  className="w-20 object-contain"
-/>
+              <Image
+                src={logo}
+                alt="Zidwell Logo"
+                width={32}
+                height={32}
+                className="w-20 object-contain"
+              />
               <h1 className="font-bold text-lg">Zidwell</h1>
             </div>
 

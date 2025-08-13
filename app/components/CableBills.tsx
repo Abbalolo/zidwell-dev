@@ -12,6 +12,7 @@ import { useUserContextData } from "../context/userData";
 import CableCustomerCard from "./CablesCusInfo";
 import BouquePlanSelector from "./BouquetPlanSelector";
 import Swal from "sweetalert2";
+import Loader from "./Loader";
 interface Plan {
   code: string;
   description: string;
@@ -22,6 +23,7 @@ export default function CableBills() {
   const [CableProvider, setCableProviders] = useState<any | null>(null);
   const [userInfo, setUserInfo] = useState<any | null>(null);
   const [decorderNumber, setdecorderNumber] = useState("");
+  const [pin, setPin] = useState("");
   const [bundles, setBundles] = useState<Plan[]>([]);
   const [amount, setAmount] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
@@ -70,6 +72,9 @@ export default function CableBills() {
       newErrors.decorderNumber = "Please verify your decorder number first";
     }
 
+    if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+
+    if (!pin) newErrors.amount = "Please enter transaction pin";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -101,19 +106,17 @@ export default function CableBills() {
       return;
     }
 
-   
-
     // Step 5: Build payload
     const payload = {
       service: selectedProvider.slug,
       smartCardNumber: userInfo?.smartCardNumber,
       amount: Number(selectedPlan?.price),
       packageCode: selectedPlan?.code,
-      customerName: userInfo?.customerName,
+      pin: pin.trim(),
       reference: `Cable-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     };
 
-    console.log("📦 Purchase payload:", payload);
+    // console.log("📦 Purchase payload:", payload);
 
     // Step 6: Make the request
     try {
@@ -162,7 +165,7 @@ export default function CableBills() {
       if (!response.ok)
         throw new Error(data.error || "Failed to fetch providers");
 
-      console.log("Cable providers fetched:", data);
+      // console.log("Cable providers fetched:", data);
 
       setCableProviders(data);
     } catch (error: any) {
@@ -172,37 +175,52 @@ export default function CableBills() {
     }
   };
 
-  const validatedecorderNumber = async () => {
-    if (!selectedProvider?.slug || !decorderNumber) return;
+const validatedecorderNumber = async () => {
+  if (!decorderNumber) return;
 
-    const payload = {
-      service: selectedProvider.slug,
-      smartCardNumber: decorderNumber.trim(),
-    };
-
-    try {
-      setLoading(true);
-
-      const response = await fetch("/api/validate-cable-tv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to validate decorder number");
-      }
-      setUserInfo(data.data);
-      console.log("✅ decorder validation response:", data);
-    } catch (error: any) {
-      console.error("❌ decorder validation failed:", error.message);
-      // Optionally show a UI alert
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    service: selectedProvider?.slug || "",
+    smartCardNumber: decorderNumber.trim(),
   };
+
+  try {
+    setLoading(true);
+
+    const response = await fetch("/api/validate-cable-tv", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error || "Failed to validate decoder number");
+    }
+
+    setUserInfo(data.data);
+    setIsVerified(true);
+
+    // ✅ Update selectedProvider to match the validated number's service
+    if (data.data?.service && CableProvider?.data) {
+      const matchedProvider = CableProvider.data.find(
+        (prov: any) => prov.slug === data.data.service
+      );
+
+      if (matchedProvider) {
+        setSelectedProvider(matchedProvider);
+      }
+    }
+
+    // console.log("✅ decoder validation response:", data);
+  } catch (error: any) {
+    console.error("❌ decoder validation failed:", error.message);
+    setIsVerified(false);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const getBouquetBundle = async () => {
     if (!selectedProvider?.slug) return;
@@ -216,7 +234,7 @@ export default function CableBills() {
       if (!response.ok)
         throw new Error(data.error || "Failed to fetch bundles");
       setBundles(data.data); // Enable if needed
-      console.log("data", data);
+      // console.log("data", data);
     } catch (error: any) {
       console.error("Fetch error:", error.message);
     } finally {
@@ -233,25 +251,46 @@ export default function CableBills() {
   }, [selectedProvider]);
 
   useEffect(() => {
-    if (decorderNumber) {
-      validatedecorderNumber();
+    if (!decorderNumber) return;
+
+    const newErrors: { [key: string]: string } = {};
+
+    // First, quick local format check
+    if (!/^[0-9]{10,14}$/.test(decorderNumber)) {
+      newErrors.decorderNumber = "Invalid format";
+
+      return;
     }
+
+    // If format is valid, debounce API check
+    const timeoutId = setTimeout(() => {
+      validatedecorderNumber();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [decorderNumber]);
 
-  //   useEffect(() => {
-  //     if (decorderNumber && decorderType) ValidatedecorderNumber();
-  //   }, [decorderNumber || decorderType]);
+  if(loading) {
+    return <div className="flex h-screen justify-center items-center">
+<Loader/>
+    </div>
+  }
 
-  // 0209227217814
+  if(isVerified) {
+    return <div className="flex h-screen justify-center items-center">
+<Loader/>
+    </div>
+  }
 
-  console.log("amount", selectedPlan);
-  console.log("Selected Provider:", userInfo);
+  // 8057900967
+
+  // console.log("amount", selectedPlan);
+  // console.log("Selected Provider:", userInfo);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-      
         <h1 className="text-3xl font-bold text-foreground mb-2">
           Pay Cable Bills
         </h1>
@@ -274,16 +313,13 @@ export default function CableBills() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-                {CableProvider?.data.map((provider: any) => {
-               
+                {CableProvider?.data.map((provider: any, index:any) => {
                   const isSelected = selectedProvider?.name === provider.name;
 
                   return (
                     <div
-                      key={provider.id}
-                      onClick={() =>
-                        setSelectedProvider(provider)
-                      }
+                      key={index}
+                      onClick={() => setSelectedProvider(provider)}
                       className={`relative p-4 border-2 rounded-md transition-all duration-200 ${
                         isSelected
                           ? "bg-gray-100 border-gray-600 text-gray-900 shadow-md"
@@ -303,9 +339,6 @@ export default function CableBills() {
                         <h3 className="font-semibold text-gray-900 text-sm md:text-base">
                           {provider.name}
                         </h3>
-                        <p className="text-sm text-gray-500">
-                          {provider.status ? "VTU Available" : "Unavailable"}
-                        </p>
                       </div>
 
                       {isSelected && (
@@ -359,34 +392,48 @@ export default function CableBills() {
             </Card>
           )}
 
-          <div>
-            <Label>Select Plan</Label>
+          {isVerified && (
+            <div>
+              <Label>Select Plan</Label>
 
-            <BouquePlanSelector
-              plans={bundles}
-              selectedPlan={selectedPlan}
-              onSelect={(plan) => setSelectedPlan(plan)}
+              <BouquePlanSelector
+                plans={bundles}
+                selectedPlan={selectedPlan}
+                onSelect={(plan) => setSelectedPlan(plan)}
+              />
+              {errors.plan && (
+                <p className="text-sm text-red-500">{errors.plan}</p>
+              )}
+            </div>
+          )}
+
+          {/* Pin Input */}
+          <div className="border-t pt-4">
+            <Label htmlFor="pin">Transaction Pin</Label>
+
+            <Input
+              id="pin"
+              type="text"
+              placeholder="Enter Pin here.."
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              className={` ${errors.pin ? "border-red-500" : ""}`}
             />
-            {errors.plan && (
-              <p className="text-sm text-red-500">{errors.plan}</p>
-            )}
           </div>
         </div>
 
         {/* Payment Summary */}
         <div className="lg:col-span-1">
-         
-            <CableCustomerCard
-              customerName={userInfo?.customerName || ""}
-              decorderNumber={userInfo?.smartCardNumber || ""}
-              service={userInfo?.service || ""}
-              selectedProvider={selectedProvider}
-              selectedPlan={selectedPlan}
-              loading={loading}
-              handlePayment={handlePayment}
-              errors={errors}
-            />
-        
+          <CableCustomerCard
+            customerName={userInfo?.customerName || ""}
+            decorderNumber={userInfo?.smartCardNumber || ""}
+            service={userInfo?.service || ""}
+            selectedProvider={selectedProvider}
+            selectedPlan={selectedPlan}
+            loading={loading}
+            handlePayment={handlePayment}
+            errors={errors}
+          />
         </div>
       </div>
     </div>

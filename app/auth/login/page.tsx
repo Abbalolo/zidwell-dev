@@ -181,8 +181,7 @@ import { useUserContextData } from "@/app/context/userData";
 
 import Carousel from "@/app/components/Carousel";
 
-
- const images = [
+const images = [
   "/zid-pic/image1.jpg",
   "/zid-pic/image2.jpg",
   "/zid-pic/image3.jpg",
@@ -283,14 +282,13 @@ const Page = () => {
         <Card className="w-full max-w-md h-full">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
-             <Image
-  src={logo}
-  alt="Zidwell Logo"
-  width={32}
-  height={32}
-  className="w-20 object-contain"
-
-/>
+              <Image
+                src={logo}
+                alt="Zidwell Logo"
+                width={32}
+                height={32}
+                className="w-20 object-contain"
+              />
               <h1 className="font-bold text-lg">Zidwell</h1>
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
