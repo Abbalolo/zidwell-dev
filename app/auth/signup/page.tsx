@@ -213,19 +213,27 @@ export default function RegisterPage() {
       // setShowModal(true);
       router.push("/auth/login");
     } catch (error: any) {
-      console.error(
-        "Registration error:",
-        error.response?.data
-      );
+      console.error("Registration error:", error.response?.data);
 
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text:
-         error.response?.data.details?.errors.email
-          //  ||
-          // "An error occurred during sign-up. Please try again.",
-      });
+      if (error.response?.data.details?.errors.email) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: error.response?.data.details?.errors.email,
+        });
+      } else if (error.response?.data.details?.errors.bvn) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: error.response?.data.details?.errors.bvn,
+        });
+      } else if (error.response?.data.details?.errors.phone) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: error.response?.data.details?.errors.phone,
+        });
+      }
     } finally {
       setLoading(false);
     }
