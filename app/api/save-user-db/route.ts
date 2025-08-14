@@ -8,37 +8,33 @@ export async function POST(req: NextRequest) {
 
     const {
       email,
-      firstName,
-      lastName,
+      first_name,
+      last_name,
       phone,
       walletId,
-      bankAccountName,
-      bankAccountNumber,
-      bankName,
+      bank_account_name,
+      bank_account_number,
+      bank_name,
     } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-
-   
-    const { data, error } = await supabase
-      .from("users")
-      .upsert(
-        {
-          email: email.toLowerCase(),
-          firstName,
-          lastName,
-          phone,
-          walletId,
-          bankName,
-          bankAccountName,
-          bankAccountNumber,
-          loginAt: new Date().toISOString(),
-        },
-        { onConflict: "email" } // ensures update if email exists
-      );
+    const { data, error } = await supabase.from("users").upsert(
+      {
+        email: email.toLowerCase(),
+        first_name,
+        last_name,
+        phone,
+        walletId,
+        bank_name,
+        bank_account_name,
+        bank_account_number,
+        login_at: new Date().toISOString(),
+      },
+      { onConflict: "email" } // ensures update if email exists
+    );
 
     if (error) {
       console.error("❌ Supabase Error:", error);
@@ -46,7 +42,6 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data }, { status: 200 });
-
   } catch (error: any) {
     console.error("❌ Unexpected Error:", error.message);
     return NextResponse.json(

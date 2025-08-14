@@ -196,13 +196,13 @@ export default function RegisterPage() {
 
       const userData: any = {
         email: response.data.emailAddress,
-        firstName: response.data.firstName,
-        lastName: response.data.lastName,
+        first_name: response.data.firstName,
+        last_name: response.data.lastName,
         phone: phone,
         walletId: response.data.walletId,
-        bankAccountName: response.data.bankAccountName,
-        bankName: response.data.bankName,
-        bankAccountNumber: response.data.bankAccountNumber,
+        bank_account_name: response.data.bankAccountName,
+        bank_name: response.data.bankName,
+        bank_account_number: response.data.bankAccountNumber,
       };
 
       // ✅ Save user data to Supabase (optional)
