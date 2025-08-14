@@ -294,6 +294,7 @@ export default function RegisterPage() {
                     value={formData.firstName}
                     onChange={handleChange}
                     placeholder="First name"
+                     autoComplete="off"
                   />
                   {errors.firstName && (
                     <p className="text-sm text-red-500">{errors.firstName}</p>
@@ -307,6 +308,7 @@ export default function RegisterPage() {
                     value={formData.lastName}
                     onChange={handleChange}
                     placeholder="Last name"
+                     autoComplete="off"
                   />
                   {errors.lastName && (
                     <p className="text-sm text-red-500">{errors.lastName}</p>
@@ -322,6 +324,7 @@ export default function RegisterPage() {
                 placeholder="Email address"
                 value={formData.email}
                 onChange={handleChange}
+                 autoComplete="off"
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email}</p>
@@ -337,6 +340,7 @@ export default function RegisterPage() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                 autoComplete="off"
               />
               {errors.phone && (
                 <p className="text-sm text-red-500">{errors.phone}</p>
@@ -351,6 +355,7 @@ export default function RegisterPage() {
                   type={showPin ? "text" : "password"}
                   value={formData.pin}
                   onChange={handleChange}
+                   autoComplete="off"
                 />
                 <button
                   type="button"
@@ -407,6 +412,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
+                   autoComplete="off"
                 />
                 <button
                   type="button"
@@ -428,6 +434,7 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? "text" : "password"}
                   value={formData.confirmPassword}
                   onChange={handleChange}
+                   autoComplete="off"
                 />
                 <button
                   type="button"
