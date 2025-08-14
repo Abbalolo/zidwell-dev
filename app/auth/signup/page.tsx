@@ -215,14 +215,14 @@ export default function RegisterPage() {
     } catch (error: any) {
       console.error(
         "Registration error:",
-        error.response?.data.details.errors.email
+        error.response?.data
       );
 
       Swal.fire({
         icon: "error",
         title: "Oops...",
         text:
-         error.response?.data.details.errors.email
+         error.response?.data.details?.errors.email
           //  ||
           // "An error occurred during sign-up. Please try again.",
       });
@@ -260,7 +260,7 @@ export default function RegisterPage() {
                 height={32}
                 className="w-20 object-contain"
               />
-              <h1 className="font-bold text-lg">Zidwell</h1>
+              {/* <h1 className="font-bold text-lg">Zidwell</h1> */}
             </div>
 
             {/* Step Header */}

@@ -289,7 +289,7 @@ const Page = () => {
                 height={32}
                 className="w-20 object-contain"
               />
-              <h1 className="font-bold text-lg">Zidwell</h1>
+              {/* <h1 className="font-bold text-lg">Zidwell</h1> */}
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to your Zidwell account</CardDescription>
