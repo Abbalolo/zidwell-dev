@@ -30,6 +30,8 @@ export default function RegisterPage() {
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [showBvn, setShowBvn] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -176,14 +178,16 @@ export default function RegisterPage() {
       // await sendVerification(email);
 
       const paybetaData = {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.trim(),
+        phone:phone.trim(),
         password,
-        pin,
-        bvn,
+        pin:pin.trim(),
+        bvn:bvn.trim(),
       };
+
+      console.log("data",paybetaData)
 
       const response = await axios.post(
         "/api/paybeta-auth-register",
@@ -204,14 +208,14 @@ export default function RegisterPage() {
       // ✅ Save user data to Supabase (optional)
       await saveUserToSupabase(userData);
 
-      // console.log("✅ Paybeta response:", response.data);
+      console.log("✅ Paybeta response:", response.data);
 
       Swal.fire({
         title: "Successfully register account",
         icon: "success",
       });
       // setShowModal(true);
-      router.push("/auth/login");
+      // router.push("/auth/login");
     } catch (error: any) {
       console.error("Registration error:", error.response?.data);
 
@@ -338,27 +342,58 @@ export default function RegisterPage() {
                 <p className="text-sm text-red-500">{errors.phone}</p>
               )}
 
+
               <Label htmlFor="pin">Transaction PIN</Label>
-              <Input
-                id="pin"
-                name="pin"
-                value={formData.pin}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <Input
+                  id="pin"
+                  name="pin"
+                  type={showPin ? "text" : "password"}
+                  value={formData.pin}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  onClick={() => setShowPin(!showPin)}
+                >
+                  {showPin ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
               {errors.pin && (
                 <p className="text-sm text-red-500">{errors.pin}</p>
               )}
 
-              <Label htmlFor="bvn">BVN</Label>
-              <Input
-                id="bvn"
-                name="bvn"
-                value={formData.bvn}
-                onChange={handleChange}
-              />
+               <Label htmlFor="bvn">BVN</Label>
+              <div className="relative">
+                <Input
+                  id="bvn"
+                  name="bvn"
+                  type={showBvn ? "text" : "password"}
+                  value={formData.bvn}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  onClick={() => setShowBvn(!showBvn)}
+                >
+                  {showBvn ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
               {errors.bvn && (
                 <p className="text-sm text-red-500">{errors.bvn}</p>
               )}
+
+           
             </>
           )}
 
