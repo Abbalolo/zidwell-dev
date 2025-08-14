@@ -105,7 +105,7 @@ export default function RegisterPage() {
       password,
       confirmPassword,
       pin,
-      // bvn,
+      bvn,
     } = formData;
 
     if (!firstName) newErrors.firstName = "Please enter your first name.";
@@ -119,7 +119,7 @@ export default function RegisterPage() {
       newErrors.confirmPassword = "Passwords do not match.";
     if (!pin || pin.length < 4)
       newErrors.pin = "PIN must be at least 4 digits.";
-    // if (!bvn || bvn.length !== 11) newErrors.bvn = "BVN must be 11 digits.";
+    if (!bvn || bvn.length !== 11) newErrors.bvn = "BVN must be 11 digits.";
     if (!acceptTerms) newErrors.terms = "You must accept the terms.";
 
     return newErrors;
@@ -184,7 +184,7 @@ export default function RegisterPage() {
         phone:phone.trim(),
         password,
         pin:pin.trim(),
-        bvn: "00000000000",
+        bvn:bvn.trim(),
       };
 
       console.log("data",paybetaData)
@@ -373,7 +373,7 @@ export default function RegisterPage() {
                 <p className="text-sm text-red-500">{errors.pin}</p>
               )}
 
-               {/* <Label htmlFor="bvn">BVN</Label>
+               <Label htmlFor="bvn">BVN</Label>
               <div className="relative">
                 <Input
                   id="bvn"
@@ -381,6 +381,7 @@ export default function RegisterPage() {
                   type={showBvn ? "text" : "password"}
                   value={formData.bvn}
                   onChange={handleChange}
+                   autoComplete="off"
                 />
                 <button
                   type="button"
@@ -396,7 +397,7 @@ export default function RegisterPage() {
               </div>
               {errors.bvn && (
                 <p className="text-sm text-red-500">{errors.bvn}</p>
-              )} */}
+              )}
 
            
             </>
