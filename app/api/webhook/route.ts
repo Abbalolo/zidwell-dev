@@ -17,12 +17,13 @@ export async function POST(req: NextRequest) {
     }
 
     const { txRef, amount, status } = payload;
-console.log(txRef)
+    console.log("Received txRef:", txRef);
+
     if (status === "successful") {
       // ✅ Case 1: Wallet Funding
       if (txRef.startsWith("fund-")) {
         const parts = txRef.split("-");
-        const userId = parts.slice(1).join("-"); 
+        const userId = parts.slice(1).join("-"); // keep full UUID
 
         const { error } = await supabase.rpc("increment_wallet_balance", {
           user_id: userId,
@@ -33,7 +34,9 @@ console.log(txRef)
 
       // ✅ Case 2: Invoice Payment
       else if (txRef.startsWith("inv-")) {
-        const invoiceId = txRef.replace("inv-", "");
+        // Example txRef: inv-<invoiceId>-<timestamp>
+        const parts = txRef.split("-");
+        const invoiceId = parts[1]; // ✅ only UUID part
 
         // 1. Find the invoice in Supabase
         const { data: invoice, error: invError } = await supabase
@@ -58,7 +61,10 @@ console.log(txRef)
           // 3. Mark invoice as paid
           const { error: updateError } = await supabase
             .from("invoices")
-             .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+            .update({
+              payment_status: "paid",
+              paid_at: new Date().toISOString(),
+            })
             .eq("id", invoiceId);
 
           if (updateError) throw updateError;
