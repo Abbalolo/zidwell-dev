@@ -23,9 +23,6 @@ import DashboardHeader from "@/app/components/dashboard-hearder";
 import Swal from "sweetalert2";
 import { useUserContextData } from "@/app/context/userData";
 
-
-
-
 const Page = () => {
   const { templateId } = useParams();
   const router = useRouter();
@@ -36,13 +33,13 @@ const Page = () => {
   const [signeeEmail, setSigneeEmail] = useState(""); // ✅ FIXED: missing state
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("draft");
-  const {user} = useUserContextData();
+  const { userData } = useUserContextData();
   const [errors, setErrors] = useState({
     contractTitle: "",
     signeeEmail: "",
     contractContent: "",
     status: "",
-  }); 
+  });
 
   const CurrentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -50,24 +47,22 @@ const Page = () => {
     day: "2-digit",
   });
 
-type ContractTemplateType = {
-  id: string;
-  title: string;
-};
+  type ContractTemplateType = {
+    id: string;
+    title: string;
+  };
 
+  const getTemplateContent = (
+    template: ContractTemplateType,
+    user: any,
+    currentDate: string = new Date().toLocaleDateString()
+  ): string => {
+    if (!user.firstName || !user.lastName) {
+      return "Error: Missing user email.";
+    }
 
-
- const getTemplateContent = (
-  template: ContractTemplateType,
-  user: any,
-  currentDate: string = new Date().toLocaleDateString()
-): string => {
-  if (!user.firstName || !user.lastName) {
-    return "Error: Missing user email.";
-  }
-
-  const templateContent = {
-    "service-agreement": `SERVICE AGREEMENT
+    const templateContent = {
+      "service-agreement": `SERVICE AGREEMENT
 
 This Service Agreement ("Agreement") is entered into on ${currentDate} between:
 
@@ -96,7 +91,7 @@ Expected completion: [END_DATE]
 Client Signature: ${user.firstName} ${user.lastName}     Date: ${currentDate}
 `,
 
-    "employment-contract": `EMPLOYMENT CONTRACT
+      "employment-contract": `EMPLOYMENT CONTRACT
 
 This Employment Contract is between [COMPANY_NAME] and [EMPLOYEE_NAME].
 
@@ -114,7 +109,7 @@ Terms of Employment:
 Employee Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
 `,
 
-    "nda-template": `NON-DISCLOSURE AGREEMENT
+      "nda-template": `NON-DISCLOSURE AGREEMENT
 
 This Non-Disclosure Agreement ("NDA") is entered into between:
 
@@ -135,26 +130,24 @@ This agreement remains in effect for [DURATION].
 
 Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
 `,
+    };
+
+    return (
+      templateContent[template.id as keyof typeof templateContent] ||
+      `[Template content for ${template.title}]\n\nPlease customize this contract according to your needs.`
+    );
   };
 
-  return (
-    templateContent[template.id as keyof typeof templateContent] ||
-    `[Template content for ${template.title}]\n\nPlease customize this contract according to your needs.`
-  );
-};
-
-
-
-useEffect(() => {
-  if (templateId && typeof templateId === "string" && user) {
-    const foundTemplate = contractTemplates.find((t) => t.id === templateId);
-    if (foundTemplate) {
-      setTemplate(foundTemplate);
-      setContractTitle(`New ${foundTemplate.title}`);
-      setContractContent(getTemplateContent(foundTemplate, user)); // ✅ fixed
+  useEffect(() => {
+    if (templateId && typeof templateId === "string" && userData) {
+      const foundTemplate = contractTemplates.find((t) => t.id === templateId);
+      if (foundTemplate) {
+        setTemplate(foundTemplate);
+        setContractTitle(`New ${foundTemplate.title}`);
+        setContractContent(getTemplateContent(foundTemplate, userData));
+      }
     }
-  }
-}, [templateId, user]);
+  }, [templateId, userData]);
 
   const validateInputs = () => {
     const newErrors = {
@@ -166,9 +159,10 @@ useEffect(() => {
 
     if (!contractTitle.trim())
       newErrors.contractTitle = "Contract title is required.";
-  if (signeeEmail.trim() === user?.email) {
-  newErrors.signeeEmail = "Sorry, the signee email address cannot be the same as the initiator's email address.";
-}
+    if (signeeEmail.trim() === userData?.email) {
+      newErrors.signeeEmail =
+        "Sorry, the signee email address cannot be the same as the initiator's email address.";
+    }
     if (!signeeEmail.trim())
       newErrors.signeeEmail = "Signee email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signeeEmail))
@@ -197,6 +191,7 @@ useEffect(() => {
 
   const handleSend = async () => {
     if (!validateInputs()) {
+
       Swal.fire({
         icon: "error",
         title: "Validation Failed",
@@ -204,6 +199,15 @@ useEffect(() => {
       });
       return;
     }
+
+       const paid = await handleDeduct();
+
+      if (!paid) {
+        setLoading(false);
+        return;
+      }
+   
+
 
     Swal.fire({
       title: "Sending contract...",
@@ -213,16 +217,17 @@ useEffect(() => {
         Swal.showLoading();
       },
     });
+    setLoading(true);
 
     try {
-      setLoading(true);
+
       const res = await fetch("/api/send-contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           signeeEmail,
           contractText: contractContent,
-          initiatorEmail: user?.email,
+          initiatorEmail: userData?.email,
           contractTitle,
           status,
         }),
@@ -234,10 +239,12 @@ useEffect(() => {
           title: "Success!",
           text: "Contract sent for signature successfully!",
         });
+
         setLoading(false);
-         router.push("/dashboard/services/simple-agreement")
+        window.location.reload();
       } else {
         const errorData = await res.json();
+         await handleRefund();
         Swal.fire({
           icon: "error",
           title: "Failed to send",
@@ -246,6 +253,7 @@ useEffect(() => {
       }
     } catch (err) {
       console.error(err);
+       await handleRefund();
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -255,6 +263,78 @@ useEffect(() => {
       setLoading(false);
     }
   };
+
+  const handleDeduct = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      Swal.fire({
+        title: "Confirm Deduction",
+        text: "₦2,000 will be deducted from your wallet for generating this Contract.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, proceed",
+      }).then(async (result) => {
+        if (!result.isConfirmed) {
+          return resolve(false);
+        }
+
+        try {
+          const res = await fetch("/api/pay-app-service", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: userData?.id,
+              amount: 2000,
+              description: "Contract successfully generated",
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            await Swal.fire(
+              "Error",
+              data.error || "Something went wrong",
+              "error"
+            );
+            return resolve(false);
+          }
+
+          resolve(true);
+        } catch (err: any) {
+          await Swal.fire("Error", err.message, "error");
+          resolve(false);
+        }
+      });
+    });
+  };
+
+  const handleRefund = async () => {
+  try {
+    await fetch("/api/refund-service", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userData?.id,
+        amount: 2000,
+        description: "Refund for failed contract generation",
+      }),
+    });
+    Swal.fire({
+      icon: "info",
+      title: "Refund Processed",
+      text: "₦2,000 has been refunded to your wallet due to failed contract sending.",
+    });
+  } catch (err) {
+    console.error("Refund failed:", err);
+    Swal.fire({
+      icon: "warning",
+      title: "Refund Failed",
+      text: "Payment deduction was made, but refund failed. Please contact support.",
+    });
+  }
+};
 
   return (
     <div className="min-h-screen bg-background">
@@ -334,7 +414,7 @@ useEffect(() => {
                     </div>
 
                     <div>
-                      <Label htmlFor="signeeEmail">Signee Email</Label>
+                      <Label htmlFor="signeeEmail">Client Email</Label>
                       <Input
                         id="signeeEmail"
                         value={signeeEmail}
@@ -357,8 +437,9 @@ useEffect(() => {
                         className="w-full p-2 border rounded-md bg-background"
                       >
                         <option value="draft">Draft</option>
-                        <option value="pending">Pending Review for Signature</option>
-                      
+                        <option value="pending">
+                          Pending Review for Signature
+                        </option>
                       </select>
                       {errors.status && (
                         <p className="text-red-500 text-sm">{errors.status}</p>

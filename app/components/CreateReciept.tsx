@@ -34,7 +34,7 @@ interface ReceiptForm {
 
 function CreateReceipt() {
   const router = useRouter();
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   const [form, setForm] = useState<ReceiptForm>({
     name: "",
@@ -63,18 +63,18 @@ function CreateReceipt() {
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    if (user) {
+    if (userData) {
       setForm((prev) => ({
         ...prev,
         receiptId: generateReceiptId(),
         issue_date: today,
         from:
-          user.firstName && user.lastName
-            ? `${user.firstName} ${user.lastName}`
-            : user.email || "",
+          userData.firstName && userData.lastName
+            ? `${userData.firstName} ${userData.lastName}`
+            : userData.email || "",
       }));
     }
-  }, [user]);
+  }, [userData]);
 
   const updateReceiptItem = (
     index: number,
@@ -121,7 +121,7 @@ function CreateReceipt() {
       newErrors.email = "Invalid email format.";
     }
 
-    if (form.email.trim() === user?.email) {
+    if (form.email.trim() === userData?.email) {
       newErrors.email = "Customer email cannot be initiator email.";
     }
     if (!form.receiptId.trim())
@@ -141,7 +141,7 @@ function CreateReceipt() {
 
   const handleSaveReceipt = async () => {
     try {
-      if (!user?.email) {
+      if (!userData?.email) {
         return Swal.fire({
           icon: "warning",
           title: "Unauthorized",
@@ -151,8 +151,10 @@ function CreateReceipt() {
 
       const payload = {
         data: form,
-        initiatorName: user ? `${user.firstName} ${user.lastName}` : "",
-        initiatorEmail: user?.email || "",
+        initiatorName: userData
+          ? `${userData.firstName} ${userData.lastName}`
+          : "",
+        initiatorEmail: userData?.email || "",
         receiptId: form.receiptId || generateReceiptId(),
       };
 
@@ -163,7 +165,15 @@ function CreateReceipt() {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message);
+      if (!res.ok) {
+        (result.message);
+         Swal.fire({
+        icon: "error",
+        title: "Failed to Send Receipt",
+        text: result.message || "An unexpected error occurred.",
+      });
+        await handleRefund();
+      }
 
       Swal.fire({
         icon: "success",
@@ -177,12 +187,21 @@ function CreateReceipt() {
         title: "Failed to Send Receipt",
         text: (err as Error)?.message || "An unexpected error occurred.",
       });
+      await handleRefund();
     }
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
     console.log("form data", form);
+
+    const paid = await handleDeduct();
+
+    if (!paid) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     await handleSaveReceipt();
     setForm({
@@ -197,7 +216,81 @@ function CreateReceipt() {
       receipt_items: [],
     });
     setLoading(false);
-    router.refresh();
+    
+  };
+
+  const handleDeduct = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      Swal.fire({
+        title: "Confirm Deduction",
+        text: "₦200 will be deducted from your wallet for generating this Receipt.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, proceed",
+      }).then(async (result) => {
+        if (!result.isConfirmed) {
+          return resolve(false);
+        }
+
+        try {
+          const res = await fetch("/api/pay-app-service", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: userData?.id,
+              amount: 200,
+              description: "Receipt successfully generated",
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            await Swal.fire(
+              "Error",
+              data.error || "Something went wrong",
+              "error"
+            );
+            
+            return resolve(false);
+          }
+
+          resolve(true);
+        } catch (err: any) {
+          await Swal.fire("Error", err.message, "error");
+         
+          resolve(false);
+        }
+      });
+    });
+  };
+
+  const handleRefund = async () => {
+    try {
+      await fetch("/api/refund-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          amount: 200,
+          description: "Refund for failed receipt generation",
+        }),
+      });
+      Swal.fire({
+        icon: "info",
+        title: "Refund Processed",
+        text: "₦200 has been refunded to your wallet due to failed receipt sending.",
+      });
+    } catch (err) {
+      console.error("Refund failed:", err);
+      Swal.fire({
+        icon: "warning",
+        title: "Refund Failed",
+        text: "Payment deduction was made, but refund failed. Please contact support.",
+      });
+    }
   };
 
   return (

@@ -1,20 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { CreditCard, Building2, Smartphone, QrCode, Copy, Check } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { useUserContextData } from "../context/userData"
-
-
+import { Check, Copy } from "lucide-react"
+import TransactionHistory from "./transaction-history"
 
 export default function FundAccountMethods() {
   const [amount, setAmount] = useState("")
   const [copied, setCopied] = useState("")
-const {user} = useUserContextData()
+  const [showInput, setShowInput] = useState(false)
+  const [accountDetails, setAccountDetails] = useState<any>(null)
+  const { userData } = useUserContextData()
+
   const copyToClipboard = async (text: any, type: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -25,82 +26,174 @@ const {user} = useUserContextData()
     }
   }
 
+  // Function to call the backend API
+  const generateVirtualAccountNumber = async () => {
+    // Ensure userData exists and the amount is provided
+    if (!userData || !amount) {
+      console.error("Missing user data or amount.");
+      return null
+    }
+
+    // Prepare payload with user data and amount
+    const payload = {
+      userId: userData.id,
+      email: userData.email,
+      first_name: userData.firstName,
+      last_name: userData.lastName,
+      phone: userData.phone,
+      amount,
+    }
+
+    console.log("Sending fund data:", payload)
+
+    try {
+      // Make the API call to generate the virtual account number
+      const response = await fetch('/api/generate-virtual-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (response.ok) {
+        // Handle successful response
+        const data = await response.json()
+        console.log("Generated account details:", data)
+        return data
+      } else {
+        // Handle response errors
+        const errorData = await response.json()
+        console.error("Error generating account number:", errorData.error)
+        throw new Error(errorData.error || 'Something went wrong')
+      }
+    } catch (error) {
+      console.error("Error during API call:", error)
+      return null
+    }
+  }
+
+  const handleQuickFund = () => {
+    // Show the input field when "Quick Fund" is clicked
+    setShowInput(true)
+  }
+
+  const handleDeposit = async () => {
+    try {
+      // Call the backend to generate the virtual account details
+      const newAccountDetails = await generateVirtualAccountNumber()
+      
+      if (newAccountDetails && newAccountDetails.success) {
+        console.log("Account details received:", newAccountDetails)
+        setAccountDetails(newAccountDetails)  // Store the entire account details object
+      } else {
+        console.error("No account details found or success is false.")
+      }
+      
+      setAmount("") // Clear the amount input after submission
+      setShowInput(false) // Hide the input field
+    } catch (error) {
+      alert(error) // Show error if something went wrong
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Amount Input */}
-      {/* <Card>
+      {/* Account Balance Card */}
+      <Card>
         <CardHeader>
-          <CardTitle>Enter Amount to Fund</CardTitle>
+          <CardTitle>Account Balance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="amount">Amount (₦)</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="Enter amount"
-                value={amount}
-                onChange={(e:any) => setAmount(e.target.value)}
-                className="text-lg"
-              />
-            </div>
-            <p className="text-sm text-gray-500">Minimum amount: ₦100.00</p>
+          <div className="flex justify-between items-center">
+            <span className="text-lg md:text-2xl font-semibold">₦{userData?.walletBalance || "0.00"}</span>
+            <Button className="bg-[#C29307]" onClick={handleQuickFund}>Quick Fund</Button>
           </div>
         </CardContent>
-      </Card> */}
+      </Card>
 
-        <div className="bg-blue-50 p-6 rounded-lg">
-                <h3 className="font-semibold text-blue-900 mb-4 flex items-center">
-                  <Building2 className="w-5 h-5 mr-2" />
-                  Bank Transfer Details
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Bank Name:</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{user?.bankName}</span>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(user?.bankName, "bank")}>
-                        {copied === "bank" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Account Name:</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{user?.bankAccountName}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(user?.bankAccountName, "name")}
-                      >
-                        {copied === "name" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Account Number:</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium font-mono">{user?.bankAccountNumber}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(user?.bankAccountNumber, "account")}
-                      >
-                        {copied === "account" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 p-3 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Important:</strong> Please use your registered phone number as the transfer reference to
-                    ensure automatic credit.
-                  </p>
+      {/* Show input field when Quick Fund is clicked */}
+      {showInput && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Enter Amount to Fund</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="amount">Amount (₦)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="Enter amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="text-lg"
+                />
+              </div>
+              <p className="text-sm text-gray-500">Minimum amount: ₦100.00</p>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button className="bg-[#C29307]" onClick={handleDeposit}>OK</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Display account details when available */}
+      {accountDetails && accountDetails.success && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Virtual Account Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {/* Account Number */}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Account Number:</span>
+
+                <div className="flex gap-3 items-center">
+                <span className="font-mono">{accountDetails.account.account_number}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(accountDetails.account.account_number, "account")}
+                >
+                  {copied === "account" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
                 </div>
               </div>
 
-    
+              {/* Bank Name */}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Bank Name:</span>
+                <span>{accountDetails.account.bank_name}</span>
+              </div>
+
+              {/* Amount */}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Amount:</span>
+                <span>₦{accountDetails.account.amount}</span>
+              </div>
+
+              {/* Expiry Date */}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Expiry Date:</span>
+                <span>{accountDetails.account.expiry_date}</span>
+              </div>
+
+              {/* Account Status */}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Status:</span>
+                <span>{accountDetails.account.account_status}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
+      <TransactionHistory/>
     </div>
   )
 }

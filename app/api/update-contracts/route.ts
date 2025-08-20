@@ -1,7 +1,10 @@
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import supabase from "@/app/supabase/supabase";
 
-
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 export async function POST(req: Request) {
   const data = await req.json();
 
@@ -19,11 +22,14 @@ export async function POST(req: Request) {
       description,
       updated_at: new Date().toISOString(),
     })
-    .eq("token", data.id); 
+    .eq("token", data.id);
 
   if (error) {
     console.error("Supabase update error:", error);
-    return NextResponse.json({ message: "Failed to update contract" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to update contract" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ message: "Updated successfully" });

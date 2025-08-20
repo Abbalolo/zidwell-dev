@@ -14,6 +14,8 @@ import { Eye, EyeOff } from "lucide-react";
 import logo from "@/public/logo.png";
 
 import Carousel from "@/app/components/Carousel";
+import supabase from "@/app/supabase/supabase";
+// import supabase from "@/app/supabase/supabase";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,8 +26,6 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     phone: "",
-    pin: "",
-    bvn: "",
   });
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +71,51 @@ export default function RegisterPage() {
   const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
+
+  const handleNextStep = () => {
+  const errors = validateCurrentStep();
+  if (Object.keys(errors).length > 0) {
+    setErrors(errors);
+    return; // don’t go to next step if errors exist
+  }
+  setErrors({}); // clear errors if none
+  nextStep();
+};
+
+
+
+const validateCurrentStep = (): Record<string, string> => {
+  const newErrors: Record<string, string> = {};
+  const { firstName, lastName, email, phone, password, confirmPassword } = formData;
+
+  if (currentStep === 1) {
+    if (!firstName) newErrors.firstName = "Please enter your first name.";
+    if (!lastName) newErrors.lastName = "Please enter your last name.";
+    if (!email || !/^[\w-.]+@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email))
+      newErrors.email = "Invalid email.";
+  }
+
+  if (currentStep === 2) {
+    if (!phone || phone.length !== 11)
+      newErrors.phone = "Phone number must be 11 digits.";
+  }
+
+  if (currentStep === 3) {
+    if (!password) newErrors.password = "Please enter a password.";
+    if (password !== confirmPassword)
+      newErrors.confirmPassword = "Passwords do not match.";
+  }
+
+  if (currentStep === 4) {
+    if (!acceptTerms) newErrors.terms = "You must accept the terms.";
+  }
+
+  return newErrors;
+};
+
+
+
+
   const stepHeaders: any = {
     1: {
       title: "Let’s get to know you!",
@@ -79,7 +124,7 @@ export default function RegisterPage() {
     },
     2: {
       title: "A few more details",
-      subtitle: "We need your phone number, BVN, and a transaction PIN.",
+      subtitle: "We need your phone number",
     },
     3: {
       title: "Secure your account",
@@ -97,16 +142,8 @@ export default function RegisterPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    const {
-      firstName,
-      lastName,
-      email,
-      phone,
-      password,
-      confirmPassword,
-      pin,
-      bvn,
-    } = formData;
+    const { firstName, lastName, email, phone, password, confirmPassword } =
+      formData;
 
     if (!firstName) newErrors.firstName = "Please enter your first name.";
     if (!lastName) newErrors.lastName = "Please enter your last name.";
@@ -117,131 +154,104 @@ export default function RegisterPage() {
     if (!password) newErrors.password = "Please enter a password.";
     if (password !== confirmPassword)
       newErrors.confirmPassword = "Passwords do not match.";
-    if (!pin || pin.length < 4)
-      newErrors.pin = "PIN must be at least 4 digits.";
-    if (!bvn || bvn.length !== 11) newErrors.bvn = "BVN must be 11 digits.";
     if (!acceptTerms) newErrors.terms = "You must accept the terms.";
 
     return newErrors;
   };
+  
+ const saveToDatabase = async (userData: {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+}) => {
+  try {
+    const res = await fetch("/api/save-user-db", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
 
-  const sendVerification = async (email: string) => {
-    try {
-      const res = await fetch("/api/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+    const data = await res.json();
+console.log(data)
+    if (res.ok) {
+      console.log({ success: true });
+    } else {
+      console.error({ error: data.error || "Something went wrong" });
+    }
+  } catch (err) {
+    console.error({ error: "Network error" });
+  }
+};
+
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  const validationErrors = validateForm();
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+
+  setLoading(true);
+  const { firstName, lastName, phone, email, password } = formData;
+
+  try {
+    // 1. Sign up user with Supabase Auth
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+       emailRedirectTo: `${window.location.origin}/auth/login`,
+      },
+    });
+
+    if (signUpError) {
+      console.error("Supabase sign-up error:", signUpError.message);
+      Swal.fire({
+        icon: "error",
+        title: "Auth Error",
+        text: signUpError.message,
       });
-
-      const result = await res.json();
-      if (!result.success)
-        throw new Error(result.error || "Verification failed");
-    } catch (err) {
-      console.error("Verification error:", err);
-    }
-  };
-
-  const saveUserToSupabase = async (userData: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    walletId: string;
-    bankAccountName: string;
-    bankAccountNumber: string;
-  }) => {
-    try {
-      const response = await axios.post("/api/save-user-db", userData);
-
-      if (response.status === 200) {
-        console.log("✅ User saved to Supabase");
-      } else {
-        console.error("❌ Supabase saving failed:", response.data.error);
-      }
-    } catch (error: any) {
-      console.error("❌ API error:", error.response?.data || error.message);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
       return;
     }
 
-    setLoading(true);
-    const { firstName, lastName, email, password, phone, bvn, pin } = formData;
+    const supabaseUserId = signUpData.user?.id;
+    if (!supabaseUserId) throw new Error("User ID not returned from Supabase signup");
 
-    try {
-      // await sendVerification(email);
+    // 2. Save user to your DB
+    const userData = {
+      id: supabaseUserId,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+    };
 
-      const paybetaData = {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        email: email.trim(),
-        phone:phone.trim(),
-        password,
-        pin:pin.trim(),
-        bvn:bvn.trim(),
-      };
+    await saveToDatabase(userData);
 
-      console.log("data",paybetaData)
+    // 3. Show success message
+    Swal.fire({
+      title: "Successfully registered account",
+      text: "Please check your email and verify your account before logging in.",
+      icon: "success",
+    });
 
-      const response = await axios.post(
-        "/api/paybeta-auth-register",
-        paybetaData
-      );
+    router.push("/auth/login");
+  } catch (error: any) {
+    console.error(error);
+    Swal.fire({
+      icon: "error",
+      title: "Something went wrong",
+      text: "Please try again later.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const userData: any = {
-        email: response.data.emailAddress,
-        first_name: response.data.firstName,
-        last_name: response.data.lastName,
-        phone: phone,
-        walletId: response.data.walletId,
-        bank_account_name: response.data.bankAccountName,
-        bank_name: response.data.bankName,
-        bank_account_number: response.data.bankAccountNumber,
-      };
-
-      // ✅ Save user data to Supabase (optional)
-      await saveUserToSupabase(userData);
-
-      console.log("✅ Paybeta response:", response.data);
-
-      Swal.fire({
-        title: "Successfully register account",
-        icon: "success",
-      });
-      // setShowModal(true);
-      router.push("/auth/login");
-    } catch (error: any) {
-      console.error("Registration error:", error.response?.data);
-
-      if (error.response?.data.details?.errors.email) {
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: error.response?.data.details?.errors.email,
-        });
-      } else if (error.response?.data.details?.errors.bvn) {
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: error.response?.data.details?.errors.bvn,
-        });
-      } else if (error.response?.data.details?.errors.phone) {
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: error.response?.data.details?.errors.phone,
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="lg:flex lg:justify-between bg-gray-50 fade-in">
@@ -294,7 +304,7 @@ export default function RegisterPage() {
                     value={formData.firstName}
                     onChange={handleChange}
                     placeholder="First name"
-                     autoComplete="off"
+                    autoComplete="off"
                   />
                   {errors.firstName && (
                     <p className="text-sm text-red-500">{errors.firstName}</p>
@@ -308,7 +318,7 @@ export default function RegisterPage() {
                     value={formData.lastName}
                     onChange={handleChange}
                     placeholder="Last name"
-                     autoComplete="off"
+                    autoComplete="off"
                   />
                   {errors.lastName && (
                     <p className="text-sm text-red-500">{errors.lastName}</p>
@@ -324,7 +334,7 @@ export default function RegisterPage() {
                 placeholder="Email address"
                 value={formData.email}
                 onChange={handleChange}
-                 autoComplete="off"
+                autoComplete="off"
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email}</p>
@@ -340,70 +350,15 @@ export default function RegisterPage() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                 autoComplete="off"
+                autoComplete="off"
               />
               {errors.phone && (
                 <p className="text-sm text-red-500">{errors.phone}</p>
               )}
-
-
-              <Label htmlFor="pin">Transaction PIN</Label>
-              <div className="relative">
-                <Input
-                  id="pin"
-                  name="pin"
-                  type={showPin ? "text" : "password"}
-                  value={formData.pin}
-                  onChange={handleChange}
-                   autoComplete="off"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  onClick={() => setShowPin(!showPin)}
-                >
-                  {showPin ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
-              </div>
-              {errors.pin && (
-                <p className="text-sm text-red-500">{errors.pin}</p>
-              )}
-
-               <Label htmlFor="bvn">BVN</Label>
-              <div className="relative">
-                <Input
-                  id="bvn"
-                  name="bvn"
-                  type={showBvn ? "text" : "password"}
-                  value={formData.bvn}
-                  onChange={handleChange}
-                   autoComplete="off"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  onClick={() => setShowBvn(!showBvn)}
-                >
-                  {showBvn ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
-              </div>
-              {errors.bvn && (
-                <p className="text-sm text-red-500">{errors.bvn}</p>
-              )}
-
-           
             </>
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 3  && (
             <>
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -413,7 +368,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
-                   autoComplete="off"
+                  autoComplete="off"
                 />
                 <button
                   type="button"
@@ -435,7 +390,7 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? "text" : "password"}
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                   autoComplete="off"
+                  autoComplete="off"
                 />
                 <button
                   type="button"
@@ -488,7 +443,7 @@ export default function RegisterPage() {
               </Button>
             )}
             {currentStep < 4 ? (
-              <Button type="button" className="bg-[#C29307]" onClick={nextStep}>
+              <Button type="button" className="bg-[#C29307]" onClick={handleNextStep}>
                 Next
               </Button>
             ) : (

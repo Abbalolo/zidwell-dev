@@ -80,6 +80,14 @@ const navigationItems = [
 //   { name: "AI accountant", href: "#", icon: Bot },
 // ];
 
+ const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "decimal",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
 const preferenceItems = [
   { name: "My Profile", href: "/dashboard/profi", icon: User },
 ];
@@ -87,7 +95,7 @@ const preferenceItems = [
 export default function DashboardSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -154,10 +162,13 @@ export default function DashboardSidebar() {
                 <h1 className="font-bold text-lg text-white">Zidwell</h1>
               </Link>
             </div>
-            {user && user.firstName ? (
+            {userData && userData.firstName ? (
+              <>
               <p className="text-gray-400 text-sm">
-                Welcome Back {`${user.firstName}`}
+                Welcome Back {`${userData.firstName}`}
               </p>
+              <span className="text-gray-400 text-sm">Wallet Balance  {` ${formatNumber(userData.walletBalance)}`} </span>
+              </>
             ) : null}
           </div>
 

@@ -32,6 +32,7 @@ export interface Receipt {
   payment_for: string;
   receipt_items: ReceiptItem[];
   receipt_number: string;
+  signee_name: string;
   sent_at: any;
   status: string;
 }
@@ -43,7 +44,7 @@ export default function ReceiptManager() {
   const [activeTab, setActiveTab] = useState("Receipts");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   const fetchReceipts = async (email: string) => {
     setLoading(true);
@@ -66,7 +67,7 @@ export default function ReceiptManager() {
       }
 
       const data = await res.json();
-console.log(data)
+      console.log(data);
       if (!data.receipts || !Array.isArray(data.receipts)) {
         throw new Error("Invalid data structure received from server");
       }
@@ -82,13 +83,13 @@ console.log(data)
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (user?.email) {
-        fetchReceipts(user.email);
+      if (userData?.email) {
+        fetchReceipts(userData.email);
       }
     }, 100);
 
     return () => clearTimeout(timeout);
-  }, [user?.email]);
+  }, [userData?.email]);
 
   const totalAmount = receipts.reduce((sum, receipt) => {
     const recieptTotal =
@@ -98,11 +99,23 @@ console.log(data)
     return sum + recieptTotal;
   }, 0);
 
- const signedReceipt = receipts
-    .filter((rcp) => rcp.status === "signed").length
-  const pendingReceipt = receipts
-    .filter((rcp) => rcp.status === "pending").length
+  const signedReceipt = receipts.filter(
+    (rcp) => rcp.status === "signed"
+  ).length;
+  const pendingReceipt = receipts.filter(
+    (rcp) => rcp.status === "pending"
+  ).length;
 
+   const filteredReceipts = receipts?.filter((receipt) => {
+    const title = receipt.bill_to || "";
+    const status = receipt.status || "";
+    const matchesSearch = title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "All" || status === selectedStatus.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
@@ -164,7 +177,7 @@ console.log(data)
 
                 {/* Status Filter Buttons */}
                 <div className="flex flex-wrap gap-2">
-                  {["All", "Paid", "Pending", "Overdue", "Draft"].map(
+                   {["All", "Signed", "Pending", "Draft"].map(
                     (status) => (
                       <Button
                         key={status}
@@ -185,7 +198,7 @@ console.log(data)
                 <div className="w-full sm:w-auto">
                   <Button
                     className="w-full sm:w-auto hover:bg-black bg-[#C29307] hover:shadow-xl transition-all duration-300"
-                    onClick={() => setActiveTab("create")} 
+                    onClick={() => setActiveTab("create")}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     New Reciept
@@ -197,9 +210,7 @@ console.log(data)
 
           {/* Reciepts List */}
           <RecieptList
-            receipts={receipts}
-            searchTerm={searchTerm}
-            selectedStatus={selectedStatus}
+            receipts={filteredReceipts}
           />
         </TabsContent>
 

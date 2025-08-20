@@ -1,17 +1,24 @@
 import { v4 as uuidv4 } from "uuid";
-import nodemailer from "nodemailer";
-import supabase from "@/app/supabase/supabase";
+
 import { transporter } from "@/lib/node-mailer";
-
-
-
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const {signeeEmail, contractText, contractTitle, initiatorEmail, status } = body;
+    const { signeeEmail, contractText, contractTitle, initiatorEmail, status } =
+      body;
 
-
-    if (!signeeEmail || !contractText || !contractTitle || !initiatorEmail || !status) {
+    if (
+      !signeeEmail ||
+      !contractText ||
+      !contractTitle ||
+      !initiatorEmail ||
+      !status
+    ) {
       return new Response(JSON.stringify({ message: "Missing fields" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -19,12 +26,14 @@ export async function POST(req: Request) {
     }
 
     const token = uuidv4();
-     const baseUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.NEXT_PUBLIC_DEV_URL
-    : process.env.NEXT_PUBLIC_BASE_URL;
-    const signingLink = `${baseUrl}/sign/${token}`;
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const baseUrl =
+      process.env.NODE_ENV === "development"
+        ? process.env.NEXT_PUBLIC_DEV_URL
+        : process.env.NEXT_PUBLIC_BASE_URL;
+    const signingLink = `${baseUrl}/sign-contract/${token}`;
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
 
     // ⬇️ Store in Supabase
     const { error } = await supabase.from("contracts").insert({
@@ -40,12 +49,14 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Supabase insert error:", error);
-      return new Response(JSON.stringify({ message: "Failed to save contract" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ message: "Failed to save contract" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
-
 
     await transporter.sendMail({
       from: `Zidwell Contracts <${process.env.EMAIL_USER}>`,
@@ -70,14 +81,13 @@ export async function POST(req: Request) {
             – Zidwell Contracts
           </p>
         </div>
-      `
+      `,
     });
 
     return new Response(JSON.stringify({ message: "Email sent" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-
   } catch (error) {
     console.error("Error sending signature request:", error);
     return new Response(JSON.stringify({ message: "Internal server error" }), {

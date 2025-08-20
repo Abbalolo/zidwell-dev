@@ -61,15 +61,12 @@ interface ReceiptForm {
 
 type Props = {
   receipts: any[];
-  selectedStatus: string;
-  searchTerm: string;
+
 };
 
-const RecieptList: React.FC<Props> = ({ receipts, selectedStatus, searchTerm }) => {
+const RecieptList: React.FC<Props> = ({ receipts }) => {
  const statusColors: Record<string, string> = {
-    paid: "bg-green-100 text-green-800",
     pending: "bg-yellow-100 text-yellow-800",
-    overdue: "bg-red-100 text-red-800",
     draft: "bg-gray-100 text-gray-800",
     signed: "bg-blue-100 text-blue-800",
   };
@@ -81,16 +78,6 @@ const RecieptList: React.FC<Props> = ({ receipts, selectedStatus, searchTerm }) 
       maximumFractionDigits: 2,
     }).format(value);
 
-  const filteredreciepts = receipts.filter((receipt) => {
-    const matchesSearch =
-      receipt.bill_to?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.reciept_number?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      selectedStatus === "All" || receipt.status === selectedStatus;
-
-    return matchesSearch && matchesStatus;
-  });
 
   const [selectedReciept, setSelectedReciept] = useState<ReceiptForm | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -362,7 +349,7 @@ const RecieptList: React.FC<Props> = ({ receipts, selectedStatus, searchTerm }) 
 
   return (
     <div className="space-y-4">
-      {filteredreciepts.map((reciept) => {
+      {receipts.map((reciept) => {
         const totalAmount =
           reciept.receipt_items?.reduce(
             (sum:any, item:any) => sum + item.quantity * item.price,

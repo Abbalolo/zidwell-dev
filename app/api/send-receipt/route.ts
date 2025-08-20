@@ -1,17 +1,18 @@
 import { v4 as uuidv4 } from "uuid";
-import supabase from "@/app/supabase/supabase";
+
 import { transporter } from "@/lib/node-mailer";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const {
-      data,            
-      initiatorEmail,   
-      initiatorName,
-      receiptId,
-    } = body;
+    const { data, initiatorEmail, initiatorName, receiptId } = body;
 
     if (!receiptId || !data || !initiatorEmail || !initiatorName) {
       return NextResponse.json(
@@ -21,12 +22,14 @@ export async function POST(req: Request) {
     }
 
     const token = uuidv4();
-     const baseUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.NEXT_PUBLIC_DEV_URL
-    : process.env.NEXT_PUBLIC_BASE_URL;
+    const baseUrl =
+      process.env.NODE_ENV === "development"
+        ? process.env.NEXT_PUBLIC_DEV_URL
+        : process.env.NEXT_PUBLIC_BASE_URL;
     const signingLink = `${baseUrl}/sign-receipt/${token}`;
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
 
     // Save to Supabase
     const { error } = await supabase.from("receipts").upsert(
@@ -50,7 +53,7 @@ export async function POST(req: Request) {
         },
       ],
       {
-        onConflict: "receipt_id", 
+        onConflict: "receipt_id",
       }
     );
 
@@ -87,7 +90,9 @@ export async function POST(req: Request) {
       `,
     });
 
-    return NextResponse.json({ message: "Receipt signing request sent successfully." });
+    return NextResponse.json({
+      message: "Receipt signing request sent successfully.",
+    });
   } catch (error: any) {
     console.error("Unexpected error:", error);
     return NextResponse.json(

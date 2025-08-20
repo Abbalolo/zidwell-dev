@@ -87,7 +87,7 @@ export default function AirtimePurchase() {
   const [customAmount, setCustomAmount] = useState("");
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const { user } = useUserContextData();
+  const { userData, user } = useUserContextData();
 
   const handlePhoneNumberChange = (value: string) => {
     const cleanValue = value.replace(/\D/g, "");
@@ -158,26 +158,28 @@ export default function AirtimePurchase() {
       if (!response.ok)
         throw new Error(data.error || "Failed to fetch providers");
 
-      const merged = data?.data?.map((provider: any) => {
-        const match = prefixColorMap.find((entry) =>
-          entry.prefix.some((p) => provider.prefixes?.includes(p))
-        );
+      // const merged = data?.data?.map((provider: any) => {
+      //   const match = prefixColorMap.find((entry) =>
+      //     entry.prefix.some((p) => provider.prefixes?.includes(p))
+      //   );
 
-        return {
-          ...provider,
-          color: match?.color || "text-gray-600",
-          bgColor: match?.bgColor || "bg-gray-50 border-gray-200",
-          prefix: provider.prefixes || [], // API prefixes used
-        };
-      });
+      //   return {
+      //     ...provider,
+      //     color: match?.color || "text-gray-600",
+      //     bgColor: match?.bgColor || "bg-gray-50 border-gray-200",
+      //     prefix: provider.prefixes || [], // API prefixes used
+      //   };
+      // });
 
-      setProviders(merged);
+      setProviders(data);
     } catch (error: any) {
       console.error("Fetch error:", error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  console.log("provider", providers)
 
   const purchaseAirtime = async () => {
     if (!validateForm()) return;
@@ -260,8 +262,8 @@ export default function AirtimePurchase() {
   }, [phoneNumber, providers]);
 
   useEffect(() => {
-    if (user) getNetworkProviders();
-  }, [user]);
+   getNetworkProviders();
+  }, []);
 
   if (loading && !providers) {
     return (
@@ -511,7 +513,7 @@ export default function AirtimePurchase() {
                   <span className="text-green-600">
                     ₦
                     {(
-                      (user?.walletBalance || 0) - (finalAmount || 0)
+                      (userData?.walletBalance || 0) - (finalAmount || 0)
                     ).toLocaleString()}
                   </span>
                 </div>

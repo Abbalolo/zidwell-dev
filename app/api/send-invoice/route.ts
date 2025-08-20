@@ -1,8 +1,20 @@
+// app/api/send-invoice/route.ts
 import { v4 as uuidv4 } from "uuid";
-
-import supabase from "@/app/supabase/supabase";
 import { transporter } from "@/lib/node-mailer";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const calculateTotal = (data: any) => {
+  return data.invoice_items.reduce(
+    (total: any, item: any) => total + item.quantity * item.price,
+    0
+  );
+};
 
 export async function POST(req: Request) {
   try {
@@ -15,26 +27,62 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-  
-    const token = uuidv4();
-     const baseUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.NEXT_PUBLIC_DEV_URL
-    : process.env.NEXT_PUBLIC_BASE_URL;
-    const signingLink = `${baseUrl}/sign-invoice/${token}`;
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
 
+    const baseUrl =
+      process.env.NODE_ENV === "development"
+        ? process.env.NEXT_PUBLIC_DEV_URL
+        : process.env.NEXT_PUBLIC_BASE_URL;
+    const signingLink = `${baseUrl}/sign-invoice/${invoiceId}`;
+
+    // ✅ Generate Flutterwave Payment Link
+    const paymentResponse = await fetch(
+      "https://api.flutterwave.com/v3/payments",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tx_ref: `invoice-${invoiceId}-${Date.now()}`,
+          amount: calculateTotal(data),
+          currency: "NGN",
+          redirect_url: `${baseUrl}/invoice-payment-callback/${invoiceId}`,
+          customer: {
+            email: data.email,
+            name: data.name,
+          },
+          customizations: {
+            title: "Invoice Payment",
+            description: `Payment for Invoice #${invoiceId}`,
+            logo: `${baseUrl}/logo.png`,
+          },
+        }),
+      }
+    );
+
+    if (!paymentResponse.ok) {
+      return NextResponse.json(
+        { message: "Flutterwave request failed" },
+        { status: 500 }
+      );
+    }
+    const paymentData = await paymentResponse.json();
+
+    if (!paymentData?.data?.link) {
+      throw new Error("Failed to create payment link");
+    }
+
+    const paymentLink = paymentData.data.link;
+
+    // ✅ Save invoice in DB (status = pending until webhook confirms payment)
     const { error } = await supabase.from("invoices").upsert(
       [
         {
-          token,
           initiator_email: initiatorEmail,
           initiator_name: initiatorName,
           invoice_id: invoiceId,
           signing_link: signingLink,
-          verification_code: verificationCode,
           signee_name: data.name,
           signee_email: data.email,
           message: data.message,
@@ -45,63 +93,63 @@ export async function POST(req: Request) {
           delivery_issue: data.delivery_issue,
           delivery_time: data.delivery_time,
           customer_note: data.customer_note,
-          account_number: data.account_number,
-          account_name: data.account_name,
-          account_to_pay_name: data.account_to_pay_name,
           invoice_items: data.invoice_items,
+          total_amount: calculateTotal(data),
+          payment_link: paymentLink,
           created_at: new Date().toISOString(),
-          status: "pending",
+          signature_status: "pending",
         },
       ],
-      { onConflict: "id" }
+      { onConflict: "invoice_id" }
     );
 
     if (error) {
       console.error("Supabase insert error:", error);
-      return new Response(
-        JSON.stringify({ message: "Failed to save contract" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }
+      return NextResponse.json(
+        { message: "Failed to save invoice" },
+        { status: 500 }
       );
     }
 
+    // ✅ Send email to signee
     await transporter.sendMail({
       from: `Zidwell Invoice <${process.env.EMAIL_USER}>`,
       to: data.email,
-      subject: "You’ve been invited to sign a contract",
+      subject: "New Invoice Payment Request",
       html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; font-size: 15px;">
-          <p>Hello,</p>
-          <p>You have received a new contract that requires your signature.</p>
-          <p style="color: #C29307; font-weight: bold;">
-            Your verification code: <span style="font-size: 16px;">${verificationCode}</span>
-          </p>
-          <p>Please click the secure link below to review and sign the document:</p>
-          <a href="${signingLink}" target="_blank" rel="noopener noreferrer"
-            style="display: inline-block; background-color: #C29307; color: white; padding: 10px 18px; text-decoration: none; border-radius: 5px; font-weight: bold; cursor:pointer">
-            Review & Sign Contract
-          </a>
-          <p style="margin-top: 20px;"><strong>Or copy and paste this link into your browser:</strong></p>
-          <a href="${signingLink}" style="color: #C29307;">${signingLink}</a>
-          <p>If you did not request this, you can safely ignore this email.</p>
-          <p style="margin-top: 30px; font-size: 13px; color: #999;">
-            – Zidwell Contracts
-          </p>
-        </div>
+       <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #e0e0e0;">
+  <p style="margin-bottom: 16px;">Hello <strong>${data.name}</strong>,</p>
+
+  <p style="margin-bottom: 16px;">You have received an invoice from <strong>${initiatorName}</strong>.</p>
+
+  <p style="margin-bottom: 16px;">Please click the button below to pay securely:</p>
+
+  <a href="${signingLink}" target="_blank" 
+     style="display:inline-block; background-color:#C29307; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:bold; margin-bottom: 16px;">
+    Pay Invoice
+  </a>
+
+  <p style="margin: 16px 0; font-weight:bold;">Or copy and paste this link into your browser:</p>
+  <p style="margin: 8px 0; word-break: break-all; color:#555;">${signingLink}</p>
+
+  <p style="margin: 16px 0;">After payment, you’ll be redirected to sign the invoice.</p>
+  <p style="margin: 16px 0;">If you didn’t expect this, you can safely ignore this email.</p>
+
+  <p style="margin-top: 32px; font-size: 13px; color: #888;">– Zidwell Contracts</p>
+</div>
+
       `,
     });
 
-    return new Response(JSON.stringify({ message: "Email sent" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error("Error sending signature request:", error);
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json(
+      { message: "Invoice email sent" },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("Error sending invoice:", error.message);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

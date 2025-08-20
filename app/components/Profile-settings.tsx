@@ -122,7 +122,7 @@ export default function ProfileSettings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -140,12 +140,12 @@ export default function ProfileSettings() {
 
   useEffect(() => {
     // Fetch user data from context or local storage if needed
-    if (user) {
+    if (userData) {
       setProfile({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        phone: userData.phone,
         // businessName: userData.businessName || "",
         // businessType: userData.businessType || "",
         // address: user.fullAddress || "",
@@ -154,7 +154,7 @@ export default function ProfileSettings() {
         // country: userData.country || "",
       });
     }
-  }, [user]);
+  }, [userData]);
 
   const changeUserPassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -272,9 +272,9 @@ export default function ProfileSettings() {
               </Button>
             </div>
             <div className="text-center md:text-left flex-1">
-              {user && (user.firstName || user.lastName) ? (
+              {userData && (userData.firstName || userData.lastName) ? (
                 <h2 className="text-xl text-center md:text-start w-full font-bold text-gray-900">
-                  Hello {`${user.firstName} ${user.lastName}`}
+                  Hello {`${userData.firstName} ${userData.lastName}`}
                 </h2>
               ) : null}
               <p className="text-gray-600">{profile.businessName}</p>

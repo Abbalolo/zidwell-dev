@@ -1,21 +1,17 @@
 // app/api/save-user/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/app/supabase/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    const {
-      email,
-      first_name,
-      last_name,
-      phone,
-      walletId,
-      bank_account_name,
-      bank_account_number,
-      bank_name,
-    } = body;
+    const { id, email, first_name, last_name, phone } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -23,17 +19,15 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase.from("users").upsert(
       {
+        id,
         email: email.toLowerCase(),
         first_name,
         last_name,
         phone,
-        walletId,
-        bank_name,
-        bank_account_name,
-        bank_account_number,
-        login_at: new Date().toISOString(),
+        wallet_balance: 0,
+        created_at: new Date().toISOString(),
       },
-      { onConflict: "email" } // ensures update if email exists
+      { onConflict: "id" } 
     );
 
     if (error) {
@@ -42,6 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data }, { status: 200 });
+
   } catch (error: any) {
     console.error("❌ Unexpected Error:", error.message);
     return NextResponse.json(

@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation"
 
 export default function BalanceCard() {
   const [showBalance, setShowBalance] = useState(false)
-const {user} = useUserContextData();
+const {userData} = useUserContextData();
 const router = useRouter()
 
 // console.log("user balance:", balance);
@@ -31,7 +31,7 @@ const router = useRouter()
             <p className="text-gray-500 text-sm mb-2">Total Balance</p>
             <div className="flex items-center justify-center">
               <h2 className="md:text-3xl text-xl font-bold text-gray-900">
-                Available Balance: ₦ {showBalance ? formatNumber(user?.walletBalance) : "*****"}
+                Available Balance: ₦ {showBalance ? formatNumber(userData?.walletBalance) : "*****"}
               </h2>
               <Button
                 variant="ghost"

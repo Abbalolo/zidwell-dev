@@ -83,17 +83,13 @@ interface InvoiceForm {
 
 type Props = {
   invoices: any[];
-  selectedStatus: string;
-  searchTerm: string;
+
 };
 
 const InvoiceList: React.FC<Props> = ({
-  invoices,
-  selectedStatus,
-  searchTerm,
+  invoices
 }) => {
   const statusColors: Record<string, string> = {
-    paid: "bg-green-100 text-green-800",
     pending: "bg-yellow-100 text-yellow-800",
     overdue: "bg-red-100 text-red-800",
     draft: "bg-gray-100 text-gray-800",
@@ -108,25 +104,12 @@ const InvoiceList: React.FC<Props> = ({
     }).format(value);
   };
 
-  const filteredInvoices = invoices?.filter((invoice) => {
-    const billTo = invoice.bill_to || "";
-    const invoiceNumber = invoice.invoice_number || "";
-    const search = searchTerm?.toLowerCase() || "";
-
-    const matchesSearch =
-      billTo.toLowerCase().includes(search) ||
-      invoiceNumber.toLowerCase().includes(search);
-
-    const matchesStatus =
-      selectedStatus === "All" || invoice.status === selectedStatus;
-
-    return matchesSearch && matchesStatus;
-  });
+ 
 
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processing2, setProcessing2] = useState(false);
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   const router = useRouter();
 
@@ -330,27 +313,7 @@ const InvoiceList: React.FC<Props> = ({
           </div>
 
 
-          <div class="space-y-6">
-              <div class="bg-gray-50 p-6 rounded-lg border">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Account Name</h2>
-                <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.account_to_pay_name
-                }</p>
-              </div>
-              <div class="bg-gray-50 p-6 rounded-lg border">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Bank Account Name</h2>
-                <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.account_name
-                }</p>
-              </div>
-              <div class="bg-gray-50 p-6 rounded-lg border">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Bank Account Number</h2>
-                <p class="text-gray-800 leading-relaxed whitespace-pre-line">${
-                  invoice.account_number
-                }</p>
-              </div>
-            </div>
-
+          
         
           <div class="bg-gray-50 p-6 rounded-lg border">
             <h3 class="font-semibold text-gray-800 mb-3">Customer Notes</h3>
@@ -411,7 +374,7 @@ const InvoiceList: React.FC<Props> = ({
   };
 
   const sendInvoiceEmail = async (invoice: InvoiceForm) => {
-    if (!user?.email) return;
+    if (!userData?.email) return;
 
     const result = await MySwal.fire({
       title: "Send Invoice",
@@ -441,7 +404,7 @@ const InvoiceList: React.FC<Props> = ({
         const res = await fetch("/api/send-invoice-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email, invoice }),
+          body: JSON.stringify({ email: userData.email, invoice }),
         });
 
         if (!res.ok) {
@@ -474,7 +437,7 @@ const InvoiceList: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      {filteredInvoices.map((invoice) => {
+      {invoices.map((invoice) => {
         const totalAmount = invoice.invoice_items?.reduce(
           (sum:any, item:any) => sum + item.quantity * item.price,
           0
@@ -486,17 +449,17 @@ const InvoiceList: React.FC<Props> = ({
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-3 mb-2">
-                    {/* <div id="pdf-container" className="">yayayayayya</div> */}
+                
                     <h3 className="font-semibold text-lg">
                       {invoice.invoice_id}
                     </h3>
                     <Badge
                       className={
-                        statusColors[invoice.status] ||
+                        statusColors[invoice.signature_status] ||
                         "bg-gray-100 text-gray-800"
                       }
                     >
-                      {invoice.status}
+                      {invoice.signature_status}
                     </Badge>
                   </div>
                   <p className="text-gray-900 font-medium mb-1">

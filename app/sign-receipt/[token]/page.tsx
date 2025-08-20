@@ -1,8 +1,9 @@
 // app/invoice/[token]/page.tsx
-import supabase from "@/app/supabase/supabase";
+// import supabase from "@/app/supabase/supabase";
 import { notFound } from "next/navigation";
 
 import SignReceiptForm from "@/app/components/SignReceiptForm";
+import supabase from "@/app/supabase/supabase";
 
 function generateInvoiceHtml(receipt: any) {
   const formattedSignedAt = receipt.signed_at
@@ -40,9 +41,9 @@ function generateInvoiceHtml(receipt: any) {
     body { font-family: 'Inter', sans-serif; background-color: #f9fafb; padding: 20px; }
     .signatures { display: flex; gap: 20px; margin-top: 20px; }
   </style>
-  <div class="bg-white w-full max-w-4xl rounded-xl shadow-2xl mx-auto my-8 overflow-hidden">
+ 
     <div class="bg-gray-200 px-8 py-6 flex justify-between items-center">
-      // <img src="" alt="Logo" class="h-10 w-10 mr-2" />
+       <img src="" alt="Logo" class="h-10 w-10 mr-2" />
       <div>
         <h1 class="text-2xl font-bold">INVOICE</h1>
         <p class="text-sm mt-1">Billing Document</p>
@@ -88,7 +89,9 @@ function generateInvoiceHtml(receipt: any) {
                 style: "currency",
                 currency: "NGN",
               })}</td>
-              <td class="p-4 text-right">${(item.quantity * item.price).toLocaleString("en-NG", {
+              <td class="p-4 text-right">${(
+                item.quantity * item.price
+              ).toLocaleString("en-NG", {
                 style: "currency",
                 currency: "NGN",
               })}</td>
@@ -116,7 +119,7 @@ function generateInvoiceHtml(receipt: any) {
       </div>
       ${signedSection}
     </div>
-  </div>
+
   `;
 }
 
@@ -150,13 +153,23 @@ export default async function ReceiptSignPage({
 
   return (
     <div className="p-4 max-w-5xl mx-auto">
+        {receiptData.status === "signed" && (
+        <div className="mb-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+          ⚠️ Warning: This receipt has already been signed and cannot be
+          modified.
+        </div>
+      )}
       <div
         className="border p-4 bg-white shadow rounded"
         dangerouslySetInnerHTML={{ __html: receiptHtml }}
       />
       {receiptData.status !== "signed" && (
         <div className="mt-6">
-          <SignReceiptForm token={token} signeeEmail={receiptData.signee_email} signeeName={receiptData.signee_name} />
+          <SignReceiptForm
+            token={token}
+            signeeEmail={receiptData.signee_email}
+            signeeName={receiptData.signee_name}
+          />
         </div>
       )}
     </div>

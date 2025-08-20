@@ -31,7 +31,7 @@ const Page = () => {
     status: "",
   });
   const router = useRouter();
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   // Basic validation function
   const validateInputs = () => {
@@ -44,7 +44,7 @@ const Page = () => {
 
     if (!contractTitle.trim())
       newErrors.contractTitle = "Contract title is required.";
-    if (signeeEmail.trim() === user?.email) {
+    if (signeeEmail.trim() === userData?.email) {
       newErrors.signeeEmail =
         "Sorry, the signee email address cannot be the same as the initiator's email address.";
     }
@@ -87,24 +87,32 @@ const Page = () => {
       return;
     }
 
+      const paid = await handleDeduct();
+
+      if (!paid) {
+        setLoading(false);
+        return;
+      }
+
+
     Swal.fire({
       title: "Sending contract...",
       text: "Please wait while we send your contract for signature.",
       allowOutsideClick: false,
       didOpen: () => {
-        Swal.showLoading(); // Show loading spinner
+        Swal.showLoading(); 
       },
     });
 
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch("/api/send-contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           signeeEmail,
           contractText: contractContent,
-          initiatorEmail: user?.email,
+          initiatorEmail: userData?.email,
           contractTitle,
           status,
         }),
@@ -118,9 +126,10 @@ const Page = () => {
         });
 
         setLoading(false);
-        router.push("/dashboard/services/simple-agreement");
+        window.location.reload();
       } else {
         const errorData = await res.json();
+        await handleRefund()
         Swal.fire({
           icon: "error",
           title: "Failed to send",
@@ -130,12 +139,85 @@ const Page = () => {
       }
     } catch (err) {
       console.error(err);
+      await handleRefund()
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "An error occurred while sending the contract.",
       });
       setLoading(false);
+    }
+  };
+
+   const handleDeduct = async (): Promise<boolean> => {
+      return new Promise((resolve) => {
+        Swal.fire({
+          title: "Confirm Deduction",
+          text: "₦2,000 will be deducted from your wallet for generating this Contract.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+          confirmButtonText: "Yes, proceed",
+        }).then(async (result) => {
+          if (!result.isConfirmed) {
+            return resolve(false);
+          }
+  
+          try {
+            const res = await fetch("/api/pay-app-service", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: userData?.id,
+                amount: 2000,
+                description: "Contract successfully generated",
+              }),
+            });
+  
+            const data = await res.json();
+  
+            if (!res.ok) {
+              await Swal.fire(
+                "Error",
+                data.error || "Something went wrong",
+                "error"
+              );
+              return resolve(false);
+            }
+  
+            resolve(true);
+          } catch (err: any) {
+            await Swal.fire("Error", err.message, "error");
+            resolve(false);
+          }
+        });
+      });
+    };
+
+    const handleRefund = async () => {
+    try {
+      await fetch("/api/refund-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          amount: 2000,
+          description: "Refund for failed contract generation",
+        }),
+      });
+      Swal.fire({
+        icon: "info",
+        title: "Refund Processed",
+        text: "₦2,000 has been refunded to your wallet due to failed contract sending.",
+      });
+    } catch (err) {
+      console.error("Refund failed:", err);
+      Swal.fire({
+        icon: "warning",
+        title: "Refund Failed",
+        text: "Payment deduction was made, but refund failed. Please contact support.",
+      });
     }
   };
 
@@ -222,7 +304,7 @@ const Page = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="signeeEmail">Signee Email</Label>
+                      <Label htmlFor="signeeEmail">Client Email</Label>
                       <Input
                         id="signeeEmail"
                         value={signeeEmail}

@@ -34,10 +34,11 @@ export default function SignReceiptForm({
     if (!trimmedName) {
       setNameError("Please enter your full name.");
       hasError = true;
-    } else if (trimmedName.toLowerCase() !== signeeName.toLowerCase()) {
-      setNameError(`Name does not match the expected signee name `);
-      hasError = true;
-    }
+    } 
+    // else if (trimmedName.toLowerCase() !== signeeName.toLowerCase()) {
+    //   setNameError(`Name does not match the expected signee name `);
+    //   hasError = true;
+    // }
 
     if (!trimmedCode) {
       setCodeError("Verification code is required.");

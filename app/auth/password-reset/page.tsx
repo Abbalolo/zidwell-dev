@@ -1,9 +1,11 @@
 "use client";
+
 import Swal from "sweetalert2";
 import React, { FormEvent, useState } from "react";
 import { Label } from "@/app/components/ui/label";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "next/navigation";
+import supabase from "@/app/supabase/supabase";
 
 
 const PasswordReset = () => {
@@ -13,9 +15,8 @@ const PasswordReset = () => {
 
   const router = useRouter();
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ): Promise<void> => {
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
     const newErrors: { [key: string]: string } = {};
@@ -29,33 +30,39 @@ const PasswordReset = () => {
       return;
     }
 
-    // Clear errors if validation passes
     setErrors({});
     setLoading(true);
 
-    // try {
-    //   await sendPasswordResetEmail(auth, email, {
-    //     url: "http://localhost:3000/auth/login",
-    //   });
+    const baseUrl =
+      process.env.NODE_ENV === "development"
+        ? process.env.NEXT_PUBLIC_DEV_URL
+        : process.env.NEXT_PUBLIC_BASE_URL;
 
-    //   Swal.fire({
-    //     title: `Password reset email sent to:, ${email}`,
-    //     icon: "success",
-    //   });
-    //   console.log("Password reset email sent to:", email);
-    //   // router.push("/auth/password-reset/succeed");
-    // } catch (error) {
-    //   Swal.fire({
-    //     title: `Failed to send password reset email. Please try again later.`,
-    //     icon: "error",
-    //   });
-    //   console.error("Error sending password reset email:", error);
-    //   setErrors({
-    //     general: "Failed to send password reset email. Please try again later.",
-    //   });
-    // } finally {
-    //   setLoading(false);
-    // }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${baseUrl}/auth/password-reset/update-password`, 
+        
+      });
+
+      console.log(error)
+
+      if (error) throw error;
+
+      Swal.fire({
+        title: `Password reset link sent to: ${email}`,
+        icon: "success",
+      });
+    } catch (error: any) {
+      Swal.fire({
+        title: `Failed to send password reset email. Please try again later.`,
+        icon: "error",
+      });
+      setErrors({
+        general: error.message || "Failed to send password reset email.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,7 +86,7 @@ const PasswordReset = () => {
           {errors.email && <p className="text-red-500">{errors.email}</p>}
           {errors.general && <p className="text-red-500">{errors.general}</p>}
           <Button
-            className="bg-[#C29307]  mt-4"
+            className="bg-[#C29307] mt-4"
             type="submit"
             disabled={loading}
           >
@@ -89,6 +96,6 @@ const PasswordReset = () => {
       </div>
     </main>
   );
-}
+};
 
 export default PasswordReset;

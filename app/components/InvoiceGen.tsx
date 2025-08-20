@@ -21,7 +21,7 @@ export interface Invoice {
   id: string;
   invoice_id: string;
   created_by: string;
-  email: string;
+  signee_email: string;
   name: string;
   customer_note: string;
   delivery_due: string;
@@ -30,13 +30,10 @@ export interface Invoice {
   invoice_number: string;
   from: string;
   bill_to: string;
-  account_number: string;
-  account_name: string;
-  account_to_pay_name: string;
   issue_date: string;
   due_date: string;
-  created_at: any;
-  status: string;
+  created_at: string | Date; 
+  signature_status: string;
   invoice_items: InvoiceItem[];
 }
 
@@ -44,21 +41,19 @@ export default function InvoiceManager() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [selectedStatus, setSelectedStatus] = useState("all"); 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
-  const { user } = useUserContextData();
-
+  const { userData } = useUserContextData();
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ fetch invoices
   const fetchInvoice = async (email: string) => {
     setLoading(true);
-    setError(null); 
+    setError(null);
 
     try {
-      if (!email) {
-        throw new Error("Email is required to fetch invoices");
-      }
+      if (!email) throw new Error("Email is required to fetch invoices");
 
       const res = await fetch("/api/get-invoices-db", {
         method: "POST",
@@ -72,11 +67,10 @@ export default function InvoiceManager() {
       }
 
       const data = await res.json();
-
-      if (!data.invoices || !Array.isArray(data.invoices)) {
+      if (!Array.isArray(data.invoices)) {
         throw new Error("Invalid data structure received from server");
       }
-      // console.log(data);
+
       setInvoices(data.invoices);
     } catch (err: any) {
       console.error("Error fetching invoices:", err);
@@ -86,38 +80,63 @@ export default function InvoiceManager() {
     }
   };
 
-useEffect(() => {
-  const timeout = setTimeout(() => {
-    if (user?.email) {
-      fetchInvoice(user.email);
+  useEffect(() => {
+    if (userData?.email) {
+      fetchInvoice(userData.email);
     }
-  }, 100); 
+  }, [userData?.email]);
 
-  return () => clearTimeout(timeout);
-}, [user?.email]);
-
+  // ✅ totals
   const totalAmount = invoices.reduce((sum, invoice) => {
     const invoiceTotal =
-      invoice.invoice_items?.reduce((itemSum, item) => {
-        return itemSum + item.quantity * item.price;
-      }, 0) || 0;
+      invoice.invoice_items?.reduce(
+        (itemSum, item) => itemSum + item.quantity * item.price,
+        0
+      ) || 0;
     return sum + invoiceTotal;
   }, 0);
 
   const paidAmount = invoices
-    .filter((inv) => inv.status === "Paid")
+    .filter((inv) => inv.signature_status?.toLowerCase() === "paid")
     .reduce((sum, invoice) => {
       const invoiceTotal =
-        invoice.invoice_items?.reduce((itemSum, item) => {
-          return itemSum + item.quantity * item.price;
-        }, 0) || 0;
+        invoice.invoice_items?.reduce(
+          (itemSum, item) => itemSum + item.quantity * item.price,
+          0
+        ) || 0;
       return sum + invoiceTotal;
     }, 0);
 
-  const signedInvoices = invoices
-    .filter((inv) => inv.status === "signed").length
-  const pendingInvoices = invoices
-    .filter((inv) => inv.status === "pending").length
+  const signedInvoices = invoices.filter(
+    (inv) => inv.signature_status?.toLowerCase() === "signed"
+  ).length;
+  const pendingInvoices = invoices.filter(
+    (inv) => inv.signature_status?.toLowerCase() === "pending"
+  ).length;
+
+ // ✅ status options
+const statusOptions = ["All", "Signed", "Pending", "Overdue", "Draft"];
+
+// ✅ filtered invoices
+const filteredInvoices = invoices.filter((item) => {
+  // normalize db value
+  const status = item.signature_status?.toLowerCase().trim() || "";
+
+  // ✅ check status
+  const statusMatch =
+    selectedStatus === "all" ? true : status === selectedStatus.toLowerCase();
+
+  // ✅ check search
+  const searchMatch =
+    searchTerm === "" ||
+    item.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.signee_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.bill_to?.toLowerCase().includes(searchTerm.toLowerCase()); 
+
+
+  return statusMatch && searchMatch;
+});
+   
 
   if (loading) {
     return (
@@ -156,7 +175,7 @@ useEffect(() => {
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-1">Pending Invoices</p>
               <p className="text-2xl font-bold text-yellow-600">
-               {pendingInvoices}
+                {pendingInvoices}
               </p>
             </div>
           </CardContent>
@@ -170,44 +189,46 @@ useEffect(() => {
         </TabsList>
 
         <TabsContent value="invoices" className="space-y-6">
-          {/* Search and Filter */}
+          {/* Search + Filter */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                {/* Search Input */}
                 <div className="relative flex gap-3 md:justify-between">
-                  <div className=" sm:flex-1">
+                  <div className="sm:flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       placeholder="Search invoices..."
                       value={searchTerm}
-                      onChange={(e: any) => setSearchTerm(e.target.value)}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 w-full"
                     />
                   </div>
 
-                  {/* Status Filter Buttons */}
+                  {/* Status filter */}
                   <div className="flex flex-wrap gap-2">
-                    {/* Desktop version: Status buttons */}
+                    {/* Desktop buttons */}
                     <div className="hidden sm:flex gap-2">
-                      {["All", "Paid", "Pending", "Overdue", "Draft"].map(
-                        (status) => (
+                      {statusOptions.map((status) => {
+                        const lowercase = status.toLowerCase();
+                        return (
                           <Button
                             key={status}
                             variant={
-                              selectedStatus === status ? "default" : "outline"
+                              selectedStatus === lowercase
+                                ? "default"
+                                : "outline"
                             }
                             size="sm"
                             className="hover:bg-[#C29307] hover:text-white border hover:shadow-xl transition-all duration-300"
-                            onClick={() => setSelectedStatus(status)}
+                            onClick={() => setSelectedStatus(lowercase)}
                           >
                             {status}
                           </Button>
-                        )
-                      )}
+                        );
+                      })}
                     </div>
 
-                    {/* Mobile version: Dot menu */}
+                    {/* Mobile dropdown */}
                     <div className="sm:hidden">
                       <Button
                         onClick={() => setIsMenuOpen((prev) => !prev)}
@@ -216,35 +237,36 @@ useEffect(() => {
                         <MoreHorizontal className="w-4 h-4 text-white" />
                       </Button>
 
-                      {/* Dropdown menu for mobile */}
                       {isMenuOpen && (
                         <div className="absolute right-0 bg-white shadow-md rounded-lg mt-2 p-2 border border-gray-200 w-40">
-                          {["All", "Paid", "Pending", "Overdue", "Draft"].map(
-                            (status) => (
+                          {statusOptions.map((status) => {
+                            const lowercase = status.toLowerCase();
+                            return (
                               <Button
                                 key={status}
                                 variant={
-                                  selectedStatus === status
+                                  selectedStatus === lowercase
                                     ? "default"
                                     : "outline"
                                 }
                                 size="sm"
                                 className="w-full text-left p-2 hover:bg-[#C29307] hover:text-white mb-1"
                                 onClick={() => {
-                                  setSelectedStatus(status);
-                                  setIsMenuOpen(false); // Close the menu after selecting
+                                  setSelectedStatus(lowercase);
+                                  setIsMenuOpen(false);
                                 }}
                               >
                                 {status}
                               </Button>
-                            )
-                          )}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-                {/* New Invoice Button */}
+
+                {/* New Invoice button */}
                 <div className="w-full sm:w-auto">
                   <Button
                     className="w-full sm:w-auto hover:bg-black bg-[#C29307] hover:shadow-xl transition-all duration-300"
@@ -258,15 +280,16 @@ useEffect(() => {
             </CardContent>
           </Card>
 
-          {/* Invoices List */}
+          {/* Invoice list */}
           <InvoiceLIst
-            invoices={invoices}
-            searchTerm={searchTerm}
-            selectedStatus={selectedStatus}
+            invoices={filteredInvoices}
+            
           />
         </TabsContent>
 
-        <CreateInvoice />
+        <TabsContent value="create">
+          <CreateInvoice />
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -3,19 +3,21 @@ import Swal from "sweetalert2";
 import {LogOut } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { useUserContextData } from "../context/userData";
+import { useEffect } from "react";
+
 
 export default function DashboardHeader() {
  
 
-  const { logout, user } = useUserContextData();
+  const { logout, userData , setUserData} = useUserContextData();
 
 
-  
+  console.log(userData)
 
   const handleLogout = async () => {
     try {
       await logout();
-      localStorage.removeItem("invoiceDraft");
+      
     } catch (error) {
       console.error("Logout error:", error);
       Swal.fire({
@@ -25,12 +27,21 @@ export default function DashboardHeader() {
       });
     }
   };
+
+
+  useEffect(() => {
+     const stored = localStorage.getItem("userData");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setUserData(parsed);
+        }
+  }, [])
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {user && (user.firstName || user.lastName) ? (
+        {userData && (userData.firstName || userData.lastName) ? (
           <h1 className="text-xl text-center md:text-start w-full font-bold text-gray-900">
-            Hello {`${user.firstName} ${user.lastName}`}
+            Hello {`${userData.firstName} ${userData.lastName}`}
           </h1>
         ) : null}
         {/* <div className="flex items-center justify-center space-x-4">

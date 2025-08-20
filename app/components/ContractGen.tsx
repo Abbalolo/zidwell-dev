@@ -13,6 +13,7 @@ import { CreateNewView } from "./CreateNewView";
 import { useUserContextData } from "../context/userData";
 import ContractsPreview from "./previews/ContractsPreview";
 import Swal from "sweetalert2";
+import Loader from "./Loader";
 
 export interface Contract {
   id: string;
@@ -68,25 +69,33 @@ export default function ContractGen() {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [contracts, setContracts] = useState<any[]>([]);
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   const fetchContracts = async (email: string) => {
-    const res = await fetch("/api/get-contracts-db", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userEmail: email }),
-    });
+    try {
+      setLoading(true);
+      const res = await fetch("/api/get-contracts-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userEmail: email }),
+      });
 
-    const data = await res.json();
-    // console.log("Fetched Contracts:", data.contracts);
-    setContracts(data.contracts);
+      const data = await res.json();
+      // console.log("Fetched Contracts:", data.contracts);
+      setContracts(data.contracts);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    if (user?.email) fetchContracts(user.email);
-  }, [user]);
+    if (userData?.email) fetchContracts(userData.email);
+  }, [userData]);
 
   const handleUseTemplate = (templateId: string) => {
     router.push(
@@ -160,6 +169,14 @@ export default function ContractGen() {
       setLoadingMap((prev) => ({ ...prev, [contract.id]: false }));
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader />
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
       <Tabs defaultValue="contracts" className="w-full">

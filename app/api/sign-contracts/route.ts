@@ -3,9 +3,14 @@ import nodemailer from "nodemailer";
 import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
-import supabase from "@/app/supabase/supabase";
+// import supabase from "@/app/supabase/supabase";
 import { transporter } from "@/lib/node-mailer";
+import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! 
+);
 function getLogoBase64() {
   try {
     const logoPath = path.join(process.cwd(), "public", "logo.png");
@@ -19,7 +24,11 @@ function getLogoBase64() {
 
 function getWatermarkBase64() {
   try {
-    const watermarkPath = path.join(process.cwd(), "public", "zidwell-watermark.png");
+    const watermarkPath = path.join(
+      process.cwd(),
+      "public",
+      "zidwell-watermark.png"
+    );
     const imageBuffer = fs.readFileSync(watermarkPath);
     return `data:image/png;base64,${imageBuffer.toString("base64")}`;
   } catch (error) {
@@ -28,7 +37,12 @@ function getWatermarkBase64() {
   }
 }
 
-function generateContractHTML(contract: any, logo: string, watermark: string, signeeName: string) {
+function generateContractHTML(
+  contract: any,
+  logo: string,
+  watermark: string,
+  signeeName: string
+) {
   return `
     <html>
       <head>
@@ -71,11 +85,17 @@ async function generatePdfBufferFromHtml(html: string): Promise<Buffer> {
 
 export async function POST(request: Request) {
   try {
-    const { token, signeeEmail, signeeName, verificationCode } = await request.json();
+    const { token, signeeEmail, signeeName, verificationCode } =
+      await request.json();
 
     if (!token || !signeeEmail || !verificationCode) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Missing required fields" },
+        { status: 400 }
+      );
     }
+
+
 
     // Get contract from Supabase
     const { data: contract, error } = await supabase
@@ -85,15 +105,24 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !contract) {
-      return NextResponse.json({ message: "Contract not found" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Contract not found" },
+        { status: 404 }
+      );
+    }
+console.log()
+    if (contract.signee_email !== signeeEmail) {
+      return NextResponse.json(
+        { message: "Email does not match" },
+        { status: 403 }
+      );
     }
 
-    if (contract.signeeEmail !== signeeEmail) {
-      return NextResponse.json({ message: "Email does not match" }, { status: 403 });
-    }
-
-    if (contract.verificationCode !== verificationCode) {
-      return NextResponse.json({ message: "Invalid verification code" }, { status: 401 });
+    if (contract.verification_code !== verificationCode) {
+      return NextResponse.json(
+        { message: "Invalid verification code" },
+        { status: 401 }
+      );
     }
 
     // Update contract status
@@ -111,11 +140,9 @@ export async function POST(request: Request) {
     const html = generateContractHTML(contract, logo, watermark, signeeName);
     const pdfBuffer = await generatePdfBufferFromHtml(html);
 
- 
-
     await transporter.sendMail({
       from: `Zidwell Contracts <${process.env.EMAIL_USER}>`,
-      to: `${contract.initiatorEmail}, ${contract.signeeEmail}`,
+      to: `${contract.initiator_email}, ${contract.signee_email}`,
       subject: "Contract Signed Successfully",
       html: `<p>The contract has been signed.</p><p>See attached PDF.</p>`,
       attachments: [
@@ -127,7 +154,10 @@ export async function POST(request: Request) {
       ],
     });
 
-    return NextResponse.json({ message: "Contract signed and emailed" }, { status: 200 });
+    return NextResponse.json(
+      { message: "Contract signed and emailed" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });

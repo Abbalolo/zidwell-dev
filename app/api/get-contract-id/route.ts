@@ -1,6 +1,10 @@
 // /app/api/get-contract/route.ts
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import supabase from "@/app/supabase/supabase"; // Your Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -14,7 +18,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("contracts")
     .select("*")
-    .eq("token", id) 
+    .eq("token", id)
     .single();
 
   if (error) {

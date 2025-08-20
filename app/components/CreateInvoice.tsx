@@ -31,11 +31,17 @@ interface InvoiceForm {
   delivery_issue: string;
   delivery_time: string;
   customer_note: string;
-  account_number: string;
-  account_name: string;
-  account_to_pay_name: string;
+  // account_number: string;
+  // account_name: string;
+  // account_to_pay_name: string;
   invoice_items: InvoiceItem[];
 }
+
+const generateInvoiceId = () => {
+  const datePart = new Date().getFullYear();
+  const randomPart = Math.floor(1000 + Math.random() * 9000);
+  return `INV-${datePart}-${randomPart}`;
+};
 
 function CreateInvoice() {
   const router = useRouter();
@@ -52,15 +58,15 @@ function CreateInvoice() {
     delivery_issue: "",
     delivery_time: "",
     customer_note: "",
-    account_number: "",
-    account_name: "",
-    account_to_pay_name: "",
+    // account_number: "",
+    // account_name: "",
+    // account_to_pay_name: "",
     invoice_items: [],
   });
 
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const { user } = useUserContextData();
+  const { userData } = useUserContextData();
 
   const saveDraftToLocalStorage = () => {
     try {
@@ -122,12 +128,6 @@ function CreateInvoice() {
     }));
   };
 
-  const generateInvoiceId = () => {
-    const datePart = new Date().getFullYear();
-    const randomPart = Math.floor(1000 + Math.random() * 9000);
-    return `INV-${datePart}-${randomPart}`;
-  };
-
   const today = new Date().toISOString().slice(0, 10);
 
   const getDueDate = (days = 14) => {
@@ -137,23 +137,23 @@ function CreateInvoice() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (userData) {
       setForm((prev) => ({
         ...prev,
-        invoiceId: generateInvoiceId(),
+        invoice_id: generateInvoiceId(),
         issue_date: today,
         due_date: getDueDate(14),
         from:
-          user.firstName && user.lastName
-            ? `${user.firstName} ${user.lastName}`
-            : user.email || "",
+          userData.firstName && userData.lastName
+            ? `${userData.firstName} ${userData.lastName}`
+            : userData.email || "",
       }));
     }
-  }, [user]);
+  }, [userData]);
 
   const handleSaveInvoice = async () => {
     try {
-      if (!user?.email) {
+      if (!userData?.email) {
         return Swal.fire({
           icon: "warning",
           title: "Unauthorized",
@@ -162,12 +162,13 @@ function CreateInvoice() {
       }
 
       const payload = {
-        data: form ,
-        initiatorName: user ? `${user.firstName} ${user.lastName}` : "",
-        initiatorEmail: user?.email || "",
+        data: form,
+        initiatorName: userData
+          ? `${userData.firstName} ${userData.lastName}`
+          : "",
+        initiatorEmail: userData?.email || "",
         invoiceId: form?.invoice_id || generateInvoiceId(),
       };
-      
 
       const res = await fetch("/api/send-invoice", {
         method: "POST",
@@ -186,6 +187,7 @@ function CreateInvoice() {
       });
     } catch (err) {
       console.error(err);
+      await handleRefund()
       Swal.fire({
         icon: "error",
         title: "Failed to Send Invoice",
@@ -194,33 +196,183 @@ function CreateInvoice() {
     }
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    // console.log("Submitted Invoice Form", form);
+  const validateInvoiceForm = (form: InvoiceForm) => {
+    const errors: string[] = [];
+
+    if (!form.name.trim()) errors.push("Client name is required.");
+    if (!form.email.trim()) {
+      errors.push("Client email is required.");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.push("Invalid email format.");
+    }
+    if (!form.invoice_id.trim()) errors.push("Invoice number is required.");
+    if (!form.from.trim()) errors.push("From field is required.");
+    if (!form.bill_to.trim()) errors.push("Bill To field is required.");
+    if (!form.issue_date) errors.push("Invoice date is required.");
+    if (!form.due_date) errors.push("Due date is required.");
+    if (form.issue_date && form.due_date && form.due_date < form.issue_date) {
+      errors.push("Due date cannot be before issue date.");
+    }
+
+    // invoice items
+    if (form.invoice_items.length === 0) {
+      errors.push("At least one invoice item is required.");
+    } else {
+      form.invoice_items.forEach((item, index) => {
+        if (!item.item.trim())
+          errors.push(`Item ${index + 1}: description required.`);
+        if (item.quantity <= 0)
+          errors.push(`Item ${index + 1}: quantity must be greater than 0.`);
+        if (item.price <= 0)
+          errors.push(`Item ${index + 1}: price must be greater than 0.`);
+      });
+    }
+
+    // bank details
+    // if (!form.account_number.trim())
+    //   errors.push("Bank account number is required.");
+    // if (!form.account_to_pay_name.trim())
+    //   errors.push("Account to pay name is required.");
+    // if (!form.account_name.trim()) errors.push("Bank name is required.");
+
+    return errors;
+  };
+
+
+
+const handleSubmit = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault(); 
+
+  const errors = validateInvoiceForm(form);
+
+  if (errors.length > 0) {
+    Swal.fire({
+      title: "Validation Errors",
+      html: errors.join("<br/>"),
+      icon: "error",
+    });
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const paid = await handleDeduct();
+
+    if (!paid) {
+      setLoading(false); 
+      return;
+    }
 
     await handleSaveInvoice();
-    setForm({
-      name: "",
-      email: "",
-      message: "",
-      invoice_id: "",
-      bill_to: "",
-      from: "",
-      issue_date: "",
-      due_date: "",
-      delivery_due: "",
-      delivery_issue: "",
-      delivery_time: "",
-      customer_note: "",
-      account_number: "",
-      account_name: "",
-      account_to_pay_name: "",
+    await Swal.fire("Success", "Invoice created successfully!", "success");
+
+// setForm({
+    //   name: "",
+    //   email: "",
+    //   message: "",
+    //   invoice_id: "",
+    //   bill_to: "",
+    //   from: "",
+    //   issue_date: "",
+    //   due_date: "",
+    //   delivery_due: "",
+    //   delivery_issue: "",
+    //   delivery_time: "",
+    //   customer_note: "",
+    //   account_number: "",
+    //   account_name: "",
+    //   account_to_pay_name: "",
+    //   invoice_items: [],
+    // });
+
     
-      invoice_items: [],
-    });
+    window.location.reload();
+  } catch (err) {
+     await handleRefund()
+     console.log(err)
+      Swal.fire({
+             icon: "error",
+             title: "Error",
+             text: "An error occurred while sending the invoice.",
+           });
+    }
+  
+  finally {
     setLoading(false);
-    router.refresh();
-  };
+  }
+};
+
+const handleDeduct = async (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    Swal.fire({
+      title: "Confirm Deduction",
+      text: "₦200 will be deducted from your wallet for generating this invoice.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, proceed",
+    }).then(async (result) => {
+      if (!result.isConfirmed) {
+        return resolve(false); 
+      }
+
+      try {
+        const res = await fetch("/api/pay-app-service", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: userData?.id,
+            amount: 200,
+            description: "Invoice successfully generated",
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          await Swal.fire("Error", data.error || "Something went wrong", "error");
+          return resolve(false);
+        }
+
+        resolve(true);
+      } catch (err: any) {
+        await Swal.fire("Error", err.message, "error");
+        resolve(false);
+      }
+    });
+  });
+};
+
+  const handleRefund = async () => {
+  try {
+    await fetch("/api/refund-service", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userData?.id,
+        amount: 200,
+        description: "Refund for failed invoice generation",
+      }),
+    });
+    Swal.fire({
+      icon: "info",
+      title: "Refund Processed",
+      text: "₦200 has been refunded to your wallet due to failed invoice sending.",
+    });
+  } catch (err) {
+    console.error("Refund failed:", err);
+    Swal.fire({
+      icon: "warning",
+      title: "Refund Failed",
+      text: "Payment deduction was made, but refund failed. Please contact support.",
+    });
+  }
+};
+
+
+
 
   useEffect(() => {
     const storedDraft = localStorage.getItem("invoiceDraft");
@@ -267,9 +419,10 @@ function CreateInvoice() {
               </Label>
               <Input
                 name="invoiceId"
-                value={form.invoice_id}
+                value={generateInvoiceId()}
                 onChange={handleChange}
                 placeholder="INV-2024-001"
+                disabled
               />
             </div>
             <div>
@@ -446,7 +599,7 @@ function CreateInvoice() {
             />
           </div>
 
-          <div className="flex md:flex-row flex-col gap-4">
+          {/* <div className="flex md:flex-row flex-col gap-4">
             <div className="flex-1">
               <Label className="block text-sm font-medium mb-2">
                 Bank Account Number
@@ -482,7 +635,7 @@ function CreateInvoice() {
               onChange={handleChange}
               placeholder="GTB,UBA etc.."
             />
-          </div>
+          </div> */}
 
           <div className="flex flex-col md:flex-row gap-3">
             <Button

@@ -1,27 +1,33 @@
-
-import supabase from "@/app/supabase/supabase";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import SignInvoiceForm from "@/app/components/SignInvoiceForm";
 
-export default async function SignPage({ params }: { params: Promise<{ token: string }> } ) {
-  const token = (await params).token;
+import supabase from "@/app/supabase/supabase";
 
-  // Fetch invoice using the token
+import Link from "next/link";
+
+export default async function SignPage({
+  params,
+}: {
+  params: Promise<{ invoiceId: string }>;
+}) {
+  const invoiceId = (await params).invoiceId;
+
+
+
+  // Fetch invoice using the invoiceId
   const { data: invoice, error } = await supabase
     .from("invoices")
     .select("*")
-    .eq("token", token)
+    .eq("invoice_id", invoiceId)
     .single();
 
   if (error || !invoice) return notFound();
 
   // console.log("Fetched invoice:", invoice);
 
-  const formattedTotal = invoice.invoice_items?.reduce(
-    (sum: number, item: any) => sum + item.quantity * item.price,
-    0
-  )?.toLocaleString();
+  const formattedTotal = invoice.invoice_items
+    ?.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0)
+    ?.toLocaleString();
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
@@ -43,10 +49,18 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
               <div className="bg-gray-50 p-6 rounded-lg border">
                 <h2 className="text-lg font-semibold">Invoice Details</h2>
                 <div className="space-y-2 text-sm">
-                  <p><strong>Invoice #:</strong> {invoice.invoice_id}</p>
-                  <p><strong>Issue Date:</strong> {invoice.issue_date}</p>
-                  <p><strong>Due Date:</strong> {invoice.due_date}</p>
-                  <p><strong>Delivery:</strong> {invoice.delivery_issue}</p>
+                  <p>
+                    <strong>Invoice #:</strong> {invoice.invoice_id}
+                  </p>
+                  <p>
+                    <strong>Issue Date:</strong> {invoice.issue_date}
+                  </p>
+                  <p>
+                    <strong>Due Date:</strong> {invoice.due_date}
+                  </p>
+                  <p>
+                    <strong>Delivery:</strong> {invoice.delivery_issue}
+                  </p>
                 </div>
               </div>
             </div>
@@ -54,7 +68,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
             <div className="space-y-6">
               <div className="bg-gray-50 p-6 rounded-lg border">
                 <h2 className="text-lg font-semibold">From</h2>
-                <p className="whitespace-pre-line">{invoice.sender}</p>
+                <p className="whitespace-pre-line">{invoice.signee_name}</p>
               </div>
               <div className="bg-gray-50 p-6 rounded-lg border">
                 <h2 className="text-lg font-semibold">Bill To</h2>
@@ -66,7 +80,9 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
           {/* Message */}
           <div className="bg-gray-100 border-l-4 border-gray-300 p-6 rounded-r-lg">
             <h3 className="font-semibold text-gray-800 mb-2">Message</h3>
-            <p className="text-gray-700">{invoice.customer_note || "Thank you for your business."}</p>
+            <p className="text-gray-700">
+              {invoice.customer_note || "Thank you for your business."}
+            </p>
           </div>
 
           {/* Items */}
@@ -112,22 +128,6 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
             </div>
           </div>
 
-          {/* Bank Info */}
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-6 rounded-lg border">
-              <h2 className="font-semibold mb-2">Account Name</h2>
-              <p>{invoice.account_to_pay_name}</p>
-            </div>
-            <div className="bg-gray-50 p-6 rounded-lg border">
-              <h2 className="font-semibold mb-2">Bank Account Name</h2>
-              <p>{invoice.account_name}</p>
-            </div>
-            <div className="bg-gray-50 p-6 rounded-lg border">
-              <h2 className="font-semibold mb-2">Bank Account Number</h2>
-              <p>{invoice.account_number}</p>
-            </div>
-          </div>
-
           {/* Footer */}
           <div className="text-center mt-10 pt-6 border-t">
             <p className="text-gray-500 text-sm">
@@ -141,16 +141,21 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
             <p>Date: {invoice.created_at}</p>
           </div>
 
-        
-
           {/* Sign form */}
-          {invoice.status !== "signed" && (
+          {invoice.signature_status !== "signed" && (
             <div className="mt-10">
-              <SignInvoiceForm token={token} signeeEmail={invoice.signee_email} signeeName={invoice.signee_name} />
+              {invoice.payment_link && (
+                <Link
+                  href={invoice.payment_link}
+                  className="inline-block bg-[#C29307] text-white px-4 py-2 rounded font-bold hover:bg-[#b28a06]"
+                >
+                  Pay now
+                </Link>
+              )}
             </div>
           )}
 
-          {invoice.status === "signed" && (
+          {invoice.signature_status === "signed" && (
             <div className="p-4 mt-8 bg-yellow-100 text-yellow-800 border border-yellow-400 rounded">
               ⚠️ This invoice has already been signed.
             </div>

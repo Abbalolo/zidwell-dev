@@ -163,8 +163,6 @@ import Swal from "sweetalert2";
 import { useState, FormEvent, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-
-import { useRouter } from "next/navigation";
 import logo from "@/public/logo.png";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -201,7 +199,7 @@ const images = [
 ];
 
 const Page = () => {
-  const router = useRouter();
+ 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -222,48 +220,40 @@ const Page = () => {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+ const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
 
-    const newErrors: { [key: string]: string } = {};
-    if (!email || !/^[\w-.]+@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-    if (!password) {
-      newErrors.password = "Please enter a password";
-    }
+  const newErrors: { [key: string]: string } = {};
 
-    // Early return if validation fails
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+  if (!email || !/^[\w-.]+@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
+    newErrors.email = "Please enter a valid email address";
+  }
 
-    setLoading(true);
+  if (!password) {
+    newErrors.password = "Please enter a password";
+  }
 
-    try {
-      // Step 2: Attempt login
-      await login({ email, password });
+  // Early return if validation fails
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
 
-      setErrors({});
-      Swal.fire({
-        title: "Login Successful!",
-        icon: "success",
-      });
-      router.push("/dashboard");
-    } catch (error: any) {
-      console.error("Login error:", error.message);
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: error.message || "Something went wrong!",
-        footer: "Please try again later.",
-      });
-      setErrors({ password: error.message || "Login error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  setErrors({}); // clear previous errors
+
+  try {
+    // Try to login - assumes login is a function returning a Promise
+    await login({ email: email.trim(), password: password.trim() });
+
+  } catch (error: any) {
+    console.error("Login error:", error.message || error);
+
+    setErrors({ password: error.message || "Login error" });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen fade-in">
