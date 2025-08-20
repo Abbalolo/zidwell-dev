@@ -170,6 +170,14 @@ export default function ContractGen() {
     }
   };
 
+  
+    const signedContracts = contracts.filter(
+    (con) => con.status?.toLowerCase() === "signed"
+  ).length;
+  const pendingContracts = contracts.filter(
+    (con) => con.status?.toLowerCase() === "pending"
+  ).length;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -179,6 +187,39 @@ export default function ContractGen() {
   }
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-1">Total Contracts</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {contracts.length.toLocaleString()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-1">Signed Contracts</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {signedContracts}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-1">Pending Contracts</p>
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {pendingContracts}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
       <Tabs defaultValue="contracts" className="w-full">
         <TabsList>
           <TabsTrigger value="contracts">My Contracts</TabsTrigger>
@@ -230,15 +271,15 @@ export default function ContractGen() {
               const sentAt = contract.sent_at?.toDate?.() || new Date();
               const isDownloading = loadingMap[contract.id];
 
-              return (
+ return (
                 <Card
                   key={contract.id}
                   className="hover:shadow-md transition-shadow"
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
                           <FileText className="w-5 h-5 text-blue-600" />
                           <h3 className="font-semibold text-lg">{title}</h3>
                           <Badge className={statusColors[status]}>
@@ -256,7 +297,7 @@ export default function ContractGen() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
                         <Button
                           variant="outline"
                           size="sm"
