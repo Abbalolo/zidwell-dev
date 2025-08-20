@@ -23,13 +23,17 @@ export async function POST(req: NextRequest) {
       // ✅ Case 1: Wallet Funding
       if (txRef.startsWith("fund-")) {
         const parts = txRef.split("-");
-        const userId = parts.slice(1).join("-"); // keep full UUID
+        const userId = parts[1]; 
+
+console.log("userId", userId)
 
         const { error } = await supabase.rpc("increment_wallet_balance", {
           user_id: userId,
           amt: amount,
         });
+        console.log(error)
         if (error) throw error;
+        
       }
 
       // ✅ Case 2: Invoice Payment
