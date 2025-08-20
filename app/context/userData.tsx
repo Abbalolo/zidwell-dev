@@ -128,7 +128,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
   let sub: ReturnType<typeof supabase.channel> | null = null;
 
   const init = async () => {
@@ -138,33 +138,33 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     if (!authUser) return;
 
-    // Load from localStorage first
+    // Load from localStorage first (fast)
     const stored = localStorage.getItem("userData");
     if (stored) {
       setUserData(JSON.parse(stored));
-    } else {
-      // Fetch from DB once if not in localStorage
-      const { data } = await supabase
-        .from("users")
-        .select("id, first_name, last_name, email, phone, wallet_balance")
-        .eq("id", authUser.id)
-        .single();
-
-      if (data) {
-        const profile = {
-          id: data.id,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          email: data.email,
-          phone: data.phone,
-          walletBalance: data.wallet_balance,
-        };
-        setUserData(profile);
-        localStorage.setItem("userData", JSON.stringify(profile));
-      }
     }
 
-    // ✅ Realtime: Only update balance if it changes
+    // 🔄 Always fetch latest once from DB to avoid stale values
+    const { data } = await supabase
+      .from("users")
+      .select("id, first_name, last_name, email, phone, wallet_balance")
+      .eq("id", authUser.id)
+      .single();
+
+    if (data) {
+      const profile = {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        walletBalance: data.wallet_balance,
+      };
+      setUserData(profile);
+      localStorage.setItem("userData", JSON.stringify(profile));
+    }
+
+    // ✅ Realtime subscription
     sub = supabase
       .channel("wallet-listener")
       .on(
@@ -180,15 +180,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
           setUserData((prev) => {
             if (!prev) return prev;
-
-            // Only update if balance changed
             if (prev.walletBalance !== newBalance) {
               const updated = { ...prev, walletBalance: newBalance };
               localStorage.setItem("userData", JSON.stringify(updated));
               return updated;
             }
-
-            return prev; 
+            return prev;
           });
         }
       )
