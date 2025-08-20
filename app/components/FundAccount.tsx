@@ -97,6 +97,14 @@ export default function FundAccountMethods() {
     }
   }
 
+   const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "decimal",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
   return (
     <div className="space-y-6">
       {/* Account Balance Card */}
@@ -106,7 +114,9 @@ export default function FundAccountMethods() {
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center">
-            <span className="text-lg md:text-2xl font-semibold">₦{userData?.walletBalance || "0.00"}</span>
+<span className="text-lg md:text-2xl font-semibold">
+  ₦{formatNumber(userData?.walletBalance ?? 0)}
+</span>
             <Button className="bg-[#C29307]" onClick={handleQuickFund}>Quick Fund</Button>
           </div>
         </CardContent>
