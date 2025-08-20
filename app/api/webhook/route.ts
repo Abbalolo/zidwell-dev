@@ -22,25 +22,26 @@ export async function POST(req: NextRequest) {
     if (status === "successful") {
       // ✅ Case 1: Wallet Funding
       if (txRef.startsWith("fund-")) {
-        const parts = txRef.split("-");
-        const userId = parts[1]; 
+        // Format: fund-<uuid>-<timestamp>
+        const withoutPrefix = txRef.replace("fund-", "");
+        const parts = withoutPrefix.split("-");
 
-console.log("userId", userId)
+        // Take the first 5 segments → full UUID
+        const userId = parts.slice(0, 5).join("-");
+        console.log("✅ Extracted userId:", userId);
 
         const { error } = await supabase.rpc("increment_wallet_balance", {
           user_id: userId,
           amt: amount,
         });
-        console.log(error)
         if (error) throw error;
-        
       }
 
       // ✅ Case 2: Invoice Payment
       else if (txRef.startsWith("inv-")) {
-        // Example txRef: inv-<invoiceId>-<timestamp>
-        const parts = txRef.split("-");
-        const invoiceId = parts[1]; // ✅ only UUID part
+        // Format: inv-<invoiceId>-<timestamp>
+        const invoiceId = txRef.split("-")[1];
+        console.log("✅ Extracted invoiceId:", invoiceId);
 
         // 1. Find the invoice in Supabase
         const { data: invoice, error: invError } = await supabase
