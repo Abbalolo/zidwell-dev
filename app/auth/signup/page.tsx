@@ -203,8 +203,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: {
-       emailRedirectTo: `${window.location.origin}/auth/login`,
+      options: { 
+       emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`,
       },
     });
 

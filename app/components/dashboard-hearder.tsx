@@ -12,7 +12,7 @@ export default function DashboardHeader() {
   const { logout, userData , setUserData} = useUserContextData();
 
 
-  console.log(userData)
+  // console.log(userData)
 
   const handleLogout = async () => {
     try {
