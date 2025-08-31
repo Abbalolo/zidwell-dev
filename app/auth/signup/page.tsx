@@ -204,7 +204,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       email: email.trim(),
       password,
       options: { 
-       emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`,
+       emailRedirectTo: `${window.location.origin}/auth/login`,
       },
     });
 
