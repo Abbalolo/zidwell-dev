@@ -4,29 +4,44 @@ import {LogOut } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { useUserContextData } from "../context/userData";
 import { useEffect } from "react";
-
+import { useRouter } from "next/navigation";
+import supabase from "../supabase/supabase";
+import Cookies from "js-cookie";
 
 export default function DashboardHeader() {
  
+const router = useRouter();
+  const {  userData , setUserData} = useUserContextData();
 
-  const { logout, userData , setUserData} = useUserContextData();
-
-
-  // console.log(userData)
-
-  const handleLogout = async () => {
+const handleLogout = async () => {
     try {
-      await logout();
-      
-    } catch (error) {
-      console.error("Logout error:", error);
+   
+      await supabase.auth.signOut();
+
+      setUserData(null);
+
+     
+      localStorage.removeItem("userData");
+
+      Cookies.remove("verified");
+
       Swal.fire({
-        title: "Error",
-        text: "An error occurred while logging out.",
+        icon: "success",
+        title: "Logged Out",
+        text: "You have been successfully logged out",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => router.push("/auth/login"));
+    } catch (err: any) {
+      console.error("Logout error:", err);
+      Swal.fire({
         icon: "error",
+        title: "Error",
+        text: err.message || "Failed to logout",
       });
     }
   };
+
 
 
   useEffect(() => {
@@ -39,9 +54,9 @@ export default function DashboardHeader() {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {userData && (userData.firstName || userData.lastName) ? (
-          <h1 className="text-xl text-center md:text-start w-full font-bold text-gray-900">
-            Hello {`${userData.firstName} ${userData.lastName}`}
+        {userData && (userData.firstName) ? (
+          <h1 className="md:text-xl text-center lg:text-start w-full font-bold text-gray-900">
+            Hello {`${userData.firstName} `}
           </h1>
         ) : null}
         {/* <div className="flex items-center justify-center space-x-4">
@@ -63,7 +78,7 @@ export default function DashboardHeader() {
             variant="outline"
             className="cursor-pointer flex items-center space-x-2 bg-transparent"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 hidden md:block" />
             <span>Logout</span>
           </Button>
         </div>

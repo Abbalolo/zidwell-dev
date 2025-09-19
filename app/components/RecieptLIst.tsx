@@ -10,6 +10,7 @@ import { useUserContextData } from "../context/userData";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { Receipt } from "./ReceiptGen";
+import Loader from "./Loader";
 
 const getBase64Logo = async () => {
   try {
@@ -61,10 +62,10 @@ interface ReceiptForm {
 
 type Props = {
   receipts: any[];
-
+loading: boolean;
 };
 
-const RecieptList: React.FC<Props> = ({ receipts }) => {
+const RecieptList: React.FC<Props> = ({ receipts, loading }) => {
  const statusColors: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",
     draft: "bg-gray-100 text-gray-800",
@@ -347,6 +348,25 @@ const RecieptList: React.FC<Props> = ({ receipts }) => {
     }
   };
 
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader />
+      </div>
+    );
+  }
+
+  
+    if (receipts.length === 0) {
+    return (
+      <div className="flex items-center justify-center text-semibold">
+       No receipts records
+      </div>
+    );
+  }
+
+
   return (
     <div className="space-y-4">
       {receipts.map((reciept) => {
@@ -414,6 +434,7 @@ const RecieptList: React.FC<Props> = ({ receipts }) => {
                     }
                     variant="outline"
                     size="sm"
+                    disabled={reciept.status === "signed" }
                   >
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
@@ -431,10 +452,10 @@ const RecieptList: React.FC<Props> = ({ receipts }) => {
                     Send
                   </Button>
                   <Button
-                    onClick={() => downloadPdf(reciept)} // ✅ fixed typo here
+                    onClick={() => downloadPdf(reciept)} 
                     variant="outline"
                     size="sm"
-                    disabled={processing}
+                    disabled={reciept.status !== "signed" || processing}
                   >
                     {processing ? (
                       <Loader2 className="w-4 h-4 mr-1 animate-spin" />

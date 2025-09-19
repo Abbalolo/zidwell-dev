@@ -33,7 +33,7 @@ const Page = () => {
   const [signeeEmail, setSigneeEmail] = useState(""); // ✅ FIXED: missing state
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("draft");
-  const { userData } = useUserContextData();
+  const { userData, setUserData } = useUserContextData();
   const [errors, setErrors] = useState({
     contractTitle: "",
     signeeEmail: "",
@@ -268,7 +268,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
-        text: "₦2,000 will be deducted from your wallet for generating this Contract.",
+        text: "₦1,000 will be deducted from your wallet for generating this Contract.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -285,21 +285,29 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: userData?.id,
-              amount: 2000,
+              amount: 1000,
               description: "Contract successfully generated",
             }),
           });
 
-          const data = await res.json();
+          const result = await res.json();
 
           if (!res.ok) {
             await Swal.fire(
               "Error",
-              data.error || "Something went wrong",
+              result.error || "Something went wrong",
               "error"
             );
             return resolve(false);
           }
+
+            if (result.newWalletBalance !== undefined) {
+          setUserData((prev: any) => {
+            const updated = { ...prev, walletBalance: result.result };
+            localStorage.setItem("userData", JSON.stringify(updated));
+            return updated;
+          });
+        }
 
           resolve(true);
         } catch (err: any) {
@@ -324,7 +332,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     Swal.fire({
       icon: "info",
       title: "Refund Processed",
-      text: "₦2,000 has been refunded to your wallet due to failed contract sending.",
+      text: "₦1,000 has been refunded to your wallet due to failed contract sending.",
     });
   } catch (err) {
     console.error("Refund failed:", err);

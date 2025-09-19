@@ -8,6 +8,7 @@ import {
   AlertCircle,
   CreditCard,
   ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -17,6 +18,7 @@ import { Badge } from "./ui/badge";
 import { useUserContextData } from "../context/userData";
 import Image from "next/image";
 import Loader from "./Loader";
+import { useRouter } from "next/navigation";
 
 interface AirtimeAmount {
   value: number;
@@ -27,9 +29,8 @@ interface AirtimeAmount {
 const prefixColorMap = [
   {
     id: "mtn",
-    serviceName: "mtn_vtu",
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-50 border-yellow-200",
+    name: "MTN",
+    src: "/networks-img/mtn.png",
     prefix: [
       "0803",
       "0806",
@@ -46,23 +47,20 @@ const prefixColorMap = [
   },
   {
     id: "airtel",
-    serviceName: "airtel_vtu",
-    color: "text-red-600",
-    bgColor: "bg-red-50 border-red-200",
+    name: "Airtel",
+    src: "/networks-img/airtel.png",
     prefix: ["0802", "0808", "0708", "0812", "0701", "0902", "0907", "0901"],
   },
   {
     id: "glo",
-    serviceName: "glo_vtu",
-    color: "text-green-600",
-    bgColor: "bg-green-50 border-green-200",
+    name: "Glo",
+    src: "/networks-img/glo.png",
     prefix: ["0805", "0807", "0705", "0815", "0811", "0905"],
   },
   {
     id: "9mobile",
-    serviceName: "9mobile_vtu",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50 border-emerald-200",
+    name: "9mobile",
+    src: "/networks-img/9mobile.png",
     prefix: ["0809", "0818", "0817", "0909", "0908"],
   },
 ];
@@ -79,7 +77,6 @@ const airtimeAmounts: AirtimeAmount[] = [
 
 export default function AirtimePurchase() {
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
-  const [providers, setProviders] = useState<any[] | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -87,8 +84,8 @@ export default function AirtimePurchase() {
   const [customAmount, setCustomAmount] = useState("");
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const { userData, user } = useUserContextData();
-
+  const { userData, setUserData } = useUserContextData();
+  const router = useRouter();
   const handlePhoneNumberChange = (value: string) => {
     const cleanValue = value.replace(/\D/g, "");
     setPhoneNumber(cleanValue);
@@ -138,9 +135,9 @@ export default function AirtimePurchase() {
     if (amount && amount > 50000)
       newErrors.amount = "Maximum amount is ₦50,000";
 
-    if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+    // if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
 
-    if (!pin) newErrors.amount = "Please enter transaction pin";
+    // if (!pin) newErrors.amount = "Please enter transaction pin";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -150,46 +147,18 @@ export default function AirtimePurchase() {
     ? parseInt(customAmount) || 0
     : selectedAmount || 0;
 
-  const getNetworkProviders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/airtime-providers");
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "Failed to fetch providers");
-
-      // const merged = data?.data?.map((provider: any) => {
-      //   const match = prefixColorMap.find((entry) =>
-      //     entry.prefix.some((p) => provider.prefixes?.includes(p))
-      //   );
-
-      //   return {
-      //     ...provider,
-      //     color: match?.color || "text-gray-600",
-      //     bgColor: match?.bgColor || "bg-gray-50 border-gray-200",
-      //     prefix: provider.prefixes || [], // API prefixes used
-      //   };
-      // });
-
-      setProviders(data);
-    } catch (error: any) {
-      console.error("Fetch error:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  console.log("provider", providers)
-
   const purchaseAirtime = async () => {
     if (!validateForm()) return;
 
     const payload = {
+      userId: userData?.id,
       amount: finalAmount,
-      service: selectedProvider?.slug,
-      customerId: phoneNumber.trim(),
-      reference: `AIRTIME-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      pin: pin.trim(),
+      network: selectedProvider?.id,
+      phoneNumber: phoneNumber.trim(),
+      merchantTxRef: `AIRTIME-${Date.now()}-${Math.floor(
+        Math.random() * 1000
+      )}`,
+      senderName: userData?.firstName || "Zidwell User",
     };
 
     try {
@@ -202,19 +171,28 @@ export default function AirtimePurchase() {
       });
 
       const data = await response.json();
+      console.log("Airtime Purchase Response Data:", data);
 
       if (!response.ok) throw data;
+
+      if (data.newWalletBalance !== undefined) {
+        setUserData((prev: any) => {
+          const updated = { ...prev, walletBalance: data.newWalletBalance };
+          localStorage.setItem("userData", JSON.stringify(updated));
+          return updated;
+        });
+      }
 
       Swal.fire({
         icon: "success",
         title: "Airtime Purchase Successful",
-        text: `₦${payload.amount} sent to ${payload.customerId}`,
+        text: `₦${payload.amount} sent to ${payload.phoneNumber}`,
         confirmButtonColor: "#0f172a",
       });
 
       // Reset form
       setPhoneNumber("");
-      setPin("");
+      // setPin("");
       setSelectedProvider(null);
       setSelectedAmount(null);
       setCustomAmount("");
@@ -235,52 +213,38 @@ export default function AirtimePurchase() {
 
   useEffect(() => {
     const cleanNumber = phoneNumber.replace(/\D/g, "");
-
     if (cleanNumber.length >= 4) {
       const prefix = cleanNumber.substring(0, 4);
-      // console.log("Checking prefix:", prefix);
-
-      // Find the provider using the prefixColorMap
-      const matchedPrefixData = prefixColorMap.find((entry) =>
+      const matchedProvider = prefixColorMap.find((entry) =>
         entry.prefix.includes(prefix)
       );
-
-      if (!matchedPrefixData) return;
-
-      const matchedProvider = providers?.find(
-        (provider) =>
-          provider.slug === matchedPrefixData.serviceName ||
-          provider.name.toLowerCase().includes(matchedPrefixData.id)
-      );
-
-      // console.log("Matched Provider:", matchedProvider);
-
-      if (matchedProvider && matchedProvider?.name !== selectedProvider?.name) {
+      if (matchedProvider && matchedProvider?.id !== selectedProvider?.id) {
         setSelectedProvider(matchedProvider);
       }
     }
-  }, [phoneNumber, providers]);
-
-  useEffect(() => {
-   getNetworkProviders();
-  }, []);
-
-  if (loading && !providers) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader />
-      </div>
-    );
-  }
+  }, [phoneNumber]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:max-w-5xl md:mx-auto">
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Buy Airtime</h1>
-        <p className="text-gray-600">
-          Instant airtime top-up for all Nigerian networks
-        </p>
+
+      <div className="flex items-start  space-x-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
+        >
+          <ArrowLeft className="w-4 h-4 md:mr-2" />
+         <span className="hidden md:block">Back</span>
+        </Button>
+
+        <div className="">
+          <h1 className="md:text-3xl text-xl font-bold mb-2">Buy Airtime</h1>
+          <p className=" text-muted-foreground">
+            Instant airtime top-up for all Nigerian networks
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -296,27 +260,26 @@ export default function AirtimePurchase() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {providers?.map((provider: any, i) => {
+                {prefixColorMap?.map((provider) => {
                   const isSelected = selectedProvider?.name === provider.name;
 
                   return (
                     <div
-                      key={i}
+                      key={provider.id}
                       onClick={() => setSelectedProvider(provider)}
                       className={`relative p-4 border-2 rounded-md transition-all duration-200 ${
                         isSelected
-                          ? "bg-gray-100 border-gray-600 text-gray-900 shadow-md"
+                          ? "bg-gray-100 border-[#C29307] text-gray-900 shadow-md"
                           : "bg-white border-gray-200 hover:border-gray-300"
                       }`}
                     >
                       <div className="text-center">
                         <div className="w-16 h-16 mx-auto mb-3 relative">
                           <Image
-                            src={provider.logo}
+                            src={provider.src}
                             alt={`${provider.name} logo`}
                             width={64}
                             height={64}
-                            className="rounded-lg"
                           />
                         </div>
                         <h3 className="font-semibold text-gray-900">
@@ -326,7 +289,7 @@ export default function AirtimePurchase() {
 
                       {isSelected && (
                         <div className="absolute -top-2 -right-2">
-                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 bg-[#C29307] rounded-full flex items-center justify-center">
                             <Check className="w-4 h-4 text-white" />
                           </div>
                         </div>
@@ -443,7 +406,7 @@ export default function AirtimePurchase() {
               )}
 
               {/* Pin Input */}
-              <div className="border-t pt-4">
+              {/* <div className="border-t pt-4">
                 <Label htmlFor="pin">Transaction Pin</Label>
 
                 <Input
@@ -461,7 +424,7 @@ export default function AirtimePurchase() {
                   <AlertCircle className="w-4 h-4" />
                   <span className="text-sm">{errors.pin}</span>
                 </div>
-              )}
+              )} */}
             </CardContent>
           </Card>
         </div>
@@ -479,7 +442,9 @@ export default function AirtimePurchase() {
               {selectedProvider && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium">{selectedProvider.id}</p>
+                    <p className="font-medium">
+                      {selectedProvider.id.toUpperCase()}
+                    </p>
                     <p className="text-sm text-gray-500">VTU Airtime</p>
                   </div>
                 </div>
@@ -526,11 +491,7 @@ export default function AirtimePurchase() {
               <Button
                 onClick={purchaseAirtime}
                 disabled={
-                  !selectedProvider ||
-                  !phoneNumber ||
-                  !finalAmount ||
-                  !pin ||
-                  loading
+                  !selectedProvider || !phoneNumber || !finalAmount || loading
                 }
                 className="w-full bg-[#C29307] hover:bg-[#C29307] text-white py-3 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
               >

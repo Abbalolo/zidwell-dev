@@ -1,34 +1,60 @@
 // app/api/electricity/validate/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
+import { getNombaToken } from "@/lib/nomba";
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const body = await req.json();
+    const token = await getNombaToken();
 
-    const response = await axios.post(
-      'https://api.paybeta.ng/v2/electricity/validate',
+    const { searchParams } = new URL(req.url);
+
+    const disco = searchParams.get("disco");
+    const customerId = searchParams.get("customerId");
+
+
+ 
+    if (!disco || !customerId) {
+      return NextResponse.json(
+        { error: "Missing service or meterNumber" },
+        { status: 400 }
+      );
+    }
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const response = await axios.get(
+      "https://sandbox.nomba.com/v1/bill/electricity/lookup",
       {
-        service: body.service, 
-        meterNumber: body.meterNumber,
-        meterType: body.meterType,
-      },
-      {
-        maxBodyLength: Infinity,
-       headers: {
-          "Content-Type": "application/json",
-          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
+        params: {
+          disco,
+          customerId,
         },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accountId: process.env.NOMBA_ACCOUNT_ID!,
+          "Content-Type": "application/json",
+        },
+        maxBodyLength: Infinity,
       }
     );
 
     return NextResponse.json(response.data);
   } catch (error: any) {
-    console.error('Validation error:', error.response?.data || error.message);
+    console.error(
+      "❌ Electricity validation error:",
+      error.response?.data || error.message
+    );
     return NextResponse.json(
-      { error: 'Failed to validate electricity meter' },
+      { error: "Failed to validate electricity meter" },
       { status: 500 }
     );
   }
 }
+
+
+
+ 

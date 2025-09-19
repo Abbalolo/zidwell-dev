@@ -2,9 +2,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -23,15 +22,14 @@ export async function POST(req: Request) {
       .eq("id", userId)
       .single();
 
-    if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 400 });
-    }
-    // 1. Check if user exists
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (fetchError || !user) {
+      return NextResponse.json(
+        { error: fetchError?.message || "User not found" },
+        { status: 404 }
+      );
     }
 
-    // 2. Check balance separately
+    // 2. Check sufficient balance
     if (user.wallet_balance < amount) {
       return NextResponse.json(
         { error: "Insufficient balance" },
@@ -39,8 +37,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Deduct funds using RPC
-    const { data: newBalance, error: deductError } = await supabase.rpc(
+    // 3. Deduct funds via RPC
+    const { data: rpcData, error: deductError } = await supabase.rpc(
       "decrement_wallet_balance",
       { user_id: userId, amt: amount }
     );
@@ -48,6 +46,12 @@ export async function POST(req: Request) {
     if (deductError) {
       return NextResponse.json({ error: deductError.message }, { status: 400 });
     }
+
+    // Supabase RPC often returns an array of objects with updated values
+    const newWalletBalance =
+      Array.isArray(rpcData) && rpcData.length > 0
+        ? rpcData[0].wallet_balance || rpcData[0].balance || null
+        : null;
 
     // 4. Record transaction
     const { error: txError } = await supabase.from("transactions").insert({
@@ -65,7 +69,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       message: "Funds deducted and transaction recorded",
-      newBalance,
+      newWalletBalance,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

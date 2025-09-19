@@ -4,21 +4,21 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils"; // optional utility for className merging
+import { cn } from "@/lib/utils";
 
-
-
-export interface PlansWrapper {
-  packages: any[];
+interface DataPlan {
+  plan: string;
+  amount: number;
 }
 
 interface DataPlanSelectorProps {
-  plans: any;
-  selectedPlan: any | null;
-  onSelect: (plan: any) => void;
+  plans: DataPlan[];
+  selectedPlan: DataPlan | null;
+  onSelect: (plan: DataPlan) => void;
 }
 
-const tabs = ["Daily", "Weekly", "Monthly"] as const;
+// Better matching with your sample data
+const tabs = ["Daily", "Weekly", "Monthly", "2Months"] as const;
 
 export default function DataPlanSelector({
   plans,
@@ -27,7 +27,7 @@ export default function DataPlanSelector({
 }: DataPlanSelectorProps) {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Daily");
 
-  if (!plans?.packages?.length) {
+  if (!plans?.length) {
     return (
       <div className="text-sm text-muted-foreground py-6 text-center">
         No data plans available. Please select a provider.
@@ -35,19 +35,18 @@ export default function DataPlanSelector({
     );
   }
 
-  const filteredPlans = plans.packages.filter((plan:any) => {
-    const desc = plan.description?.toLowerCase() || "";
-    return desc.includes(activeTab.toLowerCase());
+  // Filter based on tab
+  const filteredPlans = plans.filter((plan) => {
+    const desc = plan.plan.toLowerCase();
+    if (activeTab === "Daily") return desc.includes("day");
+    if (activeTab === "Weekly") return desc.includes("7day") || desc.includes("week");
+    if (activeTab === "Monthly") return desc.includes("30day") || desc.includes("month");
+    if (activeTab === "2Months") return desc.includes("2month");
+    return false;
   });
 
-      const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "decimal",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
+  const formatNumber = (value: number) =>
+    new Intl.NumberFormat("en-NG", { style: "decimal" }).format(value);
 
   return (
     <div>
@@ -70,22 +69,22 @@ export default function DataPlanSelector({
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-2  md:grid-cols-3 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
         {filteredPlans.length === 0 ? (
           <div className="col-span-full text-sm text-muted-foreground text-center py-4">
             No {activeTab.toLowerCase()} plans available.
           </div>
         ) : (
-          filteredPlans.map((plan:any) => {
-            const isSelected = selectedPlan?.code === plan.code;
-           
+          filteredPlans.map((plan, index) => {
+            const isSelected = selectedPlan?.plan === plan.plan;
+
             return (
               <Card
-                key={plan.plan_id}
+                key={index}
                 onClick={() => onSelect(plan)}
                 className={`relative cursor-pointer transition-all border-2 rounded-xl ${
                   isSelected
-                    ? "border-[#C29307] ring-2 ring-blue-200"
+                    ? "border-[#C29307] ring-1 ring-[#C29307]"
                     : "hover:border-gray-300 border-gray-200"
                 }`}
               >
@@ -97,25 +96,13 @@ export default function DataPlanSelector({
 
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold">
-                    ₦{formatNumber(plan.price)}
+                    ₦{formatNumber(plan.amount)}
                   </CardTitle>
-                  {plan.popular && <Badge variant="default">Popular</Badge>}
+                 
                 </CardHeader>
 
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {plan.validity} validity
-                  </p>
-                  {plan.bonus && (
-                    <p className="text-xs text-green-600 mt-1">
-                      {plan.bonus}
-                    </p>
-                  )}
-                  {plan.description && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {plan.description}
-                    </p>
-                  )}
+                  <p className="text-sm text-muted-foreground">{plan.plan}</p>
                 </CardContent>
               </Card>
             );

@@ -14,8 +14,8 @@ import { Plus } from "lucide-react";
 
 interface ReceiptItem {
   item: string;
-  quantity: number;
-  price: number;
+  quantity: string | number;
+  price: string | number;
 }
 
 interface ReceiptForm {
@@ -26,15 +26,13 @@ interface ReceiptForm {
   from: string;
   issue_date: string;
   customer_note: string;
-  // amount_paid: string;
-
   payment_for: string;
   receipt_items: ReceiptItem[];
 }
 
 function CreateReceipt() {
   const router = useRouter();
-  const { userData } = useUserContextData();
+  const { userData, setUserData } = useUserContextData();
 
   const [form, setForm] = useState<ReceiptForm>({
     name: "",
@@ -44,8 +42,6 @@ function CreateReceipt() {
     from: "",
     issue_date: "",
     customer_note: "",
-    // amount_paid: "",
-
     payment_for: "",
     receipt_items: [],
   });
@@ -91,7 +87,7 @@ function CreateReceipt() {
       ...prev,
       receipt_items: [
         ...prev.receipt_items,
-        { item: "", quantity: 1, price: 0 },
+        { item: "", quantity: "", price: "" },
       ],
     }));
   };
@@ -108,7 +104,7 @@ function CreateReceipt() {
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" })); // clear error while typing
+    setErrors((prev) => ({ ...prev, [name]: "" })); 
   };
 
   const validateForm = () => {
@@ -175,6 +171,14 @@ function CreateReceipt() {
         await handleRefund();
       }
 
+         if (result.newWalletBalance !== undefined) {
+        setUserData((prev: any) => {
+          const updated = { ...prev, walletBalance: result.result };
+          localStorage.setItem("userData", JSON.stringify(updated));
+          return updated;
+        });
+      }
+
       Swal.fire({
         icon: "success",
         title: "Receipt Saved!",
@@ -223,7 +227,7 @@ function CreateReceipt() {
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
-        text: "₦200 will be deducted from your wallet for generating this Receipt.",
+        text: "₦100 will be deducted from your wallet for generating this Receipt.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -240,7 +244,7 @@ function CreateReceipt() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: userData?.id,
-              amount: 200,
+              amount: 100,
               description: "Receipt successfully generated",
             }),
           });
@@ -274,14 +278,14 @@ function CreateReceipt() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: userData?.id,
-          amount: 200,
+          amount: 100,
           description: "Refund for failed receipt generation",
         }),
       });
       Swal.fire({
         icon: "info",
         title: "Refund Processed",
-        text: "₦200 has been refunded to your wallet due to failed receipt sending.",
+        text: "₦100 has been refunded to your wallet due to failed receipt sending.",
       });
     } catch (err) {
       console.error("Refund failed:", err);
@@ -391,7 +395,7 @@ function CreateReceipt() {
                   key={index}
                   className="grid grid-cols-12 gap-2 items-center"
                 >
-                  <div className="col-span-5">
+                  <div className="col-span-12 sm:col-span-5">
                     <Input
                       placeholder="Description"
                       value={item.item}
@@ -400,7 +404,7 @@ function CreateReceipt() {
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-6 sm:col-span-2">
                     <Input
                       type="number"
                       placeholder="Qty"
@@ -414,7 +418,7 @@ function CreateReceipt() {
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-6 sm:col-span-2">
                     <Input
                       type="number"
                       placeholder="Rate"
@@ -428,10 +432,10 @@ function CreateReceipt() {
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-6 sm:col-span-2">
                     <Input
                       placeholder="Amount"
-                      value={item.quantity * item.price}
+                      value={Number(item.quantity) * Number(item.price)}
                       disabled
                     />
                   </div>

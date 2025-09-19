@@ -8,9 +8,8 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! 
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
 
 // Convert logo to base64
 function getLogoBase64() {
@@ -25,11 +24,7 @@ function getLogoBase64() {
 }
 
 // Generate the Invoice HTML
-function generateInvoiceHTML(
-  invoice: any,
-  logo: string,
-
-): string {
+function generateInvoiceHTML(invoice: any, logo: string): string {
   const total =
     invoice.invoice_items?.reduce((sum: number, item: any) => {
       return sum + item.quantity * item.price;
@@ -49,19 +44,8 @@ function generateInvoiceHTML(
       <title>Invoice</title>
       <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
       <style>
-        body {
-          font-family: 'Inter', sans-serif;
-          background-color: #f9fafb;
-          padding: 20px;
-        }
-
-        .signatures {
-          margin-top: 20px;
-          display: flex;
-          gap:10px;
-          font-weight: bold;
-
-}
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; padding: 20px; }
+        .signatures { margin-top: 20px; display: flex; gap:10px; font-weight: bold; }
       </style>
     </head>
     <body>
@@ -80,30 +64,13 @@ function generateInvoiceHTML(
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h2>
                 <div class="space-y-3 text-sm">
-                  <div class="flex justify-between">
-                    <span class="text-gray-500 font-medium">Invoice #:</span>
-                    <span class="font-semibold text-blue-600">#${
-                      invoice.invoiceId || "12345"
-                    }</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-500 font-medium">Issue Date:</span>
-                    <span class="text-gray-800">${
-                      invoice.issue_date || "N/A"
-                    }</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-500 font-medium">Due Date:</span>
-                    <span class="text-gray-800">${
-                      invoice.due_date || "N/A"
-                    }</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-500 font-medium">Delivery:</span>
-                    <span class="text-gray-800">${
-                      invoice.delivery_issue || "Standard"
-                    }</span>
-                  </div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Invoice #:</span><span class="font-semibold text-blue-600">#${invoice.invoice_id || "12345"}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Issue Date:</span><span class="text-gray-800">${invoice.issue_date || "N/A"}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Due Date:</span><span class="text-gray-800">${invoice.due_date || "N/A"}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Payment Type:</span><span class="text-gray-800">${invoice.payment_type || "N/A"}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Fee Option:</span><span class="text-gray-800">${invoice.fee_option || "N/A"}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Unit Price:</span><span class="text-gray-800">${invoice.unit_price || "N/A"}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-500 font-medium">Status:</span><span class="text-gray-800">${invoice.status || "unpaid"}</span></div>
                 </div>
               </div>
             </div>
@@ -111,15 +78,11 @@ function generateInvoiceHTML(
             <div class="space-y-6">
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">From</h2>
-                <p class="text-gray-800 whitespace-pre-line">${
-                  invoice.initiator_name || "Your Business\nLagos, NG"
-                }</p>
+                <p class="text-gray-800 whitespace-pre-line">${invoice.initiator_name || "Your Business\nLagos, NG"}</p>
               </div>
               <div class="bg-gray-50 p-6 rounded-lg border">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Bill To</h2>
-                <p class="text-gray-800 whitespace-pre-line">${
-                  invoice.bill_to || "Client Name\nAbuja, NG"
-                }</p>
+                <p class="text-gray-800 whitespace-pre-line">${invoice.bill_to || "Client Name\nAbuja, NG"}</p>
               </div>
             </div>
           </div>
@@ -127,10 +90,7 @@ function generateInvoiceHTML(
           <div class="mb-8">
             <div class="bg-gray-100 border-l-4 border-gray-300 p-6 rounded-r-lg">
               <h3 class="font-semibold text-gray-800 mb-2">Message</h3>
-              <p class="text-gray-700">${
-                invoice.customer_note ||
-                "Thanks for your business. Payment due in 14 days."
-              }</p>
+              <p class="text-gray-700">${invoice.customer_note || "Thanks for your business. Payment due in 14 days."}</p>
             </div>
           </div>
 
@@ -147,26 +107,16 @@ function generateInvoiceHTML(
                   </tr>
                 </thead>
                 <tbody>
-                  ${
-                    invoice.invoice_items
-                      ?.map(
-                        (item: any) => `
-                    <tr class="border-b hover:bg-gray-50">
-                      <td class="p-4 text-gray-800">${item.item}</td>
-                      <td class="p-4 text-center text-gray-800">${
-                        item.quantity
-                      }</td>
-                      <td class="p-4 text-right text-gray-800">${
-                        item.price
-                      }</td>
-                      <td class="p-4 text-right font-semibold text-gray-800">${
-                        item.quantity * item.price
-                      }</td>
-                    </tr>
-                  `
-                      )
-                      .join("") || ""
-                  }
+                  ${invoice.invoice_items?.map(
+                    (item: any) => `
+                      <tr class="border-b hover:bg-gray-50">
+                        <td class="p-4 text-gray-800">${item.item}</td>
+                        <td class="p-4 text-center text-gray-800">${item.quantity}</td>
+                        <td class="p-4 text-right text-gray-800">${item.price}</td>
+                        <td class="p-4 text-right font-semibold text-gray-800">${item.quantity * item.price}</td>
+                      </tr>
+                    `
+                  ).join("") || ""}
                 </tbody>
               </table>
             </div>
@@ -175,39 +125,28 @@ function generateInvoiceHTML(
           <div class="flex justify-end mb-8">
             <div class="bg-gray-200 p-6 rounded-lg min-w-80">
               <div class="space-y-3">
-                <div class="flex justify-between text-lg">
-                  <span>Subtotal:</span>
-                  <span>${formattedTotal}</span>
-                </div>
+                <div class="flex justify-between text-lg"><span>Subtotal:</span><span>${formattedTotal}</span></div>
                 <div class="border-t border-blue-200 pt-3">
-                  <div class="flex justify-between text-xl font-bold">
-                    <span>Total:</span>
-                    <span>${formattedTotal}</span>
-                  </div>
+                  <div class="flex justify-between text-xl font-bold"><span>Total:</span><span>${formattedTotal}</span></div>
                 </div>
               </div>
             </div>
           </div>
 
-         
-
           <div class="bg-gray-50 p-6 rounded-lg border mt-6">
             <h3 class="font-semibold text-gray-800 mb-3">Customer Notes</h3>
-            <p class="text-gray-600">${
-              invoice.customer_note ||
-              "Please contact us for any issues with this invoice."
-            }</p>
+            <p class="text-gray-600">${invoice.customer_note || "Please contact us for any issues with this invoice."}</p>
           </div>
 
           <div class="signatures">
-        <p>Signee: ${invoice.initiator_name}</p>
-          <p>Date: ${new Date(invoice.created_at).toLocaleDateString()}</p>
-       </div>
+            <p>Signee: ${invoice.initiator_name}</p>
+            <p>Date: ${new Date(invoice.created_at).toLocaleDateString()}</p>
+          </div>
 
           <div class="signatures">
-          <p>Signee: ${invoice.signee_name}</p>
-          <p>Date: ${new Date().toLocaleDateString()}</p>
-        </div>
+            <p>Signee: ${invoice.signee_name}</p>
+            <p>Date: ${new Date().toLocaleDateString()}</p>
+          </div>
 
           <div class="mt-8 pt-6 border-t text-center">
             <p class="text-gray-500 text-sm">Thank you for your business! Please remit payment by the due date.</p>
@@ -232,13 +171,10 @@ async function generatePdfBufferFromHtml(html: string): Promise<Buffer> {
 // Main API Handler
 export async function POST(request: Request) {
   try {
-    const { invoiceId  } = await request.json();
+    const { invoiceId } = await request.json();
 
     if (!invoiceId) {
-      return NextResponse.json(
-        { message: "Missing required fields" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
     const { data: invoice, error } = await supabase
@@ -248,49 +184,42 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !invoice) {
-      return NextResponse.json(
-        { message: "Invoice not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Invoice not found" }, { status: 404 });
     }
 
-   
-    await supabase
-      .from("invoices")
-      .update({
-        signature_status: "signed",
-        signed_at: new Date().toISOString(),
-      })
-      .eq("invoice_id", invoiceId);
+      // await supabase
+      // .from("invoices")
+      // .update({
+      //   signature_status: "signed",
+      //   signed_at: new Date().toISOString(),
+      // })
+      // .eq("invoice_id", invoiceId);
+
 
     const logo = getLogoBase64();
-    const html = generateInvoiceHTML(
-      invoice,
-      logo,
-      
-    );
+    const html = generateInvoiceHTML(invoice, logo);
     const pdfBuffer = await generatePdfBufferFromHtml(html);
 
     await transporter.sendMail({
       from: `Zidwell <${process.env.EMAIL_USER}>`,
       to: `${invoice.initiator_email}, ${invoice.signee_email}`,
-      subject: "Invoice Signed Successfully",
-      html: `<p>The invoice has been signed successfully. See attached PDF.</p>`,
+      subject: "Invoice Generated Successfully",
+      html: `<p>The invoice has been generated successfully. See attached PDF.</p>`,
       attachments: [
         {
-          filename: `${invoice.invoiceId || "invoice"}.pdf`,
+          filename: `${invoice.invoice_id || "invoice"}.pdf`,
           content: pdfBuffer,
           contentType: "application/pdf",
         },
       ],
     });
 
-    return NextResponse.json(
-      { message: "Invoice signed and emailed" },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: "Invoice PDF emailed" }, { status: 200 });
   } catch (error) {
     console.error("Server error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
+
+
+

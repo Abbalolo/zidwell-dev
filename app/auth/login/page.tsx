@@ -1,163 +1,3 @@
-// const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-//   e.preventDefault();
-//   const validationErrors = validateForm();
-//   if (Object.keys(validationErrors).length > 0) {
-//     setErrors(validationErrors);
-//     return;
-//   }
-
-//   setLoading(true);
-//   const { firstName, lastName, email, password, phone } = formData;
-
-//   try {
-//     const userCred = await createUserWithEmailAndPassword(
-//       auth,
-//       email,
-//       password
-//     );
-//     const user = userCred.user;
-
-//     // await sendEmailVerification(user, {
-//     //   url: "http://localhost:3000//auth/authentication-action",
-//     //   handleCodeInApp: true,
-//     // });
-
-//     await sendVerification(email);
-
-//     await updateProfile(user, { displayName: `${firstName} ${lastName}` });
-
-//     // await setDoc(doc(db, "users", user.uid), {
-//     //   uid: user.uid,
-//     //   email: user.email,
-//     //   firstName: firstName.trim(),
-//     //   lastName: lastName.trim(),
-//     //   phone: phone.trim(),
-//     //   zidCoin: 30,
-//     //   subscription: "inActive",
-//     //   emailVerified: false,
-//     //   createdAt: new Date().toISOString(),
-//     // });
-
-//     console.log({ title: "Please verify your email to access the app." });
-//     Swal.fire({
-//       title: "Check your email to verify your account",
-//       text: "Please verify your email to access the app",
-//       icon: "success",
-//     });
-//     router.push("/auth/login");
-//   } catch (error: any) {
-//     if (error.code === "auth/email-already-in-use") {
-//       Swal.fire({
-//         title: "Oops?",
-//         text: "Email is already in use.",
-//         icon: "warning",
-//       });
-//       console.log({
-//         variant: "destructive",
-//         title: "Email is already in use.",
-//       });
-//     } else {
-//       Swal.fire({
-//         icon: "error",
-//         title: "Oops...",
-//         text: "An error occurred during sign-up.",
-//       });
-//       console.log({
-//         variant: "destructive",
-//         title: "An error occurred during sign-up.",
-//       });
-//     }
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-//   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-//   event.preventDefault();
-//   const newErrors: { [key: string]: string } = {};
-
-//   if (!email || !/^[\w-.]+@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
-//     newErrors.email = "Please enter a valid email address";
-//   }
-//   if (!password) {
-//     newErrors.password = "Please enter a password";
-//   }
-
-//   if (Object.keys(newErrors).length > 0) {
-//     setErrors(newErrors);
-//     return;
-//   }
-
-//   setLoading(true);
-//   try {
-//     const userCredential = await signInWithEmailAndPassword(
-//       auth,
-//       email,
-//       password
-//     );
-//     const user = userCredential.user;
-
-//     if (!user.emailVerified) {
-//       await sendEmailVerification(user);
-//       Swal.fire({
-//         icon: "error",
-//         title: "Oops...",
-//         text: "Something went wrong!",
-//         footer:
-//           "You need to verify your email to log in. A verification email has been sent.",
-//       });
-//       setErrors({
-//         email:
-//           "You need to verify your email to log in. A verification email has been sent.",
-//       });
-//       setShowVerifyButton(true);
-//       await signOut(auth);
-//       return;
-//     }
-
-//     const userRef = doc(db, "users", user.uid);
-//     // const admin = await checkAdminStatus();
-
-//     // if (admin) {
-//     //   Cookies.set("isAdmin", "true");
-//     // }
-
-//     await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
-
-//     setIsLogin(true);
-//     setErrors({});
-//     Swal.fire({
-//       title: "Success!",
-//       icon: "success",
-
-//     });
-//     router.push(redirectTo);
-//     // Cookies.set("authToken", idToken, { path: "/", expires: 1 });
-//   } catch (error: any) {
-//     console.error(error.message);
-
-//     // Firebase error codes: https://firebase.google.com/docs/auth/admin/errors
-//     if (error.code === "auth/invalid-login-credentials") {
-//       setErrors({ password: "Invalid email or password" });
-//       Swal.fire({
-//         icon: "error",
-//         title: "Oops...",
-//         text: "Invalid email or password",
-
-//       });
-//     } else {
-//       setErrors({ password: "An unexpected error occurred" });
-//       Swal.fire({
-//         icon: "error",
-//         title: "Oops...",
-//         text: "Something went wrong!",
-//         footer: "Please try again later.",
-//       });
-//     }
-//   } finally {
-//     setLoading(false);
-//   }
-// };
 "use client";
 import Swal from "sweetalert2";
 import { useState, FormEvent, useEffect } from "react";
@@ -167,6 +7,7 @@ import logo from "@/public/logo.png";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
+import Cookies from "js-cookie";
 import {
   Card,
   CardContent,
@@ -175,9 +16,11 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
-import { useUserContextData } from "@/app/context/userData";
+import { UserData, useUserContextData } from "@/app/context/userData";
 
 import Carousel from "@/app/components/Carousel";
+import { useRouter } from "next/navigation";
+import supabase from "@/app/supabase/supabase";
 
 const images = [
   "/zid-pic/image1.jpg",
@@ -199,15 +42,13 @@ const images = [
 ];
 
 const Page = () => {
- 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-
-  const { login } = useUserContextData();
+  const { setUserData } = useUserContextData();
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -215,45 +56,124 @@ const Page = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
-    checkScreenSize(); // Initial check
+    checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
- const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  
+
+  const fetchUserData = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("users")
+      .select(
+        "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification"
+      )
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      if (error.code !== "PGRST116") throw error;
+      return null;
+    }
+    return {
+      id: data.id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      phone: data.phone,
+      walletBalance: data.wallet_balance,
+      zidcoinBalance: data.zidcoin_balance,
+      bvnVerification: data.bvn_verification,
+      referralCode: data.referral_code,
+    } as any;
+  };
+
+  const fetchPendingUserData = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("pending_users")
+      .select(
+        "auth_id, first_name, last_name, email, phone, referred_by, verified, bvn_verification"
+      )
+      .eq("auth_id", userId)
+      .single();
+
+      
+
+    if (error) {
+      if (error.code !== "PGRST116") throw error; 
+      return null;
+    }
+    return {
+      id: data.auth_id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      phone: data.phone,
+      referredBy: data.referred_by,
+      verified: data.verified,
+      bvnVerification: data.bvn_verification,
+    };
+  };
+
+const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
   event.preventDefault();
-
-  const newErrors: { [key: string]: string } = {};
-
-  if (!email || !/^[\w-.]+@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
-    newErrors.email = "Please enter a valid email address";
-  }
-
-  if (!password) {
-    newErrors.password = "Please enter a password";
-  }
-
-  // Early return if validation fails
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    return;
-  }
-
   setLoading(true);
-  setErrors({}); // clear previous errors
+  setErrors({});
 
-  try {
-    // Try to login - assumes login is a function returning a Promise
-    await login({ email: email.trim(), password: password.trim() });
+   try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.user) throw new Error(error?.message || "Login failed");
 
-  } catch (error: any) {
-    console.error("Login error:", error.message || error);
+      const userId = data.user.id;
 
-    setErrors({ password: error.message || "Login error" });
-  } finally {
-    setLoading(false);
-  }
+      // Fetch user profile from both tables
+      let profile = await fetchUserData(userId);
+      let isVerified = false;
+
+      console.log("profile from user", profile )
+
+      if (profile) {
+        isVerified = profile.bvnVerification === "verified";
+      } else {
+        profile = await fetchPendingUserData(userId);
+         console.log("profile from pending user", profile )
+        if (profile) {
+          isVerified = profile.bvnVerification === "verified"; 
+        }
+      }
+
+      if (!profile) throw new Error("User data not found in both tables");
+
+      // Set context and localStorage
+      setUserData(profile);
+      localStorage.setItem("userData", JSON.stringify(profile));
+
+      // Set cookie for middleware
+      Cookies.set("verified", isVerified ? "true" : "false", { expires: 7, path: "/" });
+
+      // Show success message and redirect
+      Swal.fire({
+        icon: "success",
+        title: "Login Successful",
+        text: "Welcome back!",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push(isVerified ? "/dashboard" : "/onboarding");
+      });
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Login Failed",
+        text: err.message || "Invalid email or password",
+      });
+    } finally {
+      setLoading(false);
+    }
 };
+
+
 
   return (
     <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen fade-in">
@@ -364,7 +284,7 @@ const Page = () => {
           </CardContent>
         </Card>
       </div>
-      <Carousel slides={images} autoSlide />
+      <Carousel />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { useUserContextData } from "../context/userData";
 import Swal from "sweetalert2";
 
 import withReactContent from "sweetalert2-react-content";
+import Loader from "./Loader";
 
 const getBase64Logo = async () => {
   const response = await fetch("/logo.png");
@@ -83,17 +84,17 @@ interface InvoiceForm {
 
 type Props = {
   invoices: any[];
-
+loading: boolean;
 };
 
 const InvoiceList: React.FC<Props> = ({
-  invoices
+  invoices,
+  loading
 }) => {
   const statusColors: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    overdue: "bg-red-100 text-red-800",
+    unpaid: "bg-yellow-100 text-yellow-800",
     draft: "bg-gray-100 text-gray-800",
-    signed: "bg-blue-100 text-blue-800",
+    paid: "bg-blue-100 text-blue-800",
   };
 
   const formatNumber = (value: number) => {
@@ -434,6 +435,24 @@ const InvoiceList: React.FC<Props> = ({
     }
   };
 
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader />
+      </div>
+    );
+  }
+
+    if (invoices.length === 0) {
+    return (
+      <div className="flex items-center justify-center text-semibold">
+       No invoices records
+      </div>
+    );
+  }
+
+ 
 
   return (
     <div className="space-y-4">
@@ -455,11 +474,11 @@ const InvoiceList: React.FC<Props> = ({
                     </h3>
                     <Badge
                       className={
-                        statusColors[invoice.signature_status] ||
+                        statusColors[invoice.status] ||
                         "bg-gray-100 text-gray-800"
                       }
                     >
-                      {invoice.signature_status}
+                      {invoice.status}
                     </Badge>
                   </div>
                   <p className="text-gray-900 font-medium mb-1">
@@ -502,7 +521,7 @@ const InvoiceList: React.FC<Props> = ({
                     View
                   </Button>
 
-                  {invoice.status !== "signed" &&
+                 
                   <>
                   <Button
                     onClick={() =>
@@ -512,6 +531,7 @@ const InvoiceList: React.FC<Props> = ({
                     }
                     variant="outline"
                     size="sm"
+                    disabled={invoice.status === "unpaid"}
                   >
                     <Edit className="w-4 h-4 mr-1" />
                     Edit
@@ -532,14 +552,14 @@ const InvoiceList: React.FC<Props> = ({
                   </Button>
                   </>
 
-                  }
+                  
                   
                  
                   <Button
                     onClick={() => downloadPdf(invoice)}
                     variant="outline"
                     size="sm"
-                    disabled={processing}
+                     disabled={invoice.status === "unpaid" || processing}
                   >
                     {processing ? (
                       <Loader2 className="w-4 h-4 mr-1 animate-spin" />

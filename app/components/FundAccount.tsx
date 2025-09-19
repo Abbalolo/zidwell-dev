@@ -1,37 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { useUserContextData } from "../context/userData"
-import { Check, Copy } from "lucide-react"
-import TransactionHistory from "./transaction-history"
+import { useState } from "react";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { useUserContextData } from "../context/userData";
+import { Check, Copy } from "lucide-react";
+import TransactionHistory from "./transaction-history";
 
 export default function FundAccountMethods() {
-  const [amount, setAmount] = useState("")
-  const [copied, setCopied] = useState("")
-  const [showInput, setShowInput] = useState(false)
-  const [accountDetails, setAccountDetails] = useState<any>(null)
-  const { userData } = useUserContextData()
+  const [amount, setAmount] = useState("");
+  const [copied, setCopied] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [accountDetails, setAccountDetails] = useState<any>(null);
+  const { userData } = useUserContextData();
 
   const copyToClipboard = async (text: any, type: string) => {
     try {
-      await navigator.clipboard.writeText(text)
-      setCopied(type)
-      setTimeout(() => setCopied(""), 2000)
+      await navigator.clipboard.writeText(text);
+      setCopied(type);
+      setTimeout(() => setCopied(""), 2000);
     } catch (err) {
-      console.error("Failed to copy: ", err)
+      console.error("Failed to copy: ", err);
     }
-  }
+  };
 
   // Function to call the backend API
   const generateVirtualAccountNumber = async () => {
     // Ensure userData exists and the amount is provided
     if (!userData || !amount) {
       console.error("Missing user data or amount.");
-      return null
+      return null;
     }
 
     // Prepare payload with user data and amount
@@ -42,62 +42,62 @@ export default function FundAccountMethods() {
       last_name: userData.lastName,
       phone: userData.phone,
       amount,
-    }
+    };
 
-    console.log("Sending fund data:", payload)
+    console.log("Sending fund data:", payload);
 
     try {
       // Make the API call to generate the virtual account number
-      const response = await fetch('/api/generate-virtual-account', {
-        method: 'POST',
+      const response = await fetch("/api/generate-virtual-account", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (response.ok) {
         // Handle successful response
-        const data = await response.json()
-        console.log("Generated account details:", data)
-        return data
+        const data = await response.json();
+        console.log("Generated account details:", data);
+        return data;
       } else {
         // Handle response errors
-        const errorData = await response.json()
-        console.error("Error generating account number:", errorData.error)
-        throw new Error(errorData.error || 'Something went wrong')
+        const errorData = await response.json();
+        console.error("Error generating account number:", errorData.error);
+        throw new Error(errorData.error || "Something went wrong");
       }
     } catch (error) {
-      console.error("Error during API call:", error)
-      return null
+      console.error("Error during API call:", error);
+      return null;
     }
-  }
+  };
 
   const handleQuickFund = () => {
     // Show the input field when "Quick Fund" is clicked
-    setShowInput(true)
-  }
+    setShowInput(true);
+  };
 
   const handleDeposit = async () => {
     try {
       // Call the backend to generate the virtual account details
-      const newAccountDetails = await generateVirtualAccountNumber()
-      
-      if (newAccountDetails && newAccountDetails.success) {
-        console.log("Account details received:", newAccountDetails)
-        setAccountDetails(newAccountDetails)  // Store the entire account details object
-      } else {
-        console.error("No account details found or success is false.")
-      }
-      
-      setAmount("") // Clear the amount input after submission
-      setShowInput(false) // Hide the input field
-    } catch (error) {
-      alert(error) // Show error if something went wrong
-    }
-  }
+      const newAccountDetails = await generateVirtualAccountNumber();
 
-   const formatNumber = (value: number) => {
+      if (newAccountDetails && newAccountDetails.success) {
+        console.log("Account details received:", newAccountDetails);
+        setAccountDetails(newAccountDetails); // Store the entire account details object
+      } else {
+        console.error("No account details found or success is false.");
+      }
+
+      setAmount(""); // Clear the amount input after submission
+      setShowInput(false); // Hide the input field
+    } catch (error) {
+      alert(error); // Show error if something went wrong
+    }
+  };
+
+  const formatNumber = (value: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "decimal",
       minimumFractionDigits: 2,
@@ -114,10 +114,12 @@ export default function FundAccountMethods() {
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center">
-<span className="text-lg md:text-2xl font-semibold">
-  ₦{formatNumber(userData?.walletBalance ?? 0)}
-</span>
-            <Button className="bg-[#C29307]" onClick={handleQuickFund}>Quick Fund</Button>
+            <span className="text-lg md:text-2xl font-semibold">
+              ₦{formatNumber(userData?.walletBalance ?? 0)}
+            </span>
+            <Button className="bg-[#C29307]" onClick={handleQuickFund}>
+              Quick Fund
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -144,7 +146,9 @@ export default function FundAccountMethods() {
               <p className="text-sm text-gray-500">Minimum amount: ₦100.00</p>
             </div>
             <div className="flex justify-end mt-4">
-              <Button className="bg-[#C29307]" onClick={handleDeposit}>OK</Button>
+              <Button className="bg-[#C29307]" onClick={handleDeposit}>
+                OK
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -163,14 +167,25 @@ export default function FundAccountMethods() {
                 <span className="text-gray-600">Account Number:</span>
 
                 <div className="flex gap-3 items-center">
-                <span className="font-mono">{accountDetails.account.account_number}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(accountDetails.account.account_number, "account")}
-                >
-                  {copied === "account" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
+                  <span className="font-mono">
+                    {accountDetails.account.account_number}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      copyToClipboard(
+                        accountDetails.account.account_number,
+                        "account"
+                      )
+                    }
+                  >
+                    {copied === "account" ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
 
@@ -202,8 +217,7 @@ export default function FundAccountMethods() {
         </Card>
       )}
 
-
-      <TransactionHistory/>
+      <TransactionHistory />
     </div>
-  )
+  );
 }

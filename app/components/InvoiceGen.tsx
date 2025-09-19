@@ -37,7 +37,7 @@ export interface Invoice {
   invoice_items: InvoiceItem[];
 }
 
-export default function InvoiceManager() {
+export default function InvoiceGen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,6 +86,11 @@ export default function InvoiceManager() {
     }
   }, [userData?.email]);
 
+
+
+
+
+
   // ✅ totals
   const totalAmount = invoices.reduce((sum, invoice) => {
     const invoiceTotal =
@@ -107,10 +112,11 @@ export default function InvoiceManager() {
       return sum + invoiceTotal;
     }, 0);
 
-  const signedInvoices = invoices.filter(
+  const paidInvoice = invoices.filter(
     (inv) => inv.signature_status?.toLowerCase() === "signed"
   ).length;
-  const pendingInvoices = invoices.filter(
+  
+  const unpaidInvoice = invoices.filter(
     (inv) => inv.signature_status?.toLowerCase() === "pending"
   ).length;
 
@@ -138,17 +144,11 @@ const filteredInvoices = invoices.filter((item) => {
 });
    
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
+      {activeTab === "invoices" && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-6">
@@ -163,9 +163,9 @@ const filteredInvoices = invoices.filter((item) => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-1">Signed Invoices</p>
+              <p className="text-sm text-gray-600 mb-1">Paid Invoices</p>
               <p className="text-2xl font-bold text-green-600">
-                {signedInvoices}
+                {paidInvoice}
               </p>
             </div>
           </CardContent>
@@ -173,14 +173,16 @@ const filteredInvoices = invoices.filter((item) => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-1">Pending Invoices</p>
+              <p className="text-sm text-gray-600 mb-1">Unpaid Invoices</p>
               <p className="text-2xl font-bold text-yellow-600">
-                {pendingInvoices}
+                {unpaidInvoice}
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="flex flex-wrap gap-2 mb-4">
@@ -283,7 +285,7 @@ const filteredInvoices = invoices.filter((item) => {
           {/* Invoice list */}
           <InvoiceLIst
             invoices={filteredInvoices}
-            
+            loading={loading}
           />
         </TabsContent>
 

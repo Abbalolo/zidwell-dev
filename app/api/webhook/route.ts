@@ -9,77 +9,63 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    const secretHash = process.env.FLW_SECRET_WEBHOOK_KEY!;
+    console.log("Nomba webhook payload:", payload);
 
-    // ✅ Verify webhook signature
-    if (req.headers.get("verif-hash") !== secretHash) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    // ✅ Only handle successful payments
+    if (payload.event_type !== "payment_success") {
+      return NextResponse.json({ message: "Ignored event type" }, { status: 200 });
     }
 
-    const { txRef, amount, status } = payload;
-    console.log("Received txRef:", txRef);
+    const {
+      order: { orderReference },
+      transaction: { transactionAmount, type: paymentType, transactionId },
+      merchant: { userId: issuerId },
+    } = payload.data;
 
-    if (status === "successful") {
-      // ✅ Case 1: Wallet Funding
-      if (txRef.startsWith("fund-")) {
-        // Format: fund-<uuid>-<timestamp>
-        const withoutPrefix = txRef.replace("fund-", "");
-        const parts = withoutPrefix.split("-");
+    console.log("OrderReference:", orderReference);
+    console.log("Transaction amount:", transactionAmount);
+    console.log("Transaction ID:", transactionId);
 
-        // Take the first 5 segments → full UUID
-        const userId = parts.slice(0, 5).join("-");
-        console.log("✅ Extracted userId:", userId);
+    // 1️⃣ Find the invoice using orderReference
+    const { data: invoice, error: invError } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("invoice_id", orderReference)
+      .single();
 
-        const { error } = await supabase.rpc("increment_wallet_balance", {
-          user_id: userId,
-          amt: amount,
-        });
-        if (error) throw error;
-      }
+    if (invError || !invoice) {
+      console.error("Invoice not found:", invError);
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
 
-      // ✅ Case 2: Invoice Payment
-      else if (txRef.startsWith("inv-")) {
-        // Format: inv-<invoiceId>-<timestamp>
-        const invoiceId = txRef.split("-")[1];
-        console.log("✅ Extracted invoiceId:", invoiceId);
+    // 2️⃣ Only update if not already paid
+    if (invoice.status !== "paid") {
+      // 2a️⃣ Credit issuer wallet
+      const { error: walletError } = await supabase.rpc("increment_wallet_balance", {
+        user_id: issuerId,
+        amt: transactionAmount,
+      });
+      if (walletError) throw walletError;
 
-        // 1. Find the invoice in Supabase
-        const { data: invoice, error: invError } = await supabase
-          .from("invoices")
-          .select("issuerId, payment_status")
-          .eq("id", invoiceId)
-          .single();
+      // 2b️⃣ Update invoice with payment info
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+          transaction_id: transactionId,
+          payment_method: paymentType,
+        })
+        .eq("invoice_id", orderReference);
 
-        if (invError || !invoice) throw new Error("Invoice not found");
+      if (updateError) throw updateError;
 
-        if (invoice.payment_status !== "paid") {
-          // 2. Credit issuer’s wallet
-          const { error: walletError } = await supabase.rpc(
-            "increment_wallet_balance",
-            {
-              user_id: invoice.issuerId,
-              amt: amount,
-            }
-          );
-          if (walletError) throw walletError;
-
-          // 3. Mark invoice as paid
-          const { error: updateError } = await supabase
-            .from("invoices")
-            .update({
-              payment_status: "paid",
-              paid_at: new Date().toISOString(),
-            })
-            .eq("id", invoiceId);
-
-          if (updateError) throw updateError;
-        }
-      }
+      console.log(`Invoice ${orderReference} marked as paid.`);
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("❌ Webhook Error:", error.message);
+    console.error("❌ Nomba webhook error:", error.message);
     return NextResponse.json({ error: "Webhook failed" }, { status: 500 });
   }
 }

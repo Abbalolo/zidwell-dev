@@ -120,6 +120,8 @@ export default function ReceiptManager() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
+       {activeTab === "Receipts" && (
+        
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6">
@@ -152,6 +154,7 @@ export default function ReceiptManager() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="flex flex-wrap gap-2 mb-4">
@@ -211,6 +214,7 @@ export default function ReceiptManager() {
           {/* Reciepts List */}
           <RecieptList
             receipts={filteredReceipts}
+            loading={loading}
           />
         </TabsContent>
 

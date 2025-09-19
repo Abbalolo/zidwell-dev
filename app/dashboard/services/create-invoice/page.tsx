@@ -1,10 +1,13 @@
+"use client"
 import DashboardSidebar from "@/app/components/dashboard-sidebar" 
 import DashboardHeader from "@/app/components/dashboard-hearder" 
-import InvoiceManager from "@/app/components/InvoiceGen" 
-import ProtectedRoute from "@/app/components/ProtectedRoute"
+import { ArrowLeft } from "lucide-react"
+import { Button } from "@/app/components/ui/button"
+import { useRouter } from "next/navigation"
+import InvoiceGen from "@/app/components/InvoiceGen"
 
 export default function page() {
-   
+   const router = useRouter();
   return (
 
 
@@ -15,13 +18,30 @@ export default function page() {
         <DashboardHeader />
 
         <main className="p-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Invoice Management</h1>
-              <p className="text-gray-600">Create, manage, and track your invoices</p>
-            </div>
+          <div className="md:max-w-5xl md:mx-auto">
+            <div className="flex items-start  space-x-4 mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+               <span className="hidden md:block">Back</span>
+              </Button>
 
-            <InvoiceManager />
+              <div className="">
+                <h1 className="md:text-3xl text-xl font-bold mb-2">
+                Invoice Management
+                </h1>
+                <p className=" text-muted-foreground">
+                 Create, manage, and track your invoices
+                </p>
+              </div>
+            </div>
+            
+
+            <InvoiceGen />
           </div>
         </main>
       </div>

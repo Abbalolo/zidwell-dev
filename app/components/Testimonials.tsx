@@ -13,7 +13,7 @@ const Testimonials = () => {
       image: "/zid-pic/image15.jpg",
       content:
         "Zidwell has made paying my business electricity bills so much easier. I can now focus on growing my business instead of worrying about bill payments.",
-      rating: 5,
+      rating: 3,
     },
     {
       name: "Fatima Abdullahi",
@@ -32,7 +32,7 @@ const Testimonials = () => {
       image: "/zid-pic/image4.jpg",
       content:
         "The AI accountant feature is a game-changer for my freelance business. It helps me track expenses and create professional invoices effortlessly.",
-      rating: 5,
+      rating: 4,
     },
     {
       name: "Kemi Adebayo",
@@ -42,7 +42,7 @@ const Testimonials = () => {
         "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGJsYWNrJTIwcGVvcGxlfGVufDB8fDB8fHww",
       content:
         "Zidwell's bulk payment feature saves me hours every month. I can pay for cable TV, internet, and electricity for all my branches at once.",
-      rating: 5,
+      rating: 3,
     },
     {
       name: "Ibrahim Musa",
@@ -61,7 +61,7 @@ const Testimonials = () => {
       image: "/zid-pic/image13.jpg",
       content:
         "The customer support is exceptional. Whenever I have an issue, they resolve it quickly. Zidwell has truly simplified my life.",
-      rating: 5,
+      rating: 3,
     },
   ];
 

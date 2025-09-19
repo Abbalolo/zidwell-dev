@@ -7,10 +7,8 @@ import {
   LayoutDashboard,
   Wallet,
   Receipt,
-  RotateCcw,
   FileText,
   FileSpreadsheet,
-  Bot,
   User,
   Menu,
   X,
@@ -18,82 +16,29 @@ import {
   Wifi,
   Tv,
   Lightbulb,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import { useUserContextData } from "../context/userData";
 
-const navigationItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  {
-    name: "Fund Account",
-    href: "/dashboard/services/fund-account",
-    icon: Wallet,
-  },
-  {
-    name: "Airtime Top up",
-    href: "/dashboard/services/buy-airtime",
-    icon: Smartphone,
-  },
-  { name: "Internet Top up", href: "/dashboard/services/buy-data", icon: Wifi },
-  {
-    name: "Electricity Payment",
-    href: "/dashboard/services/buy-power",
-    icon: Lightbulb,
-  },
-  { name: "Pay Cable/TV", href: "/dashboard/services/buy-cable-tv", icon: Tv },
-
-  { name: "My Transaction", href: "/dashboard/transactions", icon: Receipt },
-  // { name: "Recurring Payments", href: "/recurring", icon: RotateCcw },
-  {
-    name: "Simple Agreement",
-    href: "/dashboard/services/simple-agreement",
-    icon: FileText,
-  },
-  {
-    name: "Create Invoice",
-    href: "/dashboard/services/create-invoice",
-    icon: FileSpreadsheet,
-  },
-  {
-    name: "Create Receipt",
-    href: "/dashboard/services/create-receipt",
-    icon: Receipt,
-  },
-  {
-    name: "Tax Filling",
-    href: "/dashboard/services/tax-filling",
-    icon: FileSpreadsheet,
-  },
-];
-// const navigationItems = [
-//   { name: "Dashboard",
-//     href: "/dashboard", icon: LayoutDashboard },
-//   { name: "Fund Account", href: "#", icon: Wallet },
-//   { name: "My Transaction", href: "#", icon: Receipt },
-//   { name: "Recurring Payments", href: "#", icon: RotateCcw },
-//   { name: "Legal contract", href: "#", icon: FileText },
-//   {
-//     name: "Create Invoice",
-//     href: "#",
-//     icon: FileSpreadsheet,
-//   },
-//   { name: "AI accountant", href: "#", icon: Bot },
-// ];
-
- const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "decimal",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
+const formatNumber = (value: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "decimal",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
 
 const preferenceItems = [
-  { name: "My Profile", href: "/dashboard/profi", icon: User },
+  { name: "My Profile", href: "/dashboard/profile", icon: User },
 ];
 
 export default function DashboardSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openTopUp, setOpenTopUp] = useState(false);
+  const [openBills, setOpenBills] = useState(false);
+
   const pathname = usePathname();
   const { userData } = useUserContextData();
 
@@ -112,6 +57,7 @@ export default function DashboardSidebar() {
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
     <Link
       href={item.href}
+      onClick={() => setIsMobileMenuOpen(false)}
       className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
         isActive
           ? "bg-yellow-500/20 text-yellow-400 border-r-2 border-yellow-400"
@@ -121,6 +67,38 @@ export default function DashboardSidebar() {
       <item.icon className="w-5 h-5" />
       <span className="font-medium">{item.name}</span>
     </Link>
+  );
+
+  const Dropdown = ({
+    title,
+    icon: Icon,
+    isOpen,
+    toggle,
+    children,
+  }: {
+    title: string;
+    icon: any;
+    isOpen: boolean;
+    toggle: () => void;
+    children: React.ReactNode;
+  }) => (
+    <div>
+      <button
+        onClick={toggle}
+        className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all duration-200"
+      >
+        <div className="flex items-center space-x-3">
+          <Icon className="w-5 h-5" />
+          <span className="font-medium">{title}</span>
+        </div>
+        {isOpen ? (
+          <ChevronDown className="w-4 h-4" />
+        ) : (
+          <ChevronRight className="w-4 h-4" />
+        )}
+      </button>
+      {isOpen && <div className="ml-8 mt-1 space-y-1">{children}</div>}
+    </div>
   );
 
   return (
@@ -164,19 +142,124 @@ export default function DashboardSidebar() {
             </div>
             {userData && userData.firstName ? (
               <>
-              <p className="text-gray-400 text-sm">
-                Welcome Back {`${userData.firstName}`}
-              </p>
-              <span className="text-gray-400 text-sm">Wallet Balance  {` ${formatNumber(userData.walletBalance)}`} </span>
+                <p className="text-gray-400 text-sm">
+                  Welcome Back {`${userData.firstName}`}
+                </p>
+                {userData?.walletBalance != null && (
+                  <span className="text-gray-400 text-sm">
+                    Wallet Balance {` ${formatNumber(userData.walletBalance)}`}
+                  </span>
+                )}
               </>
             ) : null}
           </div>
 
           {/* Navigation */}
           <div className="flex-1 px-2 py-6 space-y-2">
-            {navigationItems.map((item, i) => (
-              <NavItem key={i} item={item} isActive={pathname === item.href} />
-            ))}
+            <NavItem
+              item={{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard }}
+              isActive={pathname === "/dashboard"}
+            />
+            <NavItem
+              item={{
+                name: "Fund Account",
+                href: "/dashboard/fund-account",
+                icon: Wallet,
+              }}
+              isActive={pathname === "/dashboard/fund-account"}
+            />
+
+            {/* Top Up dropdown */}
+            <Dropdown
+              title="Top Up"
+              icon={Smartphone}
+              isOpen={openTopUp}
+              toggle={() => setOpenTopUp(!openTopUp)}
+            >
+              <NavItem
+                item={{
+                  name: "Airtime",
+                  href: "/dashboard/services/buy-airtime",
+                  icon: Smartphone,
+                }}
+                isActive={pathname === "/dashboard/services/buy-airtime"}
+              />
+              <NavItem
+                item={{
+                  name: "Data Bundles",
+                  href: "/dashboard/services/buy-data",
+                  icon: Wifi,
+                }}
+                isActive={pathname === "/dashboard/services/buy-data"}
+              />
+            </Dropdown>
+
+            {/* Pay Bills dropdown */}
+            <Dropdown
+              title="Pay Bills"
+              icon={Tv}
+              isOpen={openBills}
+              toggle={() => setOpenBills(!openBills)}
+            >
+              <NavItem
+                item={{
+                  name: "Electricity",
+                  href: "/dashboard/services/buy-power",
+                  icon: Lightbulb,
+                }}
+                isActive={pathname === "/dashboard/services/buy-power"}
+              />
+              <NavItem
+                item={{
+                  name: "Cable / TV",
+                  href: "/dashboard/services/buy-cable-tv",
+                  icon: Tv,
+                }}
+                isActive={pathname === "/dashboard/services/buy-cable-tv"}
+              />
+            </Dropdown>
+
+            {/* Other services */}
+            <NavItem
+              item={{
+                name: "My Transaction",
+                href: "/dashboard/transactions",
+                icon: Receipt,
+              }}
+              isActive={pathname === "/dashboard/transactions"}
+            />
+            <NavItem
+              item={{
+                name: "Simple Agreement",
+                href: "/dashboard/services/simple-agreement",
+                icon: FileText,
+              }}
+              isActive={pathname === "/dashboard/services/simple-agreement"}
+            />
+            <NavItem
+              item={{
+                name: "Create Invoice",
+                href: "/dashboard/services/create-invoice",
+                icon: FileSpreadsheet,
+              }}
+              isActive={pathname === "/dashboard/services/create-invoice"}
+            />
+            <NavItem
+              item={{
+                name: "Create Receipt",
+                href: "/dashboard/services/create-receipt",
+                icon: Receipt,
+              }}
+              isActive={pathname === "/dashboard/services/create-receipt"}
+            />
+            <NavItem
+              item={{
+                name: "Tax Filing",
+                href: "/dashboard/services/tax-filing",
+                icon: FileSpreadsheet,
+              }}
+              isActive={pathname === "/dashboard/services/tax-filing"}
+            />
           </div>
 
           {/* Preferences */}

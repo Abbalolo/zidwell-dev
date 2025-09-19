@@ -18,7 +18,6 @@ import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2"; // Import SweetAlert2 for custom alerts
 
 const Page = () => {
-    
   const [contractTitle, setContractTitle] = useState("Untitled Contract");
   const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +30,7 @@ const Page = () => {
     status: "",
   });
   const router = useRouter();
-  const { userData } = useUserContextData();
+  const { userData, setUserData } = useUserContextData();
 
   // Basic validation function
   const validateInputs = () => {
@@ -87,20 +86,19 @@ const Page = () => {
       return;
     }
 
-      const paid = await handleDeduct();
+    const paid = await handleDeduct();
 
-      if (!paid) {
-        setLoading(false);
-        return;
-      }
-
+    if (!paid) {
+      setLoading(false);
+      return;
+    }
 
     Swal.fire({
       title: "Sending contract...",
       text: "Please wait while we send your contract for signature.",
       allowOutsideClick: false,
       didOpen: () => {
-        Swal.showLoading(); 
+        Swal.showLoading();
       },
     });
 
@@ -118,6 +116,7 @@ const Page = () => {
         }),
       });
 
+       const result = await res.json()
       if (res.ok) {
         Swal.fire({
           icon: "success",
@@ -125,11 +124,19 @@ const Page = () => {
           text: "Contract sent for signature successfully!",
         });
 
+        if (result.newWalletBalance !== undefined) {
+          setUserData((prev: any) => {
+            const updated = { ...prev, walletBalance: result.result };
+            localStorage.setItem("userData", JSON.stringify(updated));
+            return updated;
+          });
+        }
+
         setLoading(false);
         window.location.reload();
       } else {
         const errorData = await res.json();
-        await handleRefund()
+        await handleRefund();
         Swal.fire({
           icon: "error",
           title: "Failed to send",
@@ -139,7 +146,7 @@ const Page = () => {
       }
     } catch (err) {
       console.error(err);
-      await handleRefund()
+      await handleRefund();
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -149,67 +156,67 @@ const Page = () => {
     }
   };
 
-   const handleDeduct = async (): Promise<boolean> => {
-      return new Promise((resolve) => {
-        Swal.fire({
-          title: "Confirm Deduction",
-          text: "₦2,000 will be deducted from your wallet for generating this Contract.",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#3085d6",
-          cancelButtonColor: "#d33",
-          confirmButtonText: "Yes, proceed",
-        }).then(async (result) => {
-          if (!result.isConfirmed) {
+  const handleDeduct = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      Swal.fire({
+        title: "Confirm Deduction",
+        text: "₦1,000 will be deducted from your wallet for generating this Contract.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, proceed",
+      }).then(async (result) => {
+        if (!result.isConfirmed) {
+          return resolve(false);
+        }
+
+        try {
+          const res = await fetch("/api/pay-app-service", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: userData?.id,
+              amount: 2000,
+              description: "Contract successfully generated",
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            await Swal.fire(
+              "Error",
+              data.error || "Something went wrong",
+              "error"
+            );
             return resolve(false);
           }
-  
-          try {
-            const res = await fetch("/api/pay-app-service", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: userData?.id,
-                amount: 2000,
-                description: "Contract successfully generated",
-              }),
-            });
-  
-            const data = await res.json();
-  
-            if (!res.ok) {
-              await Swal.fire(
-                "Error",
-                data.error || "Something went wrong",
-                "error"
-              );
-              return resolve(false);
-            }
-  
-            resolve(true);
-          } catch (err: any) {
-            await Swal.fire("Error", err.message, "error");
-            resolve(false);
-          }
-        });
-      });
-    };
 
-    const handleRefund = async () => {
+          resolve(true);
+        } catch (err: any) {
+          await Swal.fire("Error", err.message, "error");
+          resolve(false);
+        }
+      });
+    });
+  };
+
+  const handleRefund = async () => {
     try {
       await fetch("/api/refund-service", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: userData?.id,
-          amount: 2000,
+          amount: 1000,
           description: "Refund for failed contract generation",
         }),
       });
       Swal.fire({
         icon: "info",
         title: "Refund Processed",
-        text: "₦2,000 has been refunded to your wallet due to failed contract sending.",
+        text: "₦1,000 has been refunded to your wallet due to failed contract sending.",
       });
     } catch (err) {
       console.error("Refund failed:", err);
@@ -236,7 +243,7 @@ const Page = () => {
                   <Button
                     variant="ghost"
                     onClick={() => router.back()}
-                    className="flex items-center gap-2"
+                    className="flex text-[#C29307] items-center gap-2"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Back
@@ -261,7 +268,7 @@ const Page = () => {
                     Download
                   </Button> */}
 
-                   <Button
+                  <Button
                     disabled={loading}
                     className="bg-[#C29307] hover:bg-[#b28a06] text-white flex items-center"
                     onClick={handleSend}
@@ -327,8 +334,9 @@ const Page = () => {
                         className="w-full p-2 border rounded-md bg-background"
                       >
                         <option value="draft">Draft</option>
-                        <option value="pending">Pending Review for Signature</option>
-                       
+                        <option value="pending">
+                          Pending Review for Signature
+                        </option>
                       </select>
                       {errors.status && (
                         <p className="text-red-500 text-sm">{errors.status}</p>

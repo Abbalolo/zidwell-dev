@@ -3,7 +3,6 @@
 
 **Zidwell** is a modern web application built with Next.js, designed to provide a seamless platform for managing podcasts, digital signatures, and user authentication. The app integrates with third-party services such as Paybeta and Supabase to offer secure wallet management, password resets, and real-time data handling. Users can sign up, manage their profiles, reset wallet PINs, and access a dashboard for podcasts and platform services—all within a responsive and user-friendly interface.
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Project Structure
 ```
@@ -65,6 +64,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 │   │   └── edit/
 │   │       └── [id]/
 │   │           └── page.tsx
+
 │   ├── sign/
 │   │   └── sign-document/
 │   │       └── page.tsx
@@ -107,11 +107,6 @@ pnpm dev
 bun dev
 ```
 
-## Notable Files
-
-- [`app/api/reset-password/route.ts`](app/api/reset-password/route.ts): Handles wallet PIN reset via Paybeta API.
-- [`app/api/reset-password-code/route.ts`](app/api/reset-password-code/route.ts): Handles reset code submission.
-- [`app/auth/signup/page.tsx`](app/auth/signup/page.tsx): Signup page with UI and logic.
 
 
 ## Project Structure Explained
@@ -150,6 +145,10 @@ bun dev
 
 - **tsconfig.json**  
   TypeScript configuration (compiler options, path aliases).
+
+- **middleware.ts**  
+  Custom middleware for request handling, authentication, or logging.
+
 
 ---
 
@@ -213,10 +212,6 @@ Main source folder for your Next.js application.
 
 ---
 
-#### lib/
-
-- **middleware.ts**  
-  Custom middleware for request handling, authentication, or logging.
 
 ---
 
@@ -233,6 +228,9 @@ Main source folder for your Next.js application.
 - `@/hooks` → `app/hooks`
 - `@/app/components/ui` → UI components
 
+
+Defined in [`components.json`](components.json) and `tsconfig.json`:
+
 ---
 
 ## How to Use
@@ -242,20 +240,6 @@ Main source folder for your Next.js application.
 - **Add shared logic:** Place reusable hooks in `app/hooks/`.
 - **Add UI components:** Place them in `app/components/`.
 
----
-
-This structure helps keep your code organized, scalable, and easy for new developers to understand and contribute.
-
-## Aliases
-
-Defined in [`components.json`](components.json) and `tsconfig.json`:
-
-- `@/components` → `app/components`
-- `@/lib` → `lib`
-- `@/hooks` → `app/hooks`
-- `@/app/components/ui` → UI components
-
-### Additional Folders and Files
 
 #### app/components/
 
@@ -268,26 +252,12 @@ Defined in [`components.json`](components.json) and `tsconfig.json`:
 
 #### app/context/
 
-- **AuthContext.tsx**  
-  Provides authentication state and methods to the app.
-- **ThemeContext.tsx**  
-  Manages light/dark mode or other theming options.
+- **UserData.tsx**  
+  Provides authentication fucnction to be reuse and states.
 
-#### app/hooks/ and app/hook/
-
-- **useAuth.ts**  
-  Custom hook for authentication logic (login, logout, user info).
-- **useFetch.ts**  
-  Custom hook for fetching data from APIs.
-- **usePodcast.ts**  
-  Podcast-specific logic (fetching, creating, updating podcasts).
 
 #### app/platform-services/
 
-- **paybeta.ts**  
-  Functions for interacting with the Paybeta API (wallet, payments).
-- **supabase.ts**  
-  Functions for interacting with Supabase (database, auth).
 
 #### app/podcasts/
 
@@ -307,10 +277,9 @@ Defined in [`components.json`](components.json) and `tsconfig.json`:
 
 #### app/supabase/
 
-- **client.ts**  
-  Initializes and exports the Supabase client for use throughout the app.
-- **auth.ts**  
-  Helper functions for Supabase authentication.
+- **supabase.ts**  
+  Functions for interacting with Supabase (database, auth).
+
 
 #### lib/
 

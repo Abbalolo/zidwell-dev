@@ -72,12 +72,12 @@ const services:any = [
   },
   {
     id: 8,
-    title: "Tax Filling",
+    title: "Tax Filing",
     description: "File your tax",
     icon: FileSpreadsheet ,
     color: "bg-gray-50 text-gray-600",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    link: "/dashboard/services/tax-filling"
+    link: "/dashboard/services/tax-filing"
   },
   
 

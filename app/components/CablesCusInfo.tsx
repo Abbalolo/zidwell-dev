@@ -3,7 +3,6 @@ import { Button } from "./ui/button";
 import { ArrowRight, Receipt, AlertCircle } from "lucide-react";
 import Image from "next/image";
 
-
 export default function CableCustomerCard(props: any) {
   const {
     customerName,
@@ -16,38 +15,42 @@ export default function CableCustomerCard(props: any) {
     errors,
   } = props;
 
-
   return (
     <div className="sticky top-6 flex flex-col gap-3">
       {/* Customer Info Card */}
 
       {customerName && (
-  <Card className="w-full shadow-md rounded-xl border border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800">
-            Customer Info
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-gray-700">
-          <div className="flex gap-2">
-            <span className="font-medium">Name:</span>
-            <p className="font-semibold">{customerName}</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="font-medium">Subscriber Name:</span>
-            <p className="font-semibold">{service}</p>
-          </div>
-         
-          <div className="flex gap-2">
-            <span className="font-medium">Decoder Number:</span>
-            <p className="font-semibold">{decorderNumber}</p>
-          </div>
-          
-         
-        </CardContent>
-      </Card>
+        <Card className="w-full shadow-md rounded-xl border border-gray-200">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800">
+              Customer Info
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-gray-700">
+            {customerName && (
+              <div className="flex gap-2">
+                <span className="font-medium">Name:</span>
+                <p className="font-semibold">{customerName}</p>
+              </div>
+            )}
+            {service && (
+              <div className="flex gap-2">
+                <span className="font-medium">Subscriber Name:</span>
+                <p className="font-semibold">{service}</p>
+              </div>
+            )}
+
+            {decorderNumber && (
+            <div className="flex gap-2">
+              <span className="font-medium">Decoder Number:</span>
+              <p className="font-semibold">{decorderNumber}</p>
+            </div>
+
+            )}
+
+          </CardContent>
+        </Card>
       )}
-    
 
       {/* Payment Summary Card */}
       <Card className="">
@@ -62,7 +65,7 @@ export default function CableCustomerCard(props: any) {
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-3 relative">
                 <Image
-                  src={selectedProvider.logo}
+                  src={selectedProvider.src}
                   alt={selectedProvider.name}
                   fill
                   className="object-contain rounded"
@@ -79,8 +82,6 @@ export default function CableCustomerCard(props: any) {
             </div>
           )}
 
-         
-
           <Button
             onClick={handlePayment}
             disabled={!selectedPlan}
@@ -93,7 +94,7 @@ export default function CableCustomerCard(props: any) {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-              
+                  Process Payment
                 <ArrowRight className="w-4 h-4" />
               </div>
             )}
@@ -115,4 +116,3 @@ export default function CableCustomerCard(props: any) {
     </div>
   );
 }
-

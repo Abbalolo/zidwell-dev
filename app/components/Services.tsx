@@ -55,8 +55,8 @@ const Services = () => {
     },
     {
       icon: <Calculator className="h-10 w-10" />,
-      title: "AI Accountant",
-      description: "Smart accounting assistance powered by artificial intelligence.",
+      title: "Tax Filing",
+      description: "File your taxes easily with our guided process.",
       color: "from-indigo-500 to-indigo-600",
       
     },

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { cookies } from "next/headers";
+
+import { getNombaToken } from "@/lib/nomba";
 
 export async function GET(req: NextRequest) {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("paybeta_token")?.value;
+ const token = await getNombaToken();
+
   
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -21,15 +22,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const response = await axios.get(
-      `https://api.paybeta.ng/v2/data-bundle/list?service=${service}`,
+      `https://sandbox.nomba.com/v1/bill/data-plan/${service}`,
       {
         headers: {
           "Content-Type": "application/json",
-          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
+          accountId: process.env.NOMBA_ACCOUNT_ID!,
            "Authorization": `Bearer ${token}`
         },
       }
     );
+
 
 
     return NextResponse.json(response.data);

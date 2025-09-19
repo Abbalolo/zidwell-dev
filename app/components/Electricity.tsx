@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Zap, Check, AlertCircle, Building2Icon } from "lucide-react";
+import {
+  Zap,
+  Check,
+  AlertCircle,
+  Building2Icon,
+  ArrowLeft,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -17,6 +23,8 @@ import Image from "next/image";
 import { useUserContextData } from "../context/userData";
 import ElectricityCustomerCard from "./ElectricityCusInfo";
 import Swal from "sweetalert2";
+import { Button } from "./ui/button";
+import { useRouter } from "next/navigation";
 
 interface AirtimeAmount {
   value: number;
@@ -31,11 +39,10 @@ const airtimeAmounts: AirtimeAmount[] = [
 
 export default function ElectricityBills() {
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
-  const [powerProvider, setPowerProviders] = useState<any | null>(null);
+  const [powerProviders, setPowerProviders] = useState<any[]>([]);
   const [userInfo, setUserInfo] = useState<any | null>(null);
   const [meterNumber, setMeterNumber] = useState("");
   const [meterType, setMeterType] = useState("");
-  const [decoderNumber, setDecoderNumber] = useState("");
   const [pin, setPin] = useState("");
   const [amount, setAmount] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
@@ -45,13 +52,13 @@ export default function ElectricityBills() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isVerified, setIsVerified] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user } = useUserContextData();
-
+  const { userData, setUserData } = useUserContextData();
+  const router = useRouter();
   const meterTypes = ["Prepaid", "Postpaid"];
 
   const validateAmount = (amt: number | null) => {
     if (!amt) return "Amount is required";
-    if (amt < 100) return "Minimum amount is ₦1000";
+    if (amt < 1000) return "Minimum amount is ₦1000";
     if (amt > 50000) return "Maximum amount is ₦50,000";
     return "";
   };
@@ -99,9 +106,9 @@ export default function ElectricityBills() {
       newErrors.amount = amountError;
     }
 
-    if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+    // if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
 
-    if (!pin) newErrors.amount = "Please enter transaction pin";
+    // if (!pin) newErrors.amount = "Please enter transaction pin";
 
     if (!meterNumber) {
       newErrors.meterNumber = "Please enter your meter number";
@@ -152,15 +159,15 @@ export default function ElectricityBills() {
 
     // Step 5: Build payload
     const payload = {
-      service: selectedProvider.slug,
+      disco: selectedProvider.id,
       customerId: userInfo.meterNumber,
-      billerCode: userInfo.meterType.toLowerCase(),
+      meterType: userInfo.meterType.toLowerCase(),
       amount: Number(amount),
-      pin: pin.trim(),
-      reference: `power-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      payerName: userData?.firstName || "Valued Customer",
+      merchantTxRef: `power-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     };
 
-    // console.log("📦 Purchase payload:", mdata, payload);
+    console.log("📦 Purchase payload:", payload);
 
     // Step 6: Make the request
     try {
@@ -175,6 +182,14 @@ export default function ElectricityBills() {
       const data = await response.json();
 
       if (!response.ok) throw data;
+
+        if (data.newWalletBalance !== undefined) {
+        setUserData((prev: any) => {
+          const updated = { ...prev, walletBalance: data.newWalletBalance };
+          localStorage.setItem("userData", JSON.stringify(updated));
+          return updated;
+        });
+      }
 
       Swal.fire({
         icon: "success",
@@ -210,8 +225,27 @@ export default function ElectricityBills() {
       if (!response.ok)
         throw new Error(data.error || "Failed to fetch providers");
 
-      console.log("Power providers fetched:", data);
-      setPowerProviders(data);
+      const prefixLogos: Record<string, string> = {
+        phed: "/disco-img/portharcourt.png",
+        jed: "/disco-img/jos.png",
+        kaduna: "/disco-img/kaduna.png",
+        ibedc: "/disco-img/ibadan.png",
+        eko: "/disco-img/eko.png",
+        benin: "/disco-img/benin.png",
+        abuja: "/disco-img/abuja.png",
+        kano: "/disco-img/kano.png",
+        ikeja: "/disco-img/ikeja.png",
+        enugu: "/disco-img/enugu.png",
+      };
+
+      // Merge logos into the providers
+      const enrichedProviders = data.data.map((provider: any) => ({
+        ...provider,
+        logo: prefixLogos[provider.id] || null,
+      }));
+
+      console.log("Enriched providers:", enrichedProviders);
+      setPowerProviders(enrichedProviders);
     } catch (error: any) {
       console.error("Fetch error:", error.message);
     } finally {
@@ -223,7 +257,7 @@ export default function ElectricityBills() {
     const newErrors: { [key: string]: string } = {};
 
     // Input validation before making request
-    if (!selectedProvider?.slug) {
+    if (!selectedProvider?.id) {
       newErrors.provider = "Please select an electricity provider";
     }
 
@@ -232,18 +266,15 @@ export default function ElectricityBills() {
       return;
     }
 
-    const payload = {
-      service: selectedProvider.slug,
-      meterNumber: meterNumber.trim(),
-      meterType: meterType.trim(),
-    };
+    const params = new URLSearchParams({
+      disco: selectedProvider?.id || "",
+      customerId: meterNumber.trim(),
+    });
 
     try {
       setLoading(true);
-      const response = await fetch("/api/validate-electricity", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const response = await fetch(`/api/validate-electricity?${params}`, {
+        method: "GET",
       });
 
       const data = await response.json();
@@ -277,31 +308,55 @@ export default function ElectricityBills() {
   };
 
   useEffect(() => {
-    if (user) getPowerProviders();
-  }, [user]);
+    getPowerProviders();
+  }, []);
 
   useEffect(() => {
-    if (meterNumber && meterType) ValidateMeterNumber();
-  }, [meterNumber, meterType]);
+    if (!meterNumber || !selectedProvider) return;
+    if (!/^[0-9]{10,14}$/.test(meterNumber)) {
+      setErrors(prev => ({ ...prev, meterNumber: "Meter must be 10–14 digits" }));
+      return;
+    }
+    setErrors(prev => ({ ...prev, meterNumber: "" }));
+
+    const timeout = setTimeout(ValidateMeterNumber, 500);
+    return () => clearTimeout(timeout);
+  }, [meterNumber, selectedProvider]);
+
+  console.log("Selected Provider:", selectedProvider);
 
   // 0209227217814
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:max-w-5xl md:mx-auto">
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Pay Electricity Bills
-        </h1>
-        <p className="text-muted-foreground">
-          Pay your electricity bills instantly across all DISCOs in Nigeria
-        </p>
+      <div className="flex items-start  space-x-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+         <span className="hidden md:block">Back</span>
+        </Button>
+
+        <div className="">
+          <h1 className="md:text-3xl text-xl font-bold mb-2">
+            Pay Electricity Bills
+          </h1>
+          <p className=" text-muted-foreground">
+            Pay your electricity bills instantly across all DISCOs in Nigeria
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Payment Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Provider Selection */}
+
+          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -311,16 +366,17 @@ export default function ElectricityBills() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {powerProvider?.data.map((provider: any) => {
+                {powerProviders?.map((provider: any) => {
                   const isSelected = selectedProvider?.name === provider.name;
 
+                  
                   return (
                     <div
                       key={provider.id}
                       onClick={() => setSelectedProvider(provider)}
-                      className={`relative p-4 border-2 rounded-md transition-all duration-200 ${
+                      className={`relative p-4 border-2 rounded-md transition-all duration-200 cursor-pointer${
                         isSelected
-                          ? "bg-gray-100 border-gray-600 text-gray-900 shadow-md"
+                          ? "bg-gray-100 border-[#C29307] text-gray-900 shadow-md"
                           : "bg-white border-gray-200 hover:border-gray-300"
                       } `}
                     >
@@ -334,17 +390,17 @@ export default function ElectricityBills() {
                           />
                         </div>
 
-                        <h3 className="font-semibold text-gray-900 text-sm md:text-base">
+                        <h3 className="font-semibold text-gray-900 text-sm">
                           {provider.name}
                         </h3>
-                        <p className="text-sm text-gray-500">
+                        {/* <p className="text-sm text-gray-500">
                           {provider.status ? "VTU Available" : "Unavailable"}
-                        </p>
+                        </p> */}
                       </div>
 
                       {isSelected && (
                         <div className="absolute -top-2 -right-2">
-                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 bg-[#C29307] rounded-full flex items-center justify-center">
                             <Check className="w-4 h-4 text-white" />
                           </div>
                         </div>
@@ -377,8 +433,7 @@ export default function ElectricityBills() {
                       onValueChange={(value) => {
                         setMeterType(value);
                         setIsVerified(false);
-
-                        setDecoderNumber("");
+                        setMeterNumber("");
                       }}
                     >
                       <SelectTrigger>
@@ -486,7 +541,7 @@ export default function ElectricityBills() {
         </div>
 
         {/* Pin Input */}
-        <div className="border-t pt-4">
+        {/* <div className="border-t pt-4">
           <Label htmlFor="pin">Transaction Pin</Label>
 
           <Input
@@ -497,12 +552,12 @@ export default function ElectricityBills() {
             onChange={(e) => setPin(e.target.value)}
             className={` ${errors.pin ? "border-red-500" : ""}`}
           />
-        </div>
+        </div> */}
 
         {/* Payment Summary */}
         <div className="lg:col-span-1">
           <ElectricityCustomerCard
-            customerName={userInfo?.customerName || ""}
+            customerName={userInfo?.data || ""}
             customerAddress={userInfo?.customerAddress || ""}
             meterNumber={userInfo?.meterNumber || ""}
             meterType={userInfo?.meterType || ""}

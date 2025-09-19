@@ -52,26 +52,44 @@ export default function ElectricityCustomerCard({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-gray-700">
+          {customerName && (
           <div className="flex gap-2">
             <span className="font-medium">Name:</span>
             <p className="font-semibold">{customerName}</p>
           </div>
+
+          )}
+
+          {customerAddress && (
           <div className="flex gap-2">
             <span className="font-medium">Address:</span>
             <p className="font-semibold">{customerAddress}</p>
           </div>
+
+          )}
+          {meterNumber && (
           <div className="flex gap-2">
             <span className="font-medium">Meter Number:</span>
             <p className="font-semibold">{meterNumber}</p>
           </div>
+
+          )}
+
+          {meterType && (
           <div className="flex gap-2">
             <span className="font-medium">Meter Type:</span>
             <p className="font-semibold">{meterType}</p>
           </div>
+
+          )}
+
+          {minVendAmount && (
+
           <div className="flex gap-2">
             <span className="font-medium">Min Vend Amount:</span>
             <p className="font-semibold">₦{minVendAmount.toLocaleString()}</p>
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -144,6 +162,7 @@ export default function ElectricityCustomerCard({
               <div className="flex items-center gap-2">
                 {meterType === "prepaid" ? "Recharge Meter" : "Pay Bill"}
                 <ArrowRight className="w-4 h-4" />
+                
               </div>
             )}
           </Button>

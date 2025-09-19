@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useState, useEffect, useContext, ReactNode, SetStateAction, Dispatch } from "react";
+import {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+  SetStateAction,
+  Dispatch,
+} from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Swal from "sweetalert2";
 import supabase from "../supabase/supabase";
@@ -19,22 +27,25 @@ interface SupabaseUser {
   email: string;
 }
 
-interface UserData {
+export interface UserData {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   phone?: string;
   walletBalance: number;
+  zidcoinBalance: number;
+  bvnVerification: string;
+  referralCode: string;
 }
 
 interface UserContextType {
   user: SupabaseUser | null;
-  userData: UserData | null;
-  setUserData: Dispatch<SetStateAction<UserData | null>>;
+  userData: any | null;
+  setUserData: Dispatch<SetStateAction<any | null>>;
   loading: boolean;
   episodes: PodcastEpisode[];
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  // login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   isDarkMode: boolean;
   setIsDarkMode: Dispatch<SetStateAction<boolean>>;
@@ -44,7 +55,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userData, setUserData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -52,33 +63,33 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   // Login
-  const login = async ({ email, password }: { email: string; password: string }) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  // const login = async ({ email, password }: { email: string; password: string }) => {
+  //   setLoading(true);
+  //   try {
+  //     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-      if (error || !data.user) {
-        Swal.fire({ icon: "error", title: "Login failed", text: error?.message || "Invalid credentials" });
-        return;
-      }
+  //     if (error || !data.user) {
+  //       Swal.fire({ icon: "error", title: "Login failed", text: error?.message || "Invalid credentials" });
+  //       return;
+  //     }
 
-      const authUser: SupabaseUser = {
-        id: data.user.id,
-        email: data.user.email!,
-      };
+  //     const authUser: SupabaseUser = {
+  //       id: data.user.id,
+  //       email: data.user.email!,
+  //     };
 
-      setUser(authUser);
-      await fetchUserData(authUser.id);
+  //     setUser(authUser);
+  //     await fetchUserData(authUser.id);
 
-      Swal.fire({ icon: "success", title: "Login successful", timer: 1500, showConfirmButton: false });
-      router.push("/dashboard");
-    } catch (err: any) {
-      console.error("Login error:", err);
-      Swal.fire({ icon: "error", title: "Unexpected Error", text: err.message || "Try again later." });
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     Swal.fire({ icon: "success", title: "Login successful", timer: 1500, showConfirmButton: false });
+  //     router.push("/dashboard");
+  //   } catch (err: any) {
+  //     console.error("Login error:", err);
+  //     Swal.fire({ icon: "error", title: "Unexpected Error", text: err.message || "Try again later." });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   // Logout
   const logout = async () => {
@@ -90,32 +101,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Fetch profile info from DB
-  const fetchUserData = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, first_name, last_name, email, phone, wallet_balance")
-        .eq("id", userId)
-        .single();
+  // const fetchUserData = async (userId: string) => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from("users")
+  //       .select("id, first_name, last_name, email, phone, wallet_balance")
+  //       .eq("id", userId)
+  //       .single();
 
-      if (error || !data) throw new Error("User data not found");
+  //     if (error || !data) throw new Error("User data not found");
 
-      const profile: UserData = {
-        id: data.id,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        walletBalance: data.wallet_balance,
-      };
+  //     const profile: any = {
+  //       id: data.id,
+  //       firstName: data.first_name,
+  //       lastName: data.last_name,
+  //       email: data.email,
+  //       phone: data.phone,
+  //       walletBalance: data.wallet_balance,
+  //     };
 
-      setUserData(profile);
-      localStorage.setItem("userData", JSON.stringify(profile));
-    } catch (err) {
-      console.error("Error fetching user data:", err);
-      setUserData(null);
-    }
-  };
+  //     setUserData(profile);
+  //     localStorage.setItem("userData", JSON.stringify(profile));
+  //   } catch (err) {
+  //     console.error("Error fetching user data:", err);
+  //     setUserData(null);
+  //   }
+  // };
 
   // Fetch blog episodes (static)
   const fetchEpisodes = async () => {
@@ -128,81 +139,82 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-useEffect(() => {
-  let sub: ReturnType<typeof supabase.channel> | null = null;
+  // useEffect(() => {
+  //   let sub: ReturnType<typeof supabase.channel> | null = null;
 
-  const init = async () => {
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+  //   const init = async () => {
+  //     const {
+  //       data: { user: authUser },
+  //     } = await supabase.auth.getUser();
 
-    if (!authUser) return;
+  //     if (!authUser) return;
 
-    // Load from localStorage first (fast)
-    const stored = localStorage.getItem("userData");
-    if (stored) {
-      setUserData(JSON.parse(stored));
-    }
+  //     // Load from localStorage first (fast)
+  //     const stored = localStorage.getItem("userData");
+  //     if (stored) {
+  //       setUserData(JSON.parse(stored));
+  //     }
 
-    // 🔄 Always fetch latest once from DB to avoid stale values
-    const { data } = await supabase
-      .from("users")
-      .select("id, first_name, last_name, email, phone, wallet_balance")
-      .eq("id", authUser.id)
-      .single();
+  //     // 🔄 Always fetch latest once from DB to avoid stale values
+  //     const { data } = await supabase
+  //       .from("users")
+  //       .select(
+  //         "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code,bvn_verification"
+  //       )
+  //       .eq("id", authUser.id)
+  //       .single();
 
-    if (data) {
-      const profile = {
-        id: data.id,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        walletBalance: data.wallet_balance,
-      };
-      setUserData(profile);
-      localStorage.setItem("userData", JSON.stringify(profile));
-    }
+  //     if (data) {
+  //       const profile = {
+  //         id: data.id,
+  //         firstName: data.first_name,
+  //         lastName: data.last_name,
+  //         email: data.email,
+  //         phone: data.phone,
+  //         walletBalance: data.wallet_balance,
+  //         zidcoinBalance: data.zidcoin_balance,
+  //         bvnVerification: data.bvn_verification,
+  //         referralCode: data.referral_code,
+  //       };
+  //       setUserData(profile);
+  //       localStorage.setItem("userData", JSON.stringify(profile));
+  //     }
 
-    // ✅ Realtime subscription
-    sub = supabase
-      .channel("wallet-listener")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "users",
-          filter: `id=eq.${authUser.id}`,
-        },
-        (payload) => {
-          const newBalance = payload.new.wallet_balance;
+  //     // ✅ Realtime subscription
+  //     sub = supabase
+  //       .channel("wallet-listener")
+  //       .on(
+  //         "postgres_changes",
+  //         {
+  //           event: "UPDATE",
+  //           schema: "public",
+  //           table: "users",
+  //           filter: `id=eq.${authUser.id}`,
+  //         },
+  //         (payload) => {
+  //           const newBalance = payload.new.wallet_balance;
+  //           console.log(newBalance)
 
-          setUserData((prev) => {
-            if (!prev) return prev;
-            if (prev.walletBalance !== newBalance) {
-              const updated = { ...prev, walletBalance: newBalance };
-              localStorage.setItem("userData", JSON.stringify(updated));
-              return updated;
-            }
-            return prev;
-          });
-        }
-      )
-      .subscribe();
-  };
+  //           setUserData((prev: any) => {
+  //             if (!prev) return prev;
+  //             if (prev.walletBalance !== newBalance) {
+  //               const updated = { ...prev, walletBalance: newBalance };
+  //               localStorage.setItem("userData", JSON.stringify(updated));
+  //               return updated;
+  //             }
+  //             return prev;
+  //           });
+  //         }
+  //       )
+  //       .subscribe();
+  //   };
 
-  init();
+  //   init();
 
-  return () => {
-    if (sub) supabase.removeChannel(sub);
-  };
-}, []);
-
-
-
-
-
+  //   return () => {
+  //     if (sub) supabase.removeChannel(sub);
+  //   };
+  // }, []);
 
   // Handle theme
   useEffect(() => {
@@ -221,7 +233,7 @@ useEffect(() => {
     if (["/", "/podcasts"].includes(pathname)) {
       fetchEpisodes();
     }
-  }, [pathname, user, loading]);
+  }, [pathname, user]);
 
   const handleDarkModeToggle = () => {
     const newTheme = !isDarkMode;
@@ -229,6 +241,8 @@ useEffect(() => {
     document.documentElement.classList.toggle("dark", newTheme);
     localStorage.setItem("theme", newTheme ? "dark" : "light");
   };
+
+
 
   return (
     <UserContext.Provider
@@ -238,7 +252,7 @@ useEffect(() => {
         setUserData,
         loading,
         episodes,
-        login,
+        // login,
         logout,
         isDarkMode,
         setIsDarkMode,
@@ -252,6 +266,7 @@ useEffect(() => {
 
 export const useUserContextData = () => {
   const context = useContext(UserContext);
-  if (!context) throw new Error("useUserContextData must be used inside UserProvider");
+  if (!context)
+    throw new Error("useUserContextData must be used inside UserProvider");
   return context;
 };

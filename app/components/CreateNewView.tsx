@@ -75,7 +75,7 @@ export const CreateNewView = ({ onUseTemplate }: CreateNewViewProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {contractTemplates.map((template) => (
             <ContractTemplateCard
-              key={template.id}
+              // key={template.id}
               template={template}
               onUseTemplate={onUseTemplate}
             />

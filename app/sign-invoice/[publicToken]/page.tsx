@@ -8,34 +8,38 @@ import Link from "next/link";
 export default async function SignPage({
   params,
 }: {
-  params: Promise<{ invoiceId: string }>;
+  params: Promise<{ publicToken: string }>;
 }) {
-  const invoiceId = (await params).invoiceId;
+  const publicToken = (await params).publicToken;
 
-
+console.log(publicToken)
 
   // Fetch invoice using the invoiceId
   const { data: invoice, error } = await supabase
     .from("invoices")
     .select("*")
-    .eq("invoice_id", invoiceId)
+    .eq("public_token", publicToken)
     .single();
+
+
+    console.log(error);
 
   if (error || !invoice) return notFound();
 
-  // console.log("Fetched invoice:", invoice);
 
-  const formattedTotal = invoice.invoice_items
-    ?.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0)
-    ?.toLocaleString();
+
+
+const formattedTotal = invoice?.invoice_items
+  .reduce((sum:any, item:any) => sum + item.quantity * item.price, 0)
+  .toLocaleString();
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <div className="bg-white shadow-2xl rounded-xl overflow-hidden">
         <div className="bg-gray-200 px-8 py-6 flex justify-between items-center">
-          {invoice.logo && (
+          {/* {invoice.logo && (
             <Image src={invoice.logo} alt="Logo" width={40} height={40} />
-          )}
+          )} */}
           <div>
             <h1 className="text-2xl font-bold">INVOICE</h1>
             <p className="text-sm mt-1">Professional Invoice Document</p>
