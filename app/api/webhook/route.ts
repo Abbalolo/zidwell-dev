@@ -116,33 +116,29 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // ✅ WALLET DEPOSIT FLOW
-      console.log("data", data)
+      console.log("data", data);
       const { transactionAmount, transactionId } = data.transaction;
       const { userId } = data.merchant;
-
 
       const feeRate = 0.0075;
       const fee = Math.ceil(transactionAmount * feeRate);
       const netAmount = transactionAmount - fee;
 
       // Ensure user exists
+    
       const { data: existingUser, error: userError } = await supabase
         .from("users")
         .select("id")
         .eq("id", userId)
         .maybeSingle();
+console.log("existingUser", existingUser)
 console.log("userError", userError)
       if (userError) throw new Error("User lookup failed");
 
       if (!existingUser) {
-        const { error: createError } = await supabase.from("users").insert({
-          id: userId,
-          wallet_balance: 0,
-          created_at: new Date().toISOString(),
-        });
-
-        console.log("createError", createError)
-        if (createError) throw new Error("Failed to auto-create user");
+        throw new Error(
+          `User with ID ${userId} not found. Cannot credit wallet.`
+        );
       }
 
       const { error: balanceError } = await supabase.rpc(
