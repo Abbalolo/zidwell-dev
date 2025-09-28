@@ -1,29 +1,19 @@
 "use client";
-import {
-  Camera,
-  Activity,
-
-} from "lucide-react";
+import { Camera, Activity } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
+import Swal from "sweetalert2";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Badge } from "./ui/badge";
 import { useUserContextData } from "../context/userData";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+
 import EditProfileInfo from "./profile-operations/EditProfileInfo";
 import EditBusinessInfo from "./profile-operations/EditBusinessInfo";
 import EditSecurityInfo from "./profile-operations/EditSecurityInfo";
-
-
-
-
+import supabase from "../supabase/supabase";
+import { useRef, useState } from "react";
+import UserDashboardStats from "./UserDashboardStats";
 
 const activityLog = [
   {
@@ -59,111 +49,92 @@ const activityLog = [
 ];
 
 export default function ProfileSettings() {
-const {userData} = useUserContextData()
-
-
-
-
-  // useEffect(() => {
-  //   // Fetch user data from context or local storage if needed
-  //   if (userData) {
-  //     setProfile({
-  //       firstName: userData.firstName,
-  //       lastName: userData.lastName,
-  //       email: userData.email,
-  //       phone: userData.phone,
-  //       // businessName: userData.businessName || "",
-  //       // businessType: userData.businessType || "",
-  //       // address: user.fullAddress || "",
-  //       // city: userData.city || "",
-  //       // state: userData.state || "",
-  //       // country: userData.country || "",
-  //     });
-  //   }
-  // }, [userData]);
+ const { userData, setUserData } = useUserContextData();
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
  
-    // if (user) {
-    //   try {
-    //     if (user.email) {
-    //       const credential = EmailAuthProvider.credential(user.email, currentPassword);
-    //       await reauthenticateWithCredential(user, credential);
-    //       await updatePassword(user, newPassword);
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
 
-    //       // Reset fields
-    //       setCurrentPassword("");
-    //       setNewPassword("");
-    //       setConfirmPassword("");
+const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  try {
+    if (!userData?.id) {
+      throw new Error("User is not authenticated");
+    }
 
-    //       Swal.fire({
-    //         icon: "success",
-    //         title: "Password updated successfully",
-    //       });
-    //     } else {
-    //       Swal.fire({
-    //         icon: "error",
-    //         title: "User email is not available",
-    //       });
-    //     }
-    //   } catch (error) {
-    //     console.error("Error updating password:", error);
-    //     Swal.fire({
-    //       icon: "error",
-    //       title: "Error updating password",
-    //       text: (error as Error).message,
-    //     });
-    //   }
-    // } else {
-    //   Swal.fire({
-    //     icon: "warning",
-    //     title: "No authenticated user found",
-    //   });
-    // }
-  // };
+    if (!event.target.files || event.target.files.length === 0) {
+      throw new Error("No file selected");
+    }
 
-  // const updateProfileInfo = async (event: FormEvent<HTMLFormElement>) => {
-  //   event.preventDefault();
-  //   // setIsLoading(true);
+    const file = event.target.files[0];
+    setUploading(true);
 
-  //   if (!user?.uid) {
-  //     console.error("No authenticated user found");
-  //     Swal.fire({
-  //       icon: "error",
-  //       title: "No authenticated user found",
-  //     });
-  //     // setIsLoading(false);
-  //     return;
-  //   }
+    // Generate a safe file path
+    const fileExt = file.name.split(".").pop() || "jpg";
+    const filePath = `${userData.id}-${Date.now()}.${fileExt}`;
+    const bucketName = "profile-pictures";
 
-  //   try {
-  //     const userDocRef = doc(db, "users", user.uid);
-  //     // await updateDoc(userDocRef, {
-  //     //   phone,
-  //     //   fullAddress,
-  //     //   birthDate,
-  //     //   nin,
-  //     // });
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, { upsert: true });
 
-  //     console.log("Profile information updated successfully");
+    if (uploadError) {
+      if (uploadError.message.includes("Bucket not found")) {
+        throw new Error(
+          `Bucket "${bucketName}" does not exist. Please create it in Supabase Storage.`
+        );
+      }
+      throw uploadError;
+    }
 
-  //     Swal.fire({
-  //       icon: "success",
-  //       title: "Profile information updated successfully",
-  //     });
+    // Get Public URL
+    const { data: publicData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
 
-  //     // setIsLoading(false);
-  //   } catch (error) {
-  //     console.error("Error updating profile information:", error);
+    const publicUrl = publicData?.publicUrl;
+    if (!publicUrl) throw new Error("Failed to generate public URL");
 
-  //     Swal.fire({
-  //       icon: "error",
-  //       title: "Error updating profile information",
-  //       text: (error as Error).message,
-  //     });
+    // Update DB
+    const { error: dbError } = await supabase
+      .from("users")
+      .update({ profile_picture: publicUrl })
+      .eq("id", userData.id);
 
-  //     // setIsLoading(false);
-  //   }
-  // };
+    if (dbError) throw dbError;
+
+    // Update localStorage + context
+    const updatedUser = { ...userData, profile_picture: publicUrl };
+    localStorage.setItem("userData", JSON.stringify(updatedUser));
+    setUserData(updatedUser);
+
+    console.log("✅ Profile picture updated:", publicUrl);
+
+    // ✅ SweetAlert Success
+    Swal.fire({
+      icon: "success",
+      title: "Profile Updated!",
+      text: "Your profile picture has been uploaded successfully.",
+      confirmButtonColor: "#3085d6",
+    });
+  } catch (err: any) {
+    console.error("❌ Upload failed:", err.message || err);
+
+    // ❌ SweetAlert Error
+    Swal.fire({
+      icon: "error",
+      title: "Upload Failed",
+      text: err.message || "Something went wrong. Please try again.",
+      confirmButtonColor: "#d33",
+    });
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   return (
     <div className="space-y-6 mb-5">
@@ -172,16 +143,35 @@ const {userData} = useUserContextData()
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {userData?.firstName.charAt(0).toUpperCase() }
-                {userData?.lastName.charAt(0).toUpperCase()}
-              </div>
+              {userData?.profile_picture ? (
+                <img
+                  src={userData.profile_picture}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  {userData?.firstName?.charAt(0).toUpperCase()}
+                  {userData?.lastName?.charAt(0).toUpperCase()}
+                </div>
+              )}
+
               <Button
                 size="sm"
-                className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
+                className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0 bg-gray-800 text-white hover:bg-gray-700"
+                onClick={handleUploadClick}
+                disabled={uploading}
               >
                 <Camera className="w-4 h-4" />
               </Button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleUpload}
+              />
             </div>
             <div className="text-center md:text-left flex-1">
               {userData && (userData?.firstName || userData?.lastName) ? (
@@ -210,20 +200,7 @@ const {userData} = useUserContextData()
               </div>
             </div>
             <div className="text-center">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">₦2.5M</p>
-                  <p className="text-sm text-gray-600">Total Transactions</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">1,234</p>
-                  <p className="text-sm text-gray-600">Successful Payments</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">98.5%</p>
-                  <p className="text-sm text-gray-600">Success Rate</p>
-                </div>
-              </div>
+             <UserDashboardStats userId={userData?.id}/>
             </div>
           </div>
         </CardContent>
@@ -241,17 +218,17 @@ const {userData} = useUserContextData()
         {/* personal info */}
 
         <TabsContent value="personal" className="space-y-6">
-          <EditProfileInfo/>
+          <EditProfileInfo />
         </TabsContent>
 
         {/* business info */}
         <TabsContent value="business" className="space-y-6">
-         <EditBusinessInfo/>
+          <EditBusinessInfo />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6">
           {/* Change Password */}
-         <EditSecurityInfo/>
+          <EditSecurityInfo />
         </TabsContent>
 
         {/* <TabsContent value="notifications" className="space-y-6">

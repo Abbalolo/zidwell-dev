@@ -18,10 +18,15 @@ import supabase from "@/app/supabase/supabase";
 function RegisterForm() {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const searchParams = useSearchParams();
+
+
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) setReferralCode(ref);
   }, [searchParams]);
+
+
+  console.log(referralCode)
 
   const router = useRouter();
   const [formData, setFormData] = useState({

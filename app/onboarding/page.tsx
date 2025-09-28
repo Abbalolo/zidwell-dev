@@ -33,6 +33,7 @@ interface OnboardingData {
   };
   kyc: {
     documentNumber: string;
+    transactionPin: string;
   };
 }
 
@@ -67,6 +68,7 @@ console.log(userData)
     },
     kyc: {
       documentNumber: "",
+      transactionPin: "",
     },
   });
 
@@ -80,6 +82,7 @@ console.log(userData)
       body: JSON.stringify({
         authId: userData?.id,
         bvn,
+        
       }),
     });
 
@@ -99,6 +102,7 @@ console.log(userData)
     const newData = {
       userId: userData?.id,
       dateOfBirth: data.profile.dateOfBirth,
+      transactionPin: data.kyc.transactionPin,
       businessName: data.business.businessName,
       role: data.business.role,
       businessAddress: data.business.businessAddress,

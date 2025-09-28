@@ -18,7 +18,7 @@ function EditProfileInfo() {
     lastName: userData?.lastName || "",
     email: userData?.email || "",
     phone: userData?.phone || "",
-    dob: userData?.dob || "",
+    dob: userData?.dateOfBirth || "",
     address: userData?.address || "",
     city: userData?.city || "",
     state: userData?.state || "",

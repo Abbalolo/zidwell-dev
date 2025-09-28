@@ -20,7 +20,7 @@ function PaymentCallbackContent() {
           `/api/check-invoice-status?invoiceId=${invoiceId}`
         );
         const data = await res.json();
-        console.log("Invoice status data:", data);
+       
 
         if (data?.status === "paid") {
           Swal.fire({
@@ -28,9 +28,15 @@ function PaymentCallbackContent() {
             text: `Invoice #${invoiceId} has been paid.`,
             icon: "success",
             confirmButtonText: "OK",
-          }).then(() => {
-            router.push(`/sign-invoice/${invoiceId}`);
-          });
+          })
+          // .then(() => {
+          //   if (data.public_token) {
+          //     router.push(`/sign-invoice/${data.public_token}`);
+          //   } else {
+          //     router.push("/dashboard"); 
+          //   }
+          // });
+          
         } else {
           Swal.fire(
             "Payment Pending ⏳",

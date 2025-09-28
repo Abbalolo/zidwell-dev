@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { Building, CreditCard } from "lucide-react";
 import { Button } from "../ui/button";
@@ -15,6 +16,21 @@ import {
 import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2";
 import supabase from "@/app/supabase/supabase";
+import { banks } from "@/lib/banks";
+import Loader from "../Loader";
+
+interface BusinessForm {
+  businessName: string;
+  businessType: string;
+  rcNumber: string;
+  taxId: string;
+  businessAddress: string;
+  businessDescription: string;
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+}
 
 const businessCategories = [
   { label: "Fintech", value: "Fintech" },
@@ -46,32 +62,10 @@ const businessCategories = [
   { label: "Other", value: "Other" },
 ];
 
-const banks = [
-  { label: "Access Bank", value: "Access Bank" },
-  { label: "Zenith Bank", value: "Zenith Bank" },
-  { label: "Guaranty Trust Bank (GTBank)", value: "Guaranty Trust Bank" },
-  { label: "First Bank of Nigeria", value: "First Bank of Nigeria" },
-  { label: "United Bank for Africa (UBA)", value: "UBA" },
-  { label: "Fidelity Bank", value: "Fidelity Bank" },
-  { label: "Union Bank", value: "Union Bank" },
-  { label: "Sterling Bank", value: "Sterling Bank" },
-  { label: "Polaris Bank", value: "Polaris Bank" },
-  { label: "Ecobank", value: "Ecobank" },
-  { label: "Stanbic IBTC Bank", value: "Stanbic IBTC Bank" },
-  { label: "Wema Bank", value: "Wema Bank" },
-  { label: "Keystone Bank", value: "Keystone Bank" },
-  { label: "Heritage Bank", value: "Heritage Bank" },
-  { label: "Providus Bank", value: "Providus Bank" },
-  { label: "Jaiz Bank", value: "Jaiz Bank" },
-  { label: "Globus Bank", value: "Globus Bank" },
-  { label: "Parallex Bank", value: "Parallex Bank" },
-  { label: "Lotus Bank", value: "Lotus Bank" },
-  { label: "SunTrust Bank", value: "SunTrust Bank" },
-];
-
-function EditBusinessInfo() {
+const EditBusinessInfo: React.FC = () => {
   const { userData } = useUserContextData();
-  const [form, setForm] = useState({
+
+  const [form, setForm] = useState<BusinessForm>({
     businessName: "",
     businessType: "",
     rcNumber: "",
@@ -79,29 +73,38 @@ function EditBusinessInfo() {
     businessAddress: "",
     businessDescription: "",
     bankName: "",
+    bankCode: "",
     accountNumber: "",
     accountName: "",
   });
+
   const [loading, setLoading] = useState(false);
 
-  // Fetch business info when component mounts
+  // ✅ Fetch business info on mount
   useEffect(() => {
-    const fetchBusinessInfo = async () => {
-      if (!userData?.id) return;
+  const fetchBusinessInfo = async () => {
 
-      const { data, error } = await supabase
-        .from("businesses")
-        .select(
-          "business_name, business_category, registration_number, tax_id, business_address, business_description, bank_name, bank_account_number, bank_account_name"
-        )
-        .eq("user_id", userData.id)
-        .single();
+    setLoading(true)
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 = no rows found
-        console.error("Error fetching business info:", error);
+    if (!userData?.id) return;
+
+    try {
+      const res = await fetch("/api/get-business-account-details", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userData.id }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        console.error("Error fetching business info:", result.error);
         Swal.fire("Error", "Failed to load business info.", "error");
-      } else if (data) {
+        return;
+      }
+
+      if (result.data) {
+        const data = result.data;
         setForm({
           businessName: data.business_name || "",
           businessType: data.business_category || "",
@@ -110,17 +113,28 @@ function EditBusinessInfo() {
           businessAddress: data.business_address || "",
           businessDescription: data.business_description || "",
           bankName: data.bank_name || "",
+          bankCode: data.bank_code || "",
           accountNumber: data.bank_account_number || "",
           accountName: data.bank_account_name || "",
         });
+        setLoading(false)
       }
-    };
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      Swal.fire("Error", "Something went wrong while fetching business info.", "error");
+    } finally {
+       setLoading(false)
+    }
+  };
 
-    fetchBusinessInfo();
-  }, [userData]);
+  fetchBusinessInfo();
+}, [userData?.id]);
 
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof BusinessForm, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleSave = async () => {
@@ -128,17 +142,14 @@ function EditBusinessInfo() {
 
     setLoading(true);
     try {
-      // Check if business exists
       const { data: existing } = await supabase
         .from("businesses")
         .select("id")
         .eq("user_id", userData.id)
-        .single();
+        .maybeSingle();
 
       let error;
-
       if (existing) {
-        // Update
         ({ error } = await supabase
           .from("businesses")
           .update({
@@ -149,13 +160,13 @@ function EditBusinessInfo() {
             business_address: form.businessAddress,
             business_description: form.businessDescription,
             bank_name: form.bankName,
+            bank_code: form.bankCode,
             bank_account_number: form.accountNumber,
             bank_account_name: form.accountName,
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", userData.id));
       } else {
-        // Insert new business
         ({ error } = await supabase.from("businesses").insert([
           {
             user_id: userData.id,
@@ -166,19 +177,18 @@ function EditBusinessInfo() {
             business_address: form.businessAddress,
             business_description: form.businessDescription,
             bank_name: form.bankName,
+            bank_code: form.bankCode,
             bank_account_number: form.accountNumber,
             bank_account_name: form.accountName,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         ]));
       }
 
       if (error) {
-        console.error(error);
-        Swal.fire({
-          icon: "error",
-          title: "Save Failed",
-          text: "Could not save business info.",
-        });
+        console.error("Save Error:", error);
+        Swal.fire("Error", "Could not save business info.", "error");
       } else {
         Swal.fire({
           icon: "success",
@@ -188,13 +198,22 @@ function EditBusinessInfo() {
           showConfirmButton: false,
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       Swal.fire("Error", "Something went wrong. Please try again.", "error");
     } finally {
       setLoading(false);
     }
   };
+
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader/>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -235,6 +254,7 @@ function EditBusinessInfo() {
               </Select>
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="rcNumber">RC Number</Label>
@@ -257,6 +277,7 @@ function EditBusinessInfo() {
               />
             </div>
           </div>
+
           <div>
             <Label htmlFor="businessAddress">Business Address</Label>
             <textarea
@@ -267,6 +288,7 @@ function EditBusinessInfo() {
               placeholder="Enter your business address"
             />
           </div>
+
           <div>
             <Label htmlFor="businessDescription">Business Description</Label>
             <textarea
@@ -294,21 +316,46 @@ function EditBusinessInfo() {
             <div>
               <Label htmlFor="bankName">Bank Name</Label>
               <Select
-                value={form.bankName}
-                onValueChange={(value) => handleChange("bankName", value)}
+                value={
+                  form.bankName && form.bankCode
+                    ? JSON.stringify({ name: form.bankName, code: form.bankCode })
+                    : ""
+                }
+                onValueChange={(value) => {
+                  try {
+                    const selected = JSON.parse(value);
+                    handleChange("bankName", selected.name || "");
+                    handleChange("bankCode", selected.code || "");
+                  } catch {
+                    console.error("Invalid bank data");
+                  }
+                }}
               >
-                <SelectTrigger id="BankName">
+                <SelectTrigger id="bankName">
                   <SelectValue placeholder="Select a bank name" />
                 </SelectTrigger>
                 <SelectContent>
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.value} value={bank.value}>
-                      {bank.label}
+                  {banks?.length > 0 ? (
+                    banks.map((bank) => (
+                      <SelectItem
+                        key={bank.code}
+                        value={JSON.stringify({
+                          name: bank.name,
+                          code: bank.code,
+                        })}
+                      >
+                        {bank.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem disabled value="no-banks">
+                      No banks available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
+
             <div>
               <Label htmlFor="accountNumber">Account Number</Label>
               <Input
@@ -319,6 +366,7 @@ function EditBusinessInfo() {
               />
             </div>
           </div>
+
           <div>
             <Label htmlFor="accountName">Account Name</Label>
             <Input
@@ -332,7 +380,11 @@ function EditBusinessInfo() {
       </Card>
 
       <div className="mt-4">
-        <Button className="bg-[#C29307] hover:opacity-100 transition-smooth" onClick={handleSave} disabled={loading}>
+        <Button
+          className="bg-[#C29307] hover:opacity-100 transition-smooth"
+          onClick={handleSave}
+          disabled={loading}
+        >
           {loading ? "Saving..." : "Save Business Info"}
         </Button>
       </div>

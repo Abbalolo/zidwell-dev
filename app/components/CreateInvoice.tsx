@@ -4,7 +4,7 @@ import { TabsContent } from "./ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Plus } from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
 import InvoicePreview from "./previews/InvoicePreview";
 import { useRouter } from "next/navigation";
 import { Label } from "./ui/label";
@@ -19,6 +19,7 @@ import {
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { useUserContextData } from "../context/userData";
+import { Textarea } from "./ui/textarea";
 
 type InvoiceItem = {
   item: string;
@@ -55,6 +56,7 @@ const generateInvoiceId = () => {
 
 function CreateInvoice() {
   const [errors, setErrors] = useState<Record<string, string>>({});
+   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [form, setForm] = useState<InvoiceForm>({
@@ -97,7 +99,7 @@ function CreateInvoice() {
       ...prev,
       invoice_items: [
         ...prev.invoice_items,
-        { item: "", quantity: "", price: ""},
+        { item: "", quantity: "", price: "" },
       ],
     }));
   };
@@ -141,7 +143,7 @@ function CreateInvoice() {
 
   const handleSaveInvoice = async () => {
     try {
-      if (!userData?.email) {
+      if (!userData?.id) {
         return Swal.fire({
           icon: "warning",
           title: "Unauthorized",
@@ -160,6 +162,7 @@ function CreateInvoice() {
       }
 
       const payload = {
+        userId: userData?.id,
         initiator_email: userData?.email || "",
         initiator_name: userData
           ? `${userData.firstName} ${userData.lastName}`
@@ -189,7 +192,7 @@ function CreateInvoice() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
 
-       if (result.newWalletBalance !== undefined) {
+      if (result.newWalletBalance !== undefined) {
         setUserData((prev: any) => {
           const updated = { ...prev, walletBalance: result.result };
           localStorage.setItem("userData", JSON.stringify(updated));
@@ -236,12 +239,17 @@ function CreateInvoice() {
       newErrors.due_date = "Due date cannot be before issue date.";
     }
 
-     if (!form.message.trim()) newErrors.message = "message field is required.";
-     if (!form.customer_note.trim()) newErrors.customer_note = "customer_note field is required.";
+    if (!form.message.trim()) newErrors.message = "message field is required.";
+    if (!form.customer_note.trim())
+      newErrors.customer_note = "customer_note field is required.";
 
     if (form.payment_type === "multiple" && (!form.unit || form.unit <= 0)) {
       newErrors.unit = "Unit must be greater than 0 for multiple payment.";
     }
+
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+
+    if (!pin) newErrors.pin = "Please enter transaction pin";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -308,6 +316,7 @@ function CreateInvoice() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: userData?.id,
+              pin,
               amount: 200,
               description: "Invoice successfully generated",
             }),
@@ -648,7 +657,10 @@ function CreateInvoice() {
 
                   {/* Amount */}
                   <div className="col-span-6 sm:col-span-2">
-                    <Input value={Number(item.quantity) * Number(item.price)} disabled />
+                    <Input
+                      value={Number(item.quantity) * Number(item.price)}
+                      disabled
+                    />
                   </div>
 
                   {/* Remove */}
@@ -701,7 +713,7 @@ function CreateInvoice() {
             >
               Customer Note
             </Label>
-            <textarea
+            <Textarea
               id="customer_note"
               name="customer_note"
               value={form.customer_note}
@@ -715,6 +727,29 @@ function CreateInvoice() {
               </p>
             )}
           </div>
+
+          <div className="border-t pt-4">
+            <Label htmlFor="pin">Transaction Pin</Label>
+
+            <Input
+              id="pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d*"
+              placeholder="Enter Pin here.."
+              value={pin}
+              maxLength={4}
+              onChange={(e) => setPin(e.target.value)}
+              className={` ${errors.pin ? "border-red-500" : ""}`}
+            />
+          </div>
+
+          {errors.pin && (
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{errors.pin}</span>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex flex-col md:flex-row gap-3">

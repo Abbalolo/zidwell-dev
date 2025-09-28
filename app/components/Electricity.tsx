@@ -106,9 +106,9 @@ export default function ElectricityBills() {
       newErrors.amount = amountError;
     }
 
-    // if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
-    // if (!pin) newErrors.amount = "Please enter transaction pin";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
 
     if (!meterNumber) {
       newErrors.meterNumber = "Please enter your meter number";
@@ -160,6 +160,7 @@ export default function ElectricityBills() {
     // Step 5: Build payload
     const payload = {
       disco: selectedProvider.id,
+      pin,
       customerId: userInfo.meterNumber,
       meterType: userInfo.meterType.toLowerCase(),
       amount: Number(amount),
@@ -538,21 +539,34 @@ export default function ElectricityBills() {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Pin Input */}
-        {/* <div className="border-t pt-4">
+
+           {/* Pin Input */}
+        <div className="border-t pt-4">
           <Label htmlFor="pin">Transaction Pin</Label>
 
           <Input
             id="pin"
-            type="text"
+            type="password"
+            inputMode="numeric"
+            pattern="\d*"
             placeholder="Enter Pin here.."
             value={pin}
+            maxLength={4}
             onChange={(e) => setPin(e.target.value)}
             className={` ${errors.pin ? "border-red-500" : ""}`}
           />
-        </div> */}
+        </div>
+
+          {errors.pin && (
+                        <div className="flex items-center gap-2 text-red-600">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="text-sm">{errors.pin}</span>
+                        </div>
+                      )}
+        </div>
+
+       
 
         {/* Payment Summary */}
         <div className="lg:col-span-1">

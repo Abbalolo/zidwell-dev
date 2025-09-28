@@ -1,32 +1,13 @@
-import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+// pages/api/logout.ts
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+export async function POST(req: NextRequest) {
+  const res = NextResponse.json({ message: "Logged out" });
 
-  // Sign out the user
-  await supabase.auth.signOut();
-
-  // Create response to redirect
-  const baseUrl =
-    process.env.NODE_ENV === "development"
-      ? process.env.NEXT_PUBLIC_DEV_URL
-      : process.env.NEXT_PUBLIC_BASE_URL;
-
-  const res = NextResponse.redirect(new URL("/auth/login", baseUrl));
-
-  // Clear the cookie
-  res.cookies.set({
-    name: "can_use_letter",
-    value: "",
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 0, // clear immediately
-  });
+  // Clear HTTP-only cookies
+  res.cookies.set("sb-access-token", "", { path: "/", maxAge: 0 });
+  res.cookies.set("sb-refresh-token", "", { path: "/", maxAge: 0 });
+  res.cookies.set("verified", "", { path: "/", maxAge: 0 });
 
   return res;
 }

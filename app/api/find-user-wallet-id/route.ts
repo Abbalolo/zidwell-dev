@@ -1,0 +1,44 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function POST(req: Request) {
+  try {
+    const { email } = await req.json();
+
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, first_name, last_name, wallet_id")
+      .eq("email", email)
+      .single();
+
+    if (error || !user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      receiverId: user.id,
+      receiverName: `${user.first_name} ${user.last_name}`,
+      walletId: user.wallet_id,
+    });
+  } catch (err: any) {
+    console.error("❌ API error:", err);
+    return NextResponse.json(
+      { error: "Internal server error", details: err.message },
+      { status: 500 }
+    );
+  }
+}
+
+// (Optional) Block GET requests
+export function GET() {
+  return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
+}

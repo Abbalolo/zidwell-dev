@@ -1,6 +1,7 @@
 // app/api/cable/purchase/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import bcrypt from "bcryptjs"; // ✅ for PIN verification
 import { getNombaToken } from "@/lib/nomba";
 import { createClient } from "@supabase/supabase-js";
 
@@ -15,11 +16,12 @@ export async function POST(req: NextRequest) {
   try {
     const token = await getNombaToken();
     if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const {
+      pin,
       userId,
       customerId,
       amount,
@@ -28,27 +30,63 @@ export async function POST(req: NextRequest) {
       merchantTxRef,
     } = body;
 
-    const parsedAmount = Number(amount);
-
-    // 1. Fetch wallet balance from users table
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("wallet_balance")
-      .eq("id", userId)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-    }
-
-    if (Number(user.wallet_balance) < parsedAmount) {
+    if (
+      !userId ||
+      !pin ||
+      !customerId ||
+      !amount ||
+      !cableTvPaymentType ||
+      !payerName ||
+      !merchantTxRef
+    ) {
+      console.log("here 4")
       return NextResponse.json(
-        { error: "Insufficient wallet balance" },
+        { error: "All required fields must be provided" },
         { status: 400 }
       );
     }
 
-    // 2. Create transaction as "pending"
+    const parsedAmount = Number(amount);
+
+    // ✅ 1. Fetch wallet & PIN
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("wallet_balance, transaction_pin")
+      .eq("id", userId)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // ✅ 2. Verify transaction PIN
+    if (!user.transaction_pin) {
+        console.log("here3")
+      return NextResponse.json(
+        { error: "Transaction PIN not set" },
+        { status: 400 }
+      );
+    }
+
+    const isValidPin = await bcrypt.compare(pin, user.transaction_pin);
+    if (!isValidPin) {
+        console.log("here1")
+      return NextResponse.json(
+        { error: "Invalid transaction PIN" },
+        { status: 401 }
+      );
+    }
+
+    // ✅ 3. Check balance
+    if (Number(user.wallet_balance) < parsedAmount) {
+      console.log("here2")
+      return NextResponse.json(
+        { message: "Insufficient wallet balance" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ 4. Create transaction as "pending"
     const { data: tx, error: txError } = await supabase
       .from("transactions")
       .insert([
@@ -73,25 +111,22 @@ export async function POST(req: NextRequest) {
 
     transactionId = tx.id;
 
-    // 3. Deduct wallet balance before API call
-    const { error: deductError } = await supabase.rpc(
-      "decrement_wallet_balance",
-      {
-        user_id: userId,
-        amt: parsedAmount, // ✅ match function param
-      }
-    );
+    // ✅ 5. Deduct wallet before calling Nomba API
+    const newWalletBalance = Number(user.wallet_balance) - parsedAmount;
+    const { error: deductError } = await supabase
+      .from("users")
+      .update({ wallet_balance: newWalletBalance })
+      .eq("id", userId);
 
     if (deductError) {
-      console.error("deductError", deductError);
       return NextResponse.json(
-        { error: "Failed to deduct balance" },
+        { error: "Failed to deduct wallet balance" },
         { status: 500 }
       );
     }
 
+    // ✅ 6. Call Nomba API
     try {
-      // 4. Call Nomba API
       const response = await axios.post(
         "https://sandbox.nomba.com/v1/bill/cabletv",
         {
@@ -111,60 +146,53 @@ export async function POST(req: NextRequest) {
         }
       );
 
-      // 5. Mark transaction as success
+      // ✅ 7. Mark transaction success
       await supabase
         .from("transactions")
-        .update({ status: "success" })
+        .update({
+          status: "success",
+          description: `Cable TV payment successful for ${customerId}`,
+        })
         .eq("id", tx.id);
-
-      // ✅ Fetch updated wallet balance
-      const { data: updatedUser } = await supabase
-        .from("users")
-        .select("wallet_balance")
-        .eq("id", userId)
-        .single();
 
       return NextResponse.json({
         success: true,
         data: response.data,
-        newWalletBalance: updatedUser?.wallet_balance ?? null,
+        newWalletBalance,
       });
     } catch (nombaError: any) {
       console.error(
-        "Cable TV API error:",
+        "⚠️ Cable TV API error:",
         nombaError.response?.data || nombaError.message
       );
 
-      // Refund wallet if API fails
-      await supabase.rpc("credit_balance", {
-        user_id: userId,
-        amt: parsedAmount, // ✅ match function param
-      });
+      // ✅ 8. Refund balance
+      await supabase
+        .from("users")
+        .update({ wallet_balance: user.wallet_balance }) // revert to original balance
+        .eq("id", userId);
 
-      // Mark transaction failed
+      // ✅ Mark transaction failed
       await supabase
         .from("transactions")
-        .update({ status: "failed" })
+        .update({
+          status: "failed",
+          description: `Cable TV purchase failed for ${customerId}`,
+        })
         .eq("id", tx.id);
-
-      // ✅ Fetch updated wallet balance after refund
-      const { data: updatedUser } = await supabase
-        .from("users")
-        .select("wallet_balance")
-        .eq("id", userId)
-        .single();
 
       return NextResponse.json(
         {
-          error: nombaError.response?.data || "Cable purchase failed",
-          newBalance: updatedUser?.wallet_balance ?? null,
+          error: nombaError.response?.data || "Cable TV purchase failed",
+          newWalletBalance: user.wallet_balance,
         },
-        { status: 400 }
+        { status: 500 }
       );
     }
   } catch (err: any) {
-    console.error("Cable purchase error:", err.message);
+    console.error("⚠️ Cable purchase error:", err.message);
 
+    // ✅ Mark transaction failed if created
     if (transactionId) {
       await supabase
         .from("transactions")

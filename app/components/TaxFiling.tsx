@@ -20,7 +20,7 @@ const TaxFiling = () => {
     <>
 
       {/* Video Placeholder */}
-      <Card className="p-8 mb-2 shadow-card">
+      <Card className=" p-6 mb-2 shadow-card">
         {/* <div className="aspect-video bg-tax-gray rounded-lg mb-6 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 bg-tax-navy rounded-full flex items-center justify-center mb-4 mx-auto">

@@ -73,7 +73,7 @@ export default function DataBundlePurchase() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
   const { userData, setUserData } = useUserContextData();
-const router = useRouter();
+  const router = useRouter();
   const handlePhoneNumberChange = (value: string) => {
     const cleanValue = value.replace(/\D/g, "");
     setPhoneNumber(cleanValue);
@@ -100,9 +100,9 @@ const router = useRouter();
     if (phoneError) newErrors.phoneNumber = phoneError;
     if (!selectedProvider) newErrors.provider = "Please select a provider";
     if (!selectedPlan) newErrors.plan = "Please select a plan";
-    // if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
-    // if (!pin) newErrors.amount = "Please enter transaction pin";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -136,10 +136,10 @@ const router = useRouter();
     // Step 4: Build payload
     const payload = {
       userId: userData?.id,
+      pin: pin,
       amount: selectedPlan.amount,
       network: serviceName,
       phoneNumber: phoneNumber,
-      billerCode: selectedPlan.code,
       merchantTxRef: `Data-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       senderName: userData?.firstName || "Zidwell User",
     };
@@ -159,7 +159,7 @@ const router = useRouter();
       console.log("DataBundle Purchase Response Data:", data);
       if (!response.ok) throw data;
 
-        if (data.newWalletBalance !== undefined) {
+      if (data.newWalletBalance !== undefined) {
         setUserData((prev: any) => {
           const updated = { ...prev, walletBalance: data.newWalletBalance };
           localStorage.setItem("userData", JSON.stringify(updated));
@@ -292,7 +292,7 @@ const router = useRouter();
           className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
         >
           <ArrowLeft className="w-4 h-4 md:mr-2" />
-         <span className="hidden md:block">Back</span>
+          <span className="hidden md:block">Back</span>
         </Button>
 
         <div className="">
@@ -417,12 +417,15 @@ const router = useRouter();
           </div>
 
           {/* Pin Input */}
-          {/* <div className="border-t pt-4">
+          <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
               id="pin"
-              type="text"
+              type="password"
+              inputMode="numeric"
+              pattern="\d*"
+              maxLength={4}
               placeholder="Enter Pin here.."
               value={pin}
               onChange={(e) => setPin(e.target.value)}
@@ -435,7 +438,7 @@ const router = useRouter();
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm">{errors.pin}</span>
             </div>
-          )} */}
+          )}
         </div>
 
         {/* Purchase Summary */}

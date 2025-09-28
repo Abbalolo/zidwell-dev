@@ -40,7 +40,7 @@ export default function DashboardSidebar() {
   const [openBills, setOpenBills] = useState(false);
 
   const pathname = usePathname();
-  const { userData } = useUserContextData();
+  const { userData, balance } = useUserContextData();
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -145,9 +145,9 @@ export default function DashboardSidebar() {
                 <p className="text-gray-400 text-sm">
                   Welcome Back {`${userData.firstName}`}
                 </p>
-                {userData?.walletBalance != null && (
+                {balance != null && (
                   <span className="text-gray-400 text-sm">
-                    Wallet Balance {` ${formatNumber(userData.walletBalance)}`}
+                    Wallet Balance {` ${formatNumber(balance)}`}
                   </span>
                 )}
               </>

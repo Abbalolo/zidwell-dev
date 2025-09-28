@@ -59,6 +59,8 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
     invoice_items: Array.isArray(form.invoice_items) ? form.invoice_items : [],
   };
 
+  console.log(safeForm)
+
   const calculateTotal = () => {
     return safeForm.invoice_items.reduce(
       (total:any, item:any) => total + item.quantity * item.price,
@@ -246,12 +248,12 @@ const formattedCreatedAt = date
               <div className="space-y-3">
                 <div className="flex justify-between text-lg">
                   <span>Subtotal:</span>
-                  <span>₦{formatNumber(calculateTotal())}</span>
+                  <span>₦{formatNumber(safeForm.total_amount)}</span>
                 </div>
                 <div className="border-t border-invoice-header-foreground/20 pt-3">
                   <div className="flex justify-between text-xl font-bold">
                     <span>Total:</span>
-                    <span>₦{formatNumber(calculateTotal())}</span>
+                   <span>₦{formatNumber(safeForm.total_amount)}</span>
                   </div>
                 </div>
               </div>

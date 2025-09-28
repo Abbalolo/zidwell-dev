@@ -15,6 +15,7 @@ import AOS from 'aos';
 import { useEffect } from "react";
 import 'aos/dist/aos.css'; // Import AOS styles
 import PodcastSection from "./components/Podcast";
+import Pricing from "./components/Pricing";
 
 const page = () => {
 
@@ -29,19 +30,20 @@ useEffect(() => {
 
   return (
     <div className="fade-in min-h-screen">
-      <Header />
-      <Hero />
-      <Services />
-      <WhyWeDiff />
-      <Features />
-      {/* <Pricing /> */}
-      <Testimonials />
-      <Faq />
-      <CTA />
-      <Contact/>
-      <PodcastSection/>
-      <Footer />
-    </div>
+  <Header />
+  <Hero />              
+  <Services />           
+  <WhyWeDiff />        
+  <Features />           
+  <Testimonials />      
+  <Pricing />           
+  <Faq />                
+  <CTA />                
+  <PodcastSection />    
+  <Contact />           
+  <Footer />           
+</div>
+
   );
 };
 

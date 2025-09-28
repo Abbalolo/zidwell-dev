@@ -33,7 +33,7 @@ export interface Invoice {
   issue_date: string;
   due_date: string;
   created_at: string | Date; 
-  signature_status: string;
+  status: string;
   invoice_items: InvoiceItem[];
 }
 
@@ -87,52 +87,62 @@ export default function InvoiceGen() {
   }, [userData?.email]);
 
 
-
-
-
-
   // ✅ totals
-  const totalAmount = invoices.reduce((sum, invoice) => {
-    const invoiceTotal =
-      invoice.invoice_items?.reduce(
-        (itemSum, item) => itemSum + item.quantity * item.price,
-        0
-      ) || 0;
-    return sum + invoiceTotal;
-  }, 0);
+ const totalAmount = invoices?.reduce((sum, invoice) => {
+  let items: any[] = [];
 
-  const paidAmount = invoices
-    .filter((inv) => inv.signature_status?.toLowerCase() === "paid")
-    .reduce((sum, invoice) => {
-      const invoiceTotal =
-        invoice.invoice_items?.reduce(
-          (itemSum, item) => itemSum + item.quantity * item.price,
-          0
-        ) || 0;
-      return sum + invoiceTotal;
-    }, 0);
+  try {
+    if (Array.isArray(invoice.invoice_items)) {
+      items = invoice.invoice_items;
+    } else if (typeof invoice.invoice_items === "string") {
+      items = JSON.parse(invoice.invoice_items);
+    }
+  } catch (err) {
+    console.error("Failed to parse invoice_items:", invoice.invoice_items, err);
+    items = [];
+  }
+
+  const invoiceTotal = items.reduce(
+    (itemSum, item) => itemSum + (item.quantity || 0) * (item.price || 0),
+    0
+  );
+
+  return sum + invoiceTotal;
+}, 0);
+
+
+  // const paidAmount = invoices
+  //   .filter((inv) => inv.signature_status?.toLowerCase() === "paid")
+  //   .reduce((sum, invoice) => {
+  //     const invoiceTotal =
+  //       invoice.invoice_items?.reduce(
+  //         (itemSum, item) => itemSum + item.quantity * item.price,
+  //         0
+  //       ) || 0;
+  //     return sum + invoiceTotal;
+  //   }, 0);
 
   const paidInvoice = invoices.filter(
-    (inv) => inv.signature_status?.toLowerCase() === "signed"
+    (inv) => inv.status?.toLowerCase() === "paid"
   ).length;
   
   const unpaidInvoice = invoices.filter(
-    (inv) => inv.signature_status?.toLowerCase() === "pending"
+    (inv) => inv.status?.toLowerCase() === "unpaid"
   ).length;
 
- // ✅ status options
-const statusOptions = ["All", "Signed", "Pending", "Overdue", "Draft"];
 
-// ✅ filtered invoices
+const statusOptions = ["All", "Paid", "Unpaid", "Draft"];
+
+
 const filteredInvoices = invoices.filter((item) => {
   // normalize db value
-  const status = item.signature_status?.toLowerCase().trim() || "";
+  const status = item.status?.toLowerCase().trim() || "";
 
-  // ✅ check status
+
   const statusMatch =
     selectedStatus === "all" ? true : status === selectedStatus.toLowerCase();
 
-  // ✅ check search
+
   const searchMatch =
     searchTerm === "" ||
     item.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||

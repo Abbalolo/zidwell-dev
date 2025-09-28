@@ -19,7 +19,7 @@ export default function DashboardPage() {
       <div className="lg:ml-64">
         <DashboardHeader />
         <main className="p-5">
-          <div className="max-w-6xl mx-auto space-y-8">
+          <div className="md:max-w-6xl md:mx-auto space-y-8">
             {/* Welcome Message */}
             {/* If you want modal after verification */}
             {/* {userData?.bvnVerification === "verified" && (

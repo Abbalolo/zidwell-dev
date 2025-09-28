@@ -1,22 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { useUserContextData } from "../context/userData";
-import { Check, Copy } from "lucide-react";
+import { Banknote, Check, Copy, Landmark, Wallet } from "lucide-react";
 import TransactionHistory from "./transaction-history";
+import ExpiryTimer from "./ExpiryTimer";
 
 export default function FundAccountMethods() {
-  const [amount, setAmount] = useState("");
   const [copied, setCopied] = useState("");
-  const [showInput, setShowInput] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [accountDetails, setAccountDetails] = useState<any>(null);
-  const { userData } = useUserContextData();
+  const [details, setDetails] = useState<any>(null);
+  const { userData, balance } = useUserContextData();
 
-  const copyToClipboard = async (text: any, type: string) => {
+  const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
@@ -26,135 +25,134 @@ export default function FundAccountMethods() {
     }
   };
 
-  // Function to call the backend API
   const generateVirtualAccountNumber = async () => {
-    // Ensure userData exists and the amount is provided
-    if (!userData || !amount) {
-      console.error("Missing user data or amount.");
+    if (!userData) {
+      console.error("Missing user data.");
       return null;
     }
 
-    // Prepare payload with user data and amount
     const payload = {
       userId: userData.id,
-      email: userData.email,
       first_name: userData.firstName,
       last_name: userData.lastName,
-      phone: userData.phone,
-      amount,
     };
 
-    console.log("Sending fund data:", payload);
+    setLoading(true);
 
     try {
-      // Make the API call to generate the virtual account number
       const response = await fetch("/api/generate-virtual-account", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (response.ok) {
-        // Handle successful response
-        const data = await response.json();
-        console.log("Generated account details:", data);
+      const data = await response.json();
+      console.log(data, "account");
+      setLoading(false);
+
+      if (response.ok && data.success) {
         return data;
       } else {
-        // Handle response errors
-        const errorData = await response.json();
-        console.error("Error generating account number:", errorData.error);
-        throw new Error(errorData.error || "Something went wrong");
+        console.error("Error generating account number:", data.error);
+        return null;
       }
     } catch (error) {
+      setLoading(false);
       console.error("Error during API call:", error);
       return null;
     }
   };
 
-  const handleQuickFund = () => {
-    // Show the input field when "Quick Fund" is clicked
-    setShowInput(true);
-  };
-
   const handleDeposit = async () => {
     try {
-      // Call the backend to generate the virtual account details
       const newAccountDetails = await generateVirtualAccountNumber();
-
-      if (newAccountDetails && newAccountDetails.success) {
-        console.log("Account details received:", newAccountDetails);
-        setAccountDetails(newAccountDetails); // Store the entire account details object
-      } else {
-        console.error("No account details found or success is false.");
+      if (newAccountDetails) {
+        setAccountDetails(newAccountDetails);
       }
-
-      setAmount(""); // Clear the amount input after submission
-      setShowInput(false); // Hide the input field
     } catch (error) {
-      alert(error); // Show error if something went wrong
+      alert(error);
     }
   };
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
+  const formatNumber = (value: number) =>
+    new Intl.NumberFormat("en-US", {
       style: "decimal",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
-  };
+
+    useEffect(() => {
+      const fetchAccountDetails = async () => {
+        if (!userData?.id) return; 
+    
+        try {
+          const res = await fetch("/api/get-wallet-account-details", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: userData.id }),
+          });
+    
+          const data = await res.json();
+          setDetails(data);
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+        }
+      };
+    
+      fetchAccountDetails();
+    }, [userData?.id]);
+    
 
   return (
     <div className="space-y-6">
-      {/* Account Balance Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Balance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <span className="text-lg md:text-2xl font-semibold">
-              ₦{formatNumber(userData?.walletBalance ?? 0)}
-            </span>
-            <Button className="bg-[#C29307]" onClick={handleQuickFund}>
-              Quick Fund
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="w-full flex justify-end items-end">
+        <Button
+          className="bg-[#C29307]"
+          onClick={handleDeposit}
+          disabled={loading}
+        >
+          {loading ? "Generating..." : "Quick Fund"}
+        </Button>
+      </div>
 
-      {/* Show input field when Quick Fund is clicked */}
-      {showInput && (
-        <Card>
+      {/* Account Balance Card */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <Card className=" bg-[#C29307] text-white flex items-center justify-between">
           <CardHeader>
-            <CardTitle>Enter Amount to Fund</CardTitle>
+            <CardTitle className="text-base md:text-lg ">
+              <div className="flex flex-col items-start">
+                Account Balance
+                <span className=" font-semibold">
+                  ₦{formatNumber(balance ?? 0)}
+                </span>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="amount">Amount (₦)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="Enter amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="text-lg"
-                />
-              </div>
-              <p className="text-sm text-gray-500">Minimum amount: ₦100.00</p>
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button className="bg-[#C29307]" onClick={handleDeposit}>
-                OK
-              </Button>
-            </div>
+           <Wallet className="md:text-2xl"/>
           </CardContent>
         </Card>
-      )}
 
-      {/* Display account details when available */}
+        <Card className="flex items-center justify-between text-gray-600 ">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg">
+              <div className="flex flex-col items-start ">
+                Your Account Balance
+                <span className="font-semibold text-black">
+              { details?.bank_account_number}
+                </span>
+                
+               { details?.bank_name}
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Landmark className="md:text-2xl"/>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Virtual Account Details */}
       {accountDetails && accountDetails.success && (
         <Card>
           <CardHeader>
@@ -165,17 +163,16 @@ export default function FundAccountMethods() {
               {/* Account Number */}
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Account Number:</span>
-
                 <div className="flex gap-3 items-center">
                   <span className="font-mono">
-                    {accountDetails.account.account_number}
+                    {accountDetails.account.bankAccountNumber}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() =>
                       copyToClipboard(
-                        accountDetails.account.account_number,
+                        accountDetails.account.bankAccountNumber,
                         "account"
                       )
                     }
@@ -192,25 +189,13 @@ export default function FundAccountMethods() {
               {/* Bank Name */}
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Bank Name:</span>
-                <span>{accountDetails.account.bank_name}</span>
+                <span>{accountDetails.account.bankName}</span>
               </div>
 
-              {/* Amount */}
+              {/* Expiry Date with Timer */}
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Amount:</span>
-                <span>₦{accountDetails.account.amount}</span>
-              </div>
-
-              {/* Expiry Date */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Expiry Date:</span>
-                <span>{accountDetails.account.expiry_date}</span>
-              </div>
-
-              {/* Account Status */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Status:</span>
-                <span>{accountDetails.account.account_status}</span>
+                <span className="text-gray-600">Expires In:</span>
+                <ExpiryTimer expiryDate={accountDetails.account.expiryDate} />
               </div>
             </div>
           </CardContent>

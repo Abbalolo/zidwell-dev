@@ -1,48 +1,70 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
+import { getNombaToken } from "@/lib/nomba";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, email, first_name, last_name, phone, amount } = body;
+    const { userId, first_name, last_name } = body;
 
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    // ✅ Generate temporary virtual account number
-    const response = await axios.post(
-      "https://api.flutterwave.com/v3/virtual-account-numbers",
-      {
-        email,
-        is_permanent: false, 
-        currency: "NGN",
-        amount,
-        narration: `Fund Wallet - ${first_name} ${last_name}`,
-        tx_ref: `fund-${userId}-${Date.now()}`, 
-        phonenumber: phone,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-        },
-      }
-    );
+    const token = await getNombaToken();
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
-    const account = response.data.data;
+    // ✅ Format expiryDate as "YYYY-MM-DD HH:mm:ss"
+    const expiry = new Date(Date.now() + 30 * 60 * 1000);
+    const expiryDate =
+      expiry.getFullYear() +
+      "-" +
+      String(expiry.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(expiry.getDate()).padStart(2, "0") +
+      " " +
+      String(expiry.getHours()).padStart(2, "0") +
+      ":" +
+      String(expiry.getMinutes()).padStart(2, "0") +
+      ":" +
+      String(expiry.getSeconds()).padStart(2, "0");
+
+    const res = await fetch("https://sandbox.nomba.com/v1/accounts/virtual", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accountId: process.env.NOMBA_ACCOUNT_ID!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        accountName: `${first_name} ${last_name}`,
+        accountRef: `tmp-${userId}-${Date.now()}`,
+        currency: "NGN",
+        expiryDate: expiryDate, 
+      }),
+    });
+
+    const data = await res.json();
+
+    console.log("temporary acc", data);
+
+    if (!res.ok) {
+      console.error("❌ Nomba Error:", data);
+      return NextResponse.json(
+        { error: "Failed to create virtual account", details: data },
+        { status: res.status }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      account, 
+      account: data.data,
     });
   } catch (error: any) {
-    console.error("❌ Flutterwave Error:", error.response?.data || error.message);
+    console.error("❌ Error:", error.message);
     return NextResponse.json(
-      {
-        error: "Failed to create virtual account",
-        details: error.response?.data || error.message,
-      },
+      { error: "Failed to create virtual account", details: error.message },
       { status: 500 }
     );
   }

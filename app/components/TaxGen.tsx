@@ -63,7 +63,9 @@ export default function TaxFilingGen() {
       setTaxFilings(data.receipts);
     } catch (err: any) {
       console.error("Error fetching tax filings:", err);
-      setError(err.message || "Something went wrong while fetching tax filings");
+      setError(
+        err.message || "Something went wrong while fetching tax filings"
+      );
     } finally {
       setLoading(false);
     }
@@ -107,7 +109,7 @@ export default function TaxFilingGen() {
             <CardContent className="pt-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="w-full relative flex gap-3 md:justify-between">
-                  <div className="sm:flex-1">
+                  <div className="w-full">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       placeholder="Search filings..."
@@ -122,14 +124,18 @@ export default function TaxFilingGen() {
                     <div className="hidden sm:flex gap-2">
                       {statusOptions.map((status) => {
                         const lowercase = status.toLowerCase();
+                        const isActive = selectedStatus === lowercase;
+
                         return (
                           <Button
                             key={status}
-                            variant={
-                              selectedStatus === lowercase ? "default" : "outline"
-                            }
                             size="sm"
-                            className="hover:bg-[#C29307] hover:text-white border hover:shadow-xl transition-all duration-300"
+                            variant="outline" 
+                            className={`border transition-all duration-300 ${
+                              isActive
+                                ? "bg-[#C29307] text-white hover:bg-[#b18205]" 
+                                : "hover:bg-[#C29307] hover:text-white"
+                            }`}
                             onClick={() => setSelectedStatus(lowercase)}
                           >
                             {status}
@@ -155,7 +161,9 @@ export default function TaxFilingGen() {
                               <Button
                                 key={status}
                                 variant={
-                                  selectedStatus === lowercase ? "default" : "outline"
+                                  selectedStatus === lowercase
+                                    ? "default"
+                                    : "outline"
                                 }
                                 size="sm"
                                 className="w-full text-left p-2 hover:bg-[#C29307] hover:text-white mb-1"
@@ -173,8 +181,6 @@ export default function TaxFilingGen() {
                     </div>
                   </div>
                 </div>
-
-               
               </div>
             </CardContent>
           </Card>
@@ -182,8 +188,6 @@ export default function TaxFilingGen() {
           {/* Filing list */}
           <TaxList taxFiling={filteredFilings} loading={loading} />
         </TabsContent>
-
-        
       </Tabs>
     </div>
   );

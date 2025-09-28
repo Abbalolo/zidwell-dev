@@ -42,6 +42,7 @@ export interface UserData {
 interface UserContextType {
   user: SupabaseUser | null;
   userData: any | null;
+  balance: any | null;
   setUserData: Dispatch<SetStateAction<any | null>>;
   loading: boolean;
   episodes: PodcastEpisode[];
@@ -55,6 +56,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [userData, setUserData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
@@ -62,72 +64,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Login
-  // const login = async ({ email, password }: { email: string; password: string }) => {
-  //   setLoading(true);
-  //   try {
-  //     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-  //     if (error || !data.user) {
-  //       Swal.fire({ icon: "error", title: "Login failed", text: error?.message || "Invalid credentials" });
-  //       return;
-  //     }
-
-  //     const authUser: SupabaseUser = {
-  //       id: data.user.id,
-  //       email: data.user.email!,
-  //     };
-
-  //     setUser(authUser);
-  //     await fetchUserData(authUser.id);
-
-  //     Swal.fire({ icon: "success", title: "Login successful", timer: 1500, showConfirmButton: false });
-  //     router.push("/dashboard");
-  //   } catch (err: any) {
-  //     console.error("Login error:", err);
-  //     Swal.fire({ icon: "error", title: "Unexpected Error", text: err.message || "Try again later." });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   // Logout
   const logout = async () => {
     await supabase.auth.signOut();
+    
     setUser(null);
     setUserData(null);
-    localStorage.removeItem("userData");
-    router.push("/auth/login");
+   
   };
 
-  // Fetch profile info from DB
-  // const fetchUserData = async (userId: string) => {
-  //   try {
-  //     const { data, error } = await supabase
-  //       .from("users")
-  //       .select("id, first_name, last_name, email, phone, wallet_balance")
-  //       .eq("id", userId)
-  //       .single();
-
-  //     if (error || !data) throw new Error("User data not found");
-
-  //     const profile: any = {
-  //       id: data.id,
-  //       firstName: data.first_name,
-  //       lastName: data.last_name,
-  //       email: data.email,
-  //       phone: data.phone,
-  //       walletBalance: data.wallet_balance,
-  //     };
-
-  //     setUserData(profile);
-  //     localStorage.setItem("userData", JSON.stringify(profile));
-  //   } catch (err) {
-  //     console.error("Error fetching user data:", err);
-  //     setUserData(null);
-  //   }
-  // };
-
+ 
   // Fetch blog episodes (static)
   const fetchEpisodes = async () => {
     try {
@@ -139,82 +86,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // useEffect(() => {
-  //   let sub: ReturnType<typeof supabase.channel> | null = null;
+useEffect(() => {
+  const fetchBalance = async () => {
+    if (!userData?.id) return; 
 
-  //   const init = async () => {
-  //     const {
-  //       data: { user: authUser },
-  //     } = await supabase.auth.getUser();
+    try {
+      const res = await fetch("/api/wallet-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userData.id }),
+      });
 
-  //     if (!authUser) return;
+      const data = await res.json();
+      setBalance(data.wallet_balance ?? 0);
+    } catch (error) {
+      console.error("Error fetching balance:", error);
+    }
+  };
 
-  //     // Load from localStorage first (fast)
-  //     const stored = localStorage.getItem("userData");
-  //     if (stored) {
-  //       setUserData(JSON.parse(stored));
-  //     }
+  fetchBalance();
+}, [userData?.id]);
 
-  //     // 🔄 Always fetch latest once from DB to avoid stale values
-  //     const { data } = await supabase
-  //       .from("users")
-  //       .select(
-  //         "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code,bvn_verification"
-  //       )
-  //       .eq("id", authUser.id)
-  //       .single();
-
-  //     if (data) {
-  //       const profile = {
-  //         id: data.id,
-  //         firstName: data.first_name,
-  //         lastName: data.last_name,
-  //         email: data.email,
-  //         phone: data.phone,
-  //         walletBalance: data.wallet_balance,
-  //         zidcoinBalance: data.zidcoin_balance,
-  //         bvnVerification: data.bvn_verification,
-  //         referralCode: data.referral_code,
-  //       };
-  //       setUserData(profile);
-  //       localStorage.setItem("userData", JSON.stringify(profile));
-  //     }
-
-  //     // ✅ Realtime subscription
-  //     sub = supabase
-  //       .channel("wallet-listener")
-  //       .on(
-  //         "postgres_changes",
-  //         {
-  //           event: "UPDATE",
-  //           schema: "public",
-  //           table: "users",
-  //           filter: `id=eq.${authUser.id}`,
-  //         },
-  //         (payload) => {
-  //           const newBalance = payload.new.wallet_balance;
-  //           console.log(newBalance)
-
-  //           setUserData((prev: any) => {
-  //             if (!prev) return prev;
-  //             if (prev.walletBalance !== newBalance) {
-  //               const updated = { ...prev, walletBalance: newBalance };
-  //               localStorage.setItem("userData", JSON.stringify(updated));
-  //               return updated;
-  //             }
-  //             return prev;
-  //           });
-  //         }
-  //       )
-  //       .subscribe();
-  //   };
-
-  //   init();
-
-  //   return () => {
-  //     if (sub) supabase.removeChannel(sub);
-  //   };
-  // }, []);
 
   // Handle theme
   useEffect(() => {
@@ -249,10 +141,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         userData,
+        balance,
         setUserData,
         loading,
         episodes,
-        // login,
         logout,
         isDarkMode,
         setIsDarkMode,

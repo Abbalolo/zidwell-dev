@@ -1,6 +1,13 @@
 "use client";
 import { useState } from "react";
-import { ArrowLeft, Save, Download, Send, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Download,
+  Send,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
@@ -15,10 +22,11 @@ import DashboardSidebar from "@/app/components/dashboard-sidebar";
 import DashboardHeader from "@/app/components/dashboard-hearder";
 import { useRouter } from "next/navigation";
 import { useUserContextData } from "@/app/context/userData";
-import Swal from "sweetalert2"; // Import SweetAlert2 for custom alerts
+import Swal from "sweetalert2";
 
 const Page = () => {
   const [contractTitle, setContractTitle] = useState("Untitled Contract");
+  const [pin, setPin] = useState("");
   const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [contractContent, setContractContent] = useState("");
@@ -28,6 +36,7 @@ const Page = () => {
     signeeEmail: "",
     contractContent: "",
     status: "",
+    pin: "",
   });
   const router = useRouter();
   const { userData, setUserData } = useUserContextData();
@@ -39,6 +48,7 @@ const Page = () => {
       signeeEmail: "",
       contractContent: "",
       status: "",
+      pin: "",
     };
 
     if (!contractTitle.trim())
@@ -53,7 +63,10 @@ const Page = () => {
       newErrors.signeeEmail = "Invalid email format.";
     if (!contractContent.trim())
       newErrors.contractContent = "Contract content cannot be empty.";
-    if (status === "") newErrors.status = "Please select a status."; // Validate that status is selected
+    if (status === "") newErrors.status = "Please select a status.";
+
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
 
     setErrors(newErrors);
 
@@ -77,6 +90,7 @@ const Page = () => {
   };
 
   const handleSend = async () => {
+    setLoading(true)
     if (!validateInputs()) {
       Swal.fire({
         icon: "error",
@@ -102,7 +116,6 @@ const Page = () => {
       },
     });
 
-    setLoading(true);
     try {
       const res = await fetch("/api/send-contracts", {
         method: "POST",
@@ -116,7 +129,7 @@ const Page = () => {
         }),
       });
 
-       const result = await res.json()
+      const result = await res.json();
       if (res.ok) {
         Swal.fire({
           icon: "success",
@@ -177,6 +190,7 @@ const Page = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: userData?.id,
+              pin,
               amount: 2000,
               description: "Contract successfully generated",
             }),
@@ -268,17 +282,26 @@ const Page = () => {
                     Download
                   </Button> */}
 
-                  <Button
+                <Button
                     disabled={loading}
-                    className="bg-[#C29307] hover:bg-[#b28a06] text-white flex items-center"
+                    className={`md:flex items-center text-white transition hidden  ${
+                      loading
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-[#C29307] hover:bg-[#b28a06]"
+                    }`}
                     onClick={handleSend}
                   >
                     {loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
                     ) : (
-                      <Send className="h-4 w-4 mr-2" />
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send for Signature
+                      </>
                     )}
-                    Send for Signature
                   </Button>
                 </div>
               </div>
@@ -342,6 +365,29 @@ const Page = () => {
                         <p className="text-red-500 text-sm">{errors.status}</p>
                       )}
                     </div>
+
+                    <div className="border-t pt-4">
+                      <Label htmlFor="pin">Transaction Pin</Label>
+
+                      <Input
+                        id="pin"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="\d*"
+                        placeholder="Enter Pin here.."
+                        value={pin}
+                        maxLength={4}
+                        onChange={(e) => setPin(e.target.value)}
+                        className={` ${errors.pin ? "border-red-500" : ""}`}
+                      />
+                    </div>
+
+                    {errors.pin && (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm">{errors.pin}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -367,6 +413,28 @@ const Page = () => {
                   </CardContent>
                 </Card>
               </div>
+
+               <Button
+                    disabled={loading}
+                    className={`flex items-center text-white transition md:hidden ${
+                      loading
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-[#C29307] hover:bg-[#b28a06]"
+                    }`}
+                    onClick={handleSend}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send for Signature
+                      </>
+                    )}
+                  </Button>
             </div>
           </div>
         </div>

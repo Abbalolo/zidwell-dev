@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
 
 export default function BalanceCard() {
   const [showBalance, setShowBalance] = useState(false);
-  const { userData } = useUserContextData();
+  const { userData, balance } = useUserContextData();
+  const [copyText, setCopyText] = useState(false);
   const router = useRouter();
 
   const formatNumber = (value: any) => {
@@ -32,8 +33,14 @@ export default function BalanceCard() {
 
   const handleCopyReferral = async () => {
     if (referralLink) {
+      setCopyText(true);
       await navigator.clipboard.writeText(referralLink);
-      alert("Referral link copied to clipboard!");
+
+      // alert("Referral link copied to clipboard!");
+
+      setTimeout(() => {
+        setCopyText(false);
+      }, 3000);
     }
   };
 
@@ -51,7 +58,7 @@ export default function BalanceCard() {
             <div className="flex items-center justify-center">
               <h2 className="md:text-3xl text-xl font-bold text-gray-900">
                 Available Balance: ₦{" "}
-                {showBalance ? formatNumber(userData?.walletBalance) : "*****"}
+                {showBalance ? formatNumber(balance) : "*****"}
               </h2>
               <Button
                 variant="ghost"
@@ -83,12 +90,11 @@ export default function BalanceCard() {
           )}
 
           {/* Referral Section */}
-       
 
           {/* Action Buttons */}
           <div className="flex items-center justify-center md:space-x-4 space-x-2 pt-4">
             <Button
-              onClick={() => router.push("/dashboard/services/fund-account")}
+              onClick={() => router.push("/dashboard/fund-account")}
               className="bg-[#C29307] hover:bg-[#C29307] text-white md:px-8 md:py-3"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -104,7 +110,7 @@ export default function BalanceCard() {
             </Button> */}
             <Button
               variant="outline"
-              onClick={() => router.push("/dashboard/transactions")}
+              onClick={() => router.push("dashboard/fund-account/withdraw-page")}
               className="md:px-8 md:py-3 bg-transparent"
             >
               <Receipt className="w-4 h-4 mr-2" />
@@ -112,7 +118,7 @@ export default function BalanceCard() {
             </Button>
           </div>
 
-             {userData?.referralCode && (
+          {userData?.referralCode && (
             <div className="bg-gray-100 p-4 rounded-lg text-center">
               <p className="text-gray-700 text-sm mb-2 font-semibold">
                 Invite friends & earn rewards 🎉
@@ -126,10 +132,10 @@ export default function BalanceCard() {
                 />
                 <Button
                   variant="outline"
-                  size="icon"
+                  // size="icon"
                   onClick={handleCopyReferral}
                 >
-                  <Copy className="w-4 h-4" />
+                  {copyText ? "copied" : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-2">

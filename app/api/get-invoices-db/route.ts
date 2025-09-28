@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       .eq('initiator_email', userEmail)
       .order('created_at', { ascending: false });
 
-      console.log('Fetched invoices:', invoices);
+      // console.log('Fetched invoices:', invoices);
 
     if (error) {
       console.error('❌ Supabase fetch error:', error.message);

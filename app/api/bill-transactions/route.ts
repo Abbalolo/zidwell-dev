@@ -1,26 +1,44 @@
+// /api/bill-transactions/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-
-import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(req: NextRequest) {
   try {
-    const res = await axios.get(
-      'https://api.paybeta.ng/v2/transaction/query',
-      {
-          headers: {
-          "Content-Type": "application/json",
-          "P-API-KEY": process.env.PAYBETA_API_KEY || "",
-        },
-      }
-    );
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const search = searchParams.get("search") || "";
+    const limit = parseInt(searchParams.get("limit") || "8", 10);
 
-    return NextResponse.json(res.data);
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    }
+
+    let query = supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (search) {
+      query = query.ilike("type", `%${search}%`);
+    }
+
+    if (!search) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return NextResponse.json({ transactions: data });
   } catch (error: any) {
-    console.error('PayBeta Error:', error.response?.data || error.message);
-    return NextResponse.json(
-      { error: 'Failed to fetch airtime providers' },
-      { status: 500 }
-    );
+    console.error("❌ API Error:", error.message);
+    return NextResponse.json({ error: "Unexpected error" }, { status: 500 });
   }
 }

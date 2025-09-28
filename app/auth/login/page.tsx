@@ -22,24 +22,6 @@ import Carousel from "@/app/components/Carousel";
 import { useRouter } from "next/navigation";
 import supabase from "@/app/supabase/supabase";
 
-const images = [
-  "/zid-pic/image1.jpg",
-  "/zid-pic/image2.jpg",
-  "/zid-pic/image3.jpg",
-  "/zid-pic/image4.jpg",
-  "/zid-pic/image5.jpg",
-  "/zid-pic/image6.jpg",
-  "/zid-pic/image8.jpg",
-  "/zid-pic/image9.jpg",
-  "/zid-pic/image10.jpg",
-  "/zid-pic/image11.jpg",
-  "/zid-pic/image12.jpg",
-  "/zid-pic/image13.jpg",
-  "/zid-pic/image14.jpg",
-  "/zid-pic/image15.jpg",
-  "/zid-pic/image16.jpg",
-  "/zid-pic/image17.jpg",
-];
 
 const Page = () => {
   const [email, setEmail] = useState("");
@@ -51,108 +33,52 @@ const Page = () => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+ useEffect(() => {
+    const checkScreenSize = () => setIsMobile(window.innerWidth < 768);
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  
-
-  const fetchUserData = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("users")
-      .select(
-        "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification"
-      )
-      .eq("id", userId)
-      .single();
-
-    if (error) {
-      if (error.code !== "PGRST116") throw error;
-      return null;
-    }
-    return {
-      id: data.id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      walletBalance: data.wallet_balance,
-      zidcoinBalance: data.zidcoin_balance,
-      bvnVerification: data.bvn_verification,
-      referralCode: data.referral_code,
-    } as any;
-  };
-
-  const fetchPendingUserData = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("pending_users")
-      .select(
-        "auth_id, first_name, last_name, email, phone, referred_by, verified, bvn_verification"
-      )
-      .eq("auth_id", userId)
-      .single();
-
-      
-
-    if (error) {
-      if (error.code !== "PGRST116") throw error; 
-      return null;
-    }
-    return {
-      id: data.auth_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      referredBy: data.referred_by,
-      verified: data.verified,
-      bvnVerification: data.bvn_verification,
+ 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) router.push("/dashboard");
     };
-  };
+    checkSession();
+  }, [router]);
 
-const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
-  setLoading(true);
-  setErrors({});
 
-   try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) throw new Error(error?.message || "Login failed");
 
-      const userId = data.user.id;
+ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
 
-      // Fetch user profile from both tables
-      let profile = await fetchUserData(userId);
-      let isVerified = false;
+    try {
+    
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      console.log("profile from user", profile )
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Invalid email or password");
 
-      if (profile) {
-        isVerified = profile.bvnVerification === "verified";
-      } else {
-        profile = await fetchPendingUserData(userId);
-         console.log("profile from pending user", profile )
-        if (profile) {
-          isVerified = profile.bvnVerification === "verified"; 
-        }
-      }
+      const profile = result.profile;
+      const isVerified = result.isVerified;
 
-      if (!profile) throw new Error("User data not found in both tables");
+      if (!profile) throw new Error("User profile not found.");
 
-      // Set context and localStorage
+      // 2️⃣ Save profile locally
       setUserData(profile);
       localStorage.setItem("userData", JSON.stringify(profile));
 
-      // Set cookie for middleware
+      // 3️⃣ Save verification state in a cookie (optional)
       Cookies.set("verified", isVerified ? "true" : "false", { expires: 7, path: "/" });
 
-      // Show success message and redirect
+      // 4️⃣ Show success and redirect
       Swal.fire({
         icon: "success",
         title: "Login Successful",
@@ -171,7 +97,9 @@ const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     } finally {
       setLoading(false);
     }
-};
+  };
+
+
 
 
 

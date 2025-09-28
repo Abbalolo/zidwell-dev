@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Download, Send, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Download,
+  Send,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
@@ -26,11 +33,11 @@ import { useUserContextData } from "@/app/context/userData";
 const Page = () => {
   const { templateId } = useParams();
   const router = useRouter();
-
+  const [pin, setPin] = useState("");
   const [template, setTemplate] = useState<ContractTemplateType | null>(null);
   const [contractTitle, setContractTitle] = useState("");
   const [contractContent, setContractContent] = useState("");
-  const [signeeEmail, setSigneeEmail] = useState(""); // ✅ FIXED: missing state
+  const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("draft");
   const { userData, setUserData } = useUserContextData();
@@ -39,6 +46,7 @@ const Page = () => {
     signeeEmail: "",
     contractContent: "",
     status: "",
+    pin: "",
   });
 
   const CurrentDate = new Date().toLocaleDateString("en-US", {
@@ -155,6 +163,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
       signeeEmail: "",
       contractContent: "",
       status: "",
+      pin: "",
     };
 
     if (!contractTitle.trim())
@@ -171,27 +180,17 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
       newErrors.contractContent = "Contract content cannot be empty.";
     if (!status) newErrors.status = "Please select a status.";
 
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
+
     setErrors(newErrors);
     return !Object.values(newErrors).some((error) => error);
   };
 
-  const handleSave = () => {
-    console.log({
-      title: "Contract Saved",
-      description: "Your contract has been saved as a draft.",
-    });
-  };
-
-  const handleDownload = () => {
-    console.log({
-      title: "Download Started",
-      description: "Your contract is being downloaded as a PDF.",
-    });
-  };
 
   const handleSend = async () => {
+    setLoading(true);
     if (!validateInputs()) {
-
       Swal.fire({
         icon: "error",
         title: "Validation Failed",
@@ -200,14 +199,12 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
       return;
     }
 
-       const paid = await handleDeduct();
+    const paid = await handleDeduct();
 
-      if (!paid) {
-        setLoading(false);
-        return;
-      }
-   
-
+    if (!paid) {
+      setLoading(false);
+      return;
+    }
 
     Swal.fire({
       title: "Sending contract...",
@@ -217,10 +214,8 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
         Swal.showLoading();
       },
     });
-    setLoading(true);
 
     try {
-
       const res = await fetch("/api/send-contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -244,7 +239,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
         window.location.reload();
       } else {
         const errorData = await res.json();
-         await handleRefund();
+        await handleRefund();
         Swal.fire({
           icon: "error",
           title: "Failed to send",
@@ -253,7 +248,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
       }
     } catch (err) {
       console.error(err);
-       await handleRefund();
+      await handleRefund();
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -285,6 +280,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: userData?.id,
+              pin,
               amount: 1000,
               description: "Contract successfully generated",
             }),
@@ -301,13 +297,13 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
             return resolve(false);
           }
 
-            if (result.newWalletBalance !== undefined) {
-          setUserData((prev: any) => {
-            const updated = { ...prev, walletBalance: result.result };
-            localStorage.setItem("userData", JSON.stringify(updated));
-            return updated;
-          });
-        }
+          if (result.newWalletBalance !== undefined) {
+            setUserData((prev: any) => {
+              const updated = { ...prev, walletBalance: result.result };
+              localStorage.setItem("userData", JSON.stringify(updated));
+              return updated;
+            });
+          }
 
           resolve(true);
         } catch (err: any) {
@@ -319,30 +315,30 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
   };
 
   const handleRefund = async () => {
-  try {
-    await fetch("/api/refund-service", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: userData?.id,
-        amount: 2000,
-        description: "Refund for failed contract generation",
-      }),
-    });
-    Swal.fire({
-      icon: "info",
-      title: "Refund Processed",
-      text: "₦1,000 has been refunded to your wallet due to failed contract sending.",
-    });
-  } catch (err) {
-    console.error("Refund failed:", err);
-    Swal.fire({
-      icon: "warning",
-      title: "Refund Failed",
-      text: "Payment deduction was made, but refund failed. Please contact support.",
-    });
-  }
-};
+    try {
+      await fetch("/api/refund-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          amount: 2000,
+          description: "Refund for failed contract generation",
+        }),
+      });
+      Swal.fire({
+        icon: "info",
+        title: "Refund Processed",
+        text: "₦1,000 has been refunded to your wallet due to failed contract sending.",
+      });
+    } catch (err) {
+      console.error("Refund failed:", err);
+      Swal.fire({
+        icon: "warning",
+        title: "Refund Failed",
+        text: "Payment deduction was made, but refund failed. Please contact support.",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -382,15 +378,24 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
 
                   <Button
                     disabled={loading}
-                    className="bg-[#C29307] hover:bg-[#b28a06] text-white flex items-center"
+                    className={`md:flex items-center text-white transition hidden  ${
+                      loading
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-[#C29307] hover:bg-[#b28a06]"
+                    }`}
                     onClick={handleSend}
                   >
                     {loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
                     ) : (
-                      <Send className="h-4 w-4 mr-2" />
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send for Signature
+                      </>
                     )}
-                    Send for Signature
                   </Button>
                 </div>
               </div>
@@ -453,6 +458,29 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                         <p className="text-red-500 text-sm">{errors.status}</p>
                       )}
                     </div>
+
+                    <div className="border-t pt-4">
+                      <Label htmlFor="pin">Transaction Pin</Label>
+
+                      <Input
+                        id="pin"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="\d*"
+                        placeholder="Enter Pin here.."
+                        value={pin}
+                        maxLength={4}
+                        onChange={(e) => setPin(e.target.value)}
+                        className={` ${errors.pin ? "border-red-500" : ""}`}
+                      />
+                    </div>
+
+                    {errors.pin && (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm">{errors.pin}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -473,6 +501,28 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                   </CardContent>
                 </Card>
               </div>
+
+              <Button
+                disabled={loading}
+                className={`flex items-center text-white transition md:hidden ${
+                  loading
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-[#C29307] hover:bg-[#b28a06]"
+                }`}
+                onClick={handleSend}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send for Signature
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

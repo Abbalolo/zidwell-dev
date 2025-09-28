@@ -15,7 +15,7 @@ export default function ProfilePage() {
       <div className="lg:ml-64">
         <DashboardHeader />
 
-        <main className="p-6">
+        <main className="p-5">
           <div className="md:max-w-4xl md:mx-auto">
             <div className="flex items-start  space-x-4 mb-3">
               <Button

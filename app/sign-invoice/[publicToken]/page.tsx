@@ -12,7 +12,7 @@ export default async function SignPage({
 }) {
   const publicToken = (await params).publicToken;
 
-console.log(publicToken)
+  console.log(publicToken);
 
   // Fetch invoice using the invoiceId
   const { data: invoice, error } = await supabase
@@ -21,17 +21,30 @@ console.log(publicToken)
     .eq("public_token", publicToken)
     .single();
 
-
-    console.log(error);
+  console.log(error);
 
   if (error || !invoice) return notFound();
 
+  let items: any[] = [];
 
+  try {
+    if (Array.isArray(invoice?.invoice_items)) {
+      items = invoice.invoice_items;
+    } else if (typeof invoice?.invoice_items === "string") {
+      items = JSON.parse(invoice.invoice_items);
+    }
+  } catch (err) {
+    console.error(
+      "Failed to parse invoice_items:",
+      invoice?.invoice_items,
+      err
+    );
+    items = [];
+  }
 
-
-const formattedTotal = invoice?.invoice_items
-  .reduce((sum:any, item:any) => sum + item.quantity * item.price, 0)
-  .toLocaleString();
+  const formattedTotal = items
+    .reduce((sum, item) => sum + (item.quantity || 0) * (item.price || 0), 0)
+    .toLocaleString();
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
@@ -103,16 +116,35 @@ const formattedTotal = invoice?.invoice_items
                   </tr>
                 </thead>
                 <tbody>
-                  {invoice.invoice_items?.map((item: any, idx: number) => (
-                    <tr key={idx} className="border-b hover:bg-gray-50">
-                      <td className="p-4">{item.item}</td>
-                      <td className="p-4 text-center">{item.quantity}</td>
-                      <td className="p-4 text-right">{item.price}</td>
-                      <td className="p-4 text-right font-semibold">
-                        {item.quantity * item.price}
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    let items: any[] = [];
+
+                    try {
+                      if (Array.isArray(invoice.invoice_items)) {
+                        items = invoice.invoice_items;
+                      } else if (typeof invoice.invoice_items === "string") {
+                        items = JSON.parse(invoice.invoice_items);
+                      }
+                    } catch (err) {
+                      console.error(
+                        "Failed to parse invoice_items:",
+                        invoice.invoice_items,
+                        err
+                      );
+                      items = [];
+                    }
+
+                    return items.map((item, idx) => (
+                      <tr key={idx} className="border-b hover:bg-gray-50">
+                        <td className="p-4">{item.item}</td>
+                        <td className="p-4 text-center">{item.quantity}</td>
+                        <td className="p-4 text-right">{item.price}</td>
+                        <td className="p-4 text-right">
+                          {(item.quantity * item.price).toLocaleString()}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>

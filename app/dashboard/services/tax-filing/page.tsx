@@ -16,10 +16,10 @@ function page() {
       <div className="lg:ml-64">
         <DashboardHeader />
 
-        <main className="">
-          <div className="md:max-w-5xl md:mx-auto p-6">
-            <div className="mb-6">
-              <div className="flex items-start  space-x-4">
+        <main className="md:max-w-5xl md:mx-auto md:p-6">
+
+            <div className="mb-6 md:p-0 p-6">
+              <div className="flex items-start space-x-4">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -41,7 +41,7 @@ function page() {
               </div>
             </div>
 
-          </div>
+     
             <TaxFiling />
         </main>
       </div>

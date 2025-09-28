@@ -135,9 +135,9 @@ export default function AirtimePurchase() {
     if (amount && amount > 50000)
       newErrors.amount = "Maximum amount is ₦50,000";
 
-    // if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
-    // if (!pin) newErrors.amount = "Please enter transaction pin";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -152,6 +152,7 @@ export default function AirtimePurchase() {
 
     const payload = {
       userId: userData?.id,
+      pin: pin,
       amount: finalAmount,
       network: selectedProvider?.id,
       phoneNumber: phoneNumber.trim(),
@@ -192,7 +193,7 @@ export default function AirtimePurchase() {
 
       // Reset form
       setPhoneNumber("");
-      // setPin("");
+      setPin("");
       setSelectedProvider(null);
       setSelectedAmount(null);
       setCustomAmount("");
@@ -236,7 +237,7 @@ export default function AirtimePurchase() {
           className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
         >
           <ArrowLeft className="w-4 h-4 md:mr-2" />
-         <span className="hidden md:block">Back</span>
+          <span className="hidden md:block">Back</span>
         </Button>
 
         <div className="">
@@ -406,14 +407,17 @@ export default function AirtimePurchase() {
               )}
 
               {/* Pin Input */}
-              {/* <div className="border-t pt-4">
+              <div className="border-t pt-4">
                 <Label htmlFor="pin">Transaction Pin</Label>
 
                 <Input
                   id="pin"
-                  type="text"
+                  type="password"
+                  inputMode="numeric"
+                  pattern="\d*"
                   placeholder="Enter Pin here.."
                   value={pin}
+                  maxLength={4}
                   onChange={(e) => setPin(e.target.value)}
                   className={` ${errors.pin ? "border-red-500" : ""}`}
                 />
@@ -424,7 +428,7 @@ export default function AirtimePurchase() {
                   <AlertCircle className="w-4 h-4" />
                   <span className="text-sm">{errors.pin}</span>
                 </div>
-              )} */}
+              )}
             </CardContent>
           </Card>
         </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getNombaToken } from "@/lib/nomba";
 import { transporter } from "@/lib/node-mailer";
+import bcrypt from "bcryptjs";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -11,11 +12,18 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const token = await getNombaToken();
-    const body = await req.json();
+    if (!token) {
+      return NextResponse.json(
+        { error: "Failed to authenticate with Nomba" },
+        { status: 401 }
+      );
+    }
 
+    const body = await req.json();
     const {
       userId,
       dateOfBirth,
+      transactionPin,
       businessName,
       role,
       businessAddress,
@@ -25,13 +33,23 @@ export async function POST(req: NextRequest) {
       registrationNumber,
     } = body;
 
-    if (!userId) {
+    // ✅ 1. Validate required fields early
+    if (!userId || !transactionPin) {
       return NextResponse.json(
-        { error: "userId is required" },
+        { error: "User ID and transaction PIN are required" },
         { status: 400 }
       );
     }
 
+    // ✅ 2. Validate PIN length & digits
+    if (!/^\d{4}$/.test(transactionPin)) {
+      return NextResponse.json(
+        { error: "Transaction PIN must be exactly 4 digits" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ 3. Ensure pending user & BVN verified
     const { data: pendingUser, error: pendingError } = await supabase
       .from("pending_users")
       .select("*")
@@ -39,15 +57,7 @@ export async function POST(req: NextRequest) {
       .eq("bvn_verification", "verified")
       .single();
 
-    if (pendingError) {
-      console.error("❌ Fetch pending error:", pendingError);
-      return NextResponse.json(
-        { error: "Error fetching pending user" },
-        { status: 500 }
-      );
-    }
-
-    if (!pendingUser) {
+    if (pendingError || !pendingUser) {
       return NextResponse.json(
         { error: "Pending user not found or BVN not verified" },
         { status: 403 }
@@ -56,10 +66,13 @@ export async function POST(req: NextRequest) {
 
     const { auth_id, email, first_name, last_name, phone, referred_by } =
       pendingUser;
+
     const generatedReferral = `${first_name.toLowerCase()}-${Date.now().toString(
       36
     )}`;
+    const hashedPin = await bcrypt.hash(transactionPin, 10);
 
+    // ✅ 4. Upsert user profile
     const { data: userData, error: userError } = await supabase
       .from("users")
       .upsert(
@@ -70,10 +83,12 @@ export async function POST(req: NextRequest) {
           last_name,
           phone,
           date_of_birth: dateOfBirth,
+          transaction_pin: hashedPin,
+          pin_set: true,
           wallet_balance: 0,
           zidcoin_balance: 20,
           referral_code: generatedReferral,
-          referred_by: referred_by || null,
+          referred_by: referred_by || "",
           bvn_verification: "verified",
           created_at: new Date().toISOString(),
         },
@@ -84,19 +99,20 @@ export async function POST(req: NextRequest) {
 
     if (userError) {
       console.error("❌ Upsert user error:", userError);
-      return NextResponse.json({ error: userError.message }, { status: 400 });
+      return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
     }
 
+    // ✅ 5. Save business info
     const { error: businessError } = await supabase.from("businesses").upsert(
       {
         user_id: auth_id,
-        business_name: businessName,
-        role,
-        business_address: businessAddress,
-        business_category: businessCategory,
-        business_description: businessDescription,
-        tax_id: taxId,
-        registration_number: registrationNumber,
+        business_name: businessName || "",
+        role: role || "",
+        business_address: businessAddress || "",
+        business_category: businessCategory || "",
+        business_description: businessDescription || "",
+        tax_id: taxId || "",
+        registration_number: registrationNumber || "",
         created_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
@@ -110,33 +126,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3️⃣ Apply referral rewards (if referred_by exists)
+    // ✅ 6. Referral reward handling
     if (referred_by) {
       const { error: refError } = await supabase.rpc("add_zidcoin", {
         ref_code: referred_by,
         amount: 10,
       });
 
-      if (refError) {
-        console.error("❌ Referral RPC error:", refError);
-      } else {
-        // Add bonus for referred user
+      if (!refError) {
         await supabase
           .from("users")
           .update({ zidcoin_balance: userData.zidcoin_balance + 5 })
           .eq("id", auth_id);
+      } else {
+        console.error("❌ Referral RPC error:", refError);
       }
     }
 
-    // 4️⃣ Create wallet in Nomba
-    if (!token) {
-      return NextResponse.json(
-        { error: "Failed to get Nomba token" },
-        { status: 500 }
-      );
-    }
-
-    const fullName = `${first_name} ${last_name}`;
+    // ✅ 7. Create virtual wallet with Nomba
     const nombaRes = await fetch(
       "https://sandbox.nomba.com/v1/accounts/virtual",
       {
@@ -147,15 +154,13 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          accountName: fullName,
+          accountName: `${first_name} ${last_name}`,
           accountRef: auth_id,
         }),
       }
     );
 
     const wallet = await nombaRes.json();
-
-    console.log("Nomba Response:", wallet);
 
     if (!nombaRes.ok || !wallet?.data) {
       console.error("❌ Nomba wallet error:", wallet);
@@ -165,10 +170,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5️⃣ Store wallet details
+    // ✅ 8. Save wallet info
     const { error: walletError } = await supabase
       .from("users")
-      .update({
+      .update({   
         bank_name: wallet.data.bankName,
         bank_account_name: wallet.data.bankAccountName,
         bank_account_number: wallet.data.bankAccountNumber,
@@ -176,7 +181,6 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", auth_id);
 
-    console.log("walletError", walletError);
     if (walletError) {
       console.error("❌ Wallet update error:", walletError);
       return NextResponse.json(
@@ -185,9 +189,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ✅ 9. Delete pending record
     await supabase.from("pending_users").delete().eq("auth_id", auth_id);
 
-    // 7️⃣ Send welcome email (non-blocking)
+    // ✅ 10. Send welcome email (non-blocking)
     (async () => {
       try {
         const baseUrl =
@@ -195,39 +200,36 @@ export async function POST(req: NextRequest) {
             ? process.env.NEXT_PUBLIC_DEV_URL
             : process.env.NEXT_PUBLIC_BASE_URL;
 
-        const htmlContent = `
-    <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 40px;">
-            <div style="max-width: 700px; margin: auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-              <div style="background: #C29307; padding: 20px; text-align: center;">
-                <h2 style="color: white; margin: 0;">Welcome to Zidwell 🎉</h2>
-              </div>
-              <div style="padding: 30px; color: #333;">
-                <h2 style="margin-top: 0;">Hi ${first_name},</h2>
-                <p>🎉 <b>Congratulations!</b> Your <span style="color: #C29307; font-weight: bold;">Zidwell</span> account is ready.</p>
-                <p>We’ve rewarded you with <span style="color: #C29307; font-weight: bold;">₦20 Zidcoin</span> 🎁.</p>
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${baseUrl}/dashboard" style="background: #C29307; color: white; padding: 14px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">🚀 Go to Dashboard</a>
-                </div>
-              </div>
-              <div style="background: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666;">
-                &copy; ${new Date().getFullYear()} Zidwell. All rights reserved.
-              </div>
-            </div>
-          </div>
-        `;
-
         await transporter.sendMail({
           from: `"Zidwell" <${process.env.EMAIL_USER!}>`,
           to: email,
           subject: "🎉 Congratulations & Welcome to Zidwell!",
-          html: htmlContent,
+          html: `
+            <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 40px;">
+              <div style="max-width: 700px; margin: auto; background: white; border-radius: 10px;">
+                <div style="background: #C29307; padding: 20px; text-align: center;">
+                  <h2 style="color: white;">Welcome to Zidwell 🎉</h2>
+                </div>
+                <div style="padding: 30px; color: #333;">
+                  <h2>Hi ${first_name},</h2>
+                  <p>🎉 <b>Congratulations!</b> Your <b>Zidwell</b> account is ready.</p>
+                  <p>We’ve rewarded you with <b>₦20 Zidcoin</b> 🎁.</p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${baseUrl}/dashboard" style="background: #C29307; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none;">🚀 Go to Dashboard</a>
+                  </div>
+                </div>
+                <div style="background: #f0f0f0; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+                  &copy; ${new Date().getFullYear()} Zidwell. All rights reserved.
+                </div>
+              </div>
+            </div>
+          `,
         });
       } catch (mailError) {
         console.error("❌ Email error:", mailError);
       }
     })();
 
-    // 8️⃣ Return final user + wallet info
     return NextResponse.json(
       { success: true, user: { ...userData, ...wallet.data } },
       { status: 200 }

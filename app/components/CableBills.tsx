@@ -102,12 +102,13 @@ export default function CableBills() {
       newErrors.decorderNumber = "Please verify your decorder number first";
     }
 
-    // if (pin.length != 4) newErrors.amount = "Pin must be 4 digits";
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
-    // if (!pin) newErrors.amount = "Please enter transaction pin";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
 
   const handlePayment = async () => {
     // Step 1: Validate form
@@ -138,7 +139,8 @@ export default function CableBills() {
     // Step 5: Build payload
     const payload = {
       userId: userData?.id,
-      customerId: userInfo?.smartCardNumber,
+      pin,
+      customerId: decorderNumber,
       cableTvPaymentType: selectedProvider.id,
       amount: Number(selectedPlan?.amount),
       payerName: userData?.firstName,
@@ -433,18 +435,28 @@ export default function CableBills() {
           )}
 
           {/* Pin Input */}
-          {/* <div className="border-t pt-4">
+          <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
               id="pin"
-              type="text"
+              type="password"
+              inputMode="numeric"
+              pattern="\d*"
               placeholder="Enter Pin here.."
               value={pin}
+              maxLength={4}
               onChange={(e) => setPin(e.target.value)}
               className={` ${errors.pin ? "border-red-500" : ""}`}
             />
-          </div> */}
+          </div>
+
+          {errors.pin && (
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{errors.pin}</span>
+            </div>
+          )}
         </div>
 
         {/* Payment Summary */}

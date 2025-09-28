@@ -10,7 +10,7 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { Label } from "./ui/label";
 import ReceiptPreview from "./previews/RecieptPreview";
-import { Plus } from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
 
 interface ReceiptItem {
   item: string;
@@ -33,7 +33,7 @@ interface ReceiptForm {
 function CreateReceipt() {
   const router = useRouter();
   const { userData, setUserData } = useUserContextData();
-
+  const [pin, setPin] = useState("");
   const [form, setForm] = useState<ReceiptForm>({
     name: "",
     email: "",
@@ -104,7 +104,7 @@ function CreateReceipt() {
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" })); 
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateForm = () => {
@@ -131,6 +131,9 @@ function CreateReceipt() {
     if (!form.payment_for.trim())
       newErrors.payment_for = "Payment description is required.";
 
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -147,6 +150,7 @@ function CreateReceipt() {
 
       const payload = {
         data: form,
+        pin,
         initiatorName: userData
           ? `${userData.firstName} ${userData.lastName}`
           : "",
@@ -162,16 +166,16 @@ function CreateReceipt() {
 
       const result = await res.json();
       if (!res.ok) {
-        (result.message);
-         Swal.fire({
-        icon: "error",
-        title: "Failed to Send Receipt",
-        text: result.message || "An unexpected error occurred.",
-      });
+        result.message;
+        Swal.fire({
+          icon: "error",
+          title: "Failed to Send Receipt",
+          text: result.message || "An unexpected error occurred.",
+        });
         await handleRefund();
       }
 
-         if (result.newWalletBalance !== undefined) {
+      if (result.newWalletBalance !== undefined) {
         setUserData((prev: any) => {
           const updated = { ...prev, walletBalance: result.result };
           localStorage.setItem("userData", JSON.stringify(updated));
@@ -220,10 +224,10 @@ function CreateReceipt() {
       receipt_items: [],
     });
     setLoading(false);
-    
   };
 
   const handleDeduct = async (): Promise<boolean> => {
+    setLoading(true);
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
@@ -244,6 +248,7 @@ function CreateReceipt() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: userData?.id,
+              pin,
               amount: 100,
               description: "Receipt successfully generated",
             }),
@@ -257,14 +262,18 @@ function CreateReceipt() {
               data.error || "Something went wrong",
               "error"
             );
-            
+            setLoading(false);
+
             return resolve(false);
           }
 
+          setLoading(false);
+
           resolve(true);
         } catch (err: any) {
+          setLoading(false);
           await Swal.fire("Error", err.message, "error");
-         
+
           resolve(false);
         }
       });
@@ -502,14 +511,51 @@ function CreateReceipt() {
               className="w-full p-3 border rounded-md h-24"
               placeholder="Additional notes..."
             />
+
+            {errors.customer_note && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.customer_note}
+              </p>
+            )}
           </div>
+
+          <div className="border-t pt-4">
+            <Label htmlFor="pin">Transaction Pin</Label>
+
+            <Input
+              id="pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d*"
+              placeholder="Enter Pin here.."
+              value={pin}
+              maxLength={4}
+              onChange={(e) => setPin(e.target.value)}
+              className={` ${errors.pin ? "border-red-500" : ""}`}
+            />
+          </div>
+
+          {errors.pin && (
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{errors.pin}</span>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <Button
               onClick={handleSubmit}
-              className="bg-[#C29307] hover:bg-[#C29307]"
+              disabled={loading}
+              className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
             >
-              {loading ? "Processing..." : "Create Receipt"}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : (
+                "Generate Receipt"
+              )}
             </Button>
 
             <Button

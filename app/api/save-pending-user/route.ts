@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
           first_name,
           last_name,
           phone,
-          referred_by: referred_by || null,
+          referred_by: referred_by || "",
           verified: false,
           bvn_verification: "pending",
           created_at: new Date().toISOString(),

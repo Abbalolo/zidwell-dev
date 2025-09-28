@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const {
+      userId,
       initiator_email,
       initiator_name,
       invoice_id,
@@ -40,33 +41,36 @@ export async function POST(req: Request) {
       );
     }
 
-    const orderReference = uuidv4();
     const invoiceId = invoice_id;
     const baseUrl =
       process.env.NODE_ENV === "development"
         ? process.env.NEXT_PUBLIC_DEV_URL
         : process.env.NEXT_PUBLIC_BASE_URL;
 
-        const publicToken = uuidv4();
-
+    const publicToken = uuidv4();
     const signingLink = `${baseUrl}/sign-invoice/${publicToken}`;
 
-    const callbackUrl = `${baseUrl}/invoice-payment-callback?invoiceId=${invoiceId}&orderReference=${orderReference}`;
-
+    // Get Nomba token
     const token = await getNombaToken();
+    if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    console.log("Using Nomba Token:", token);
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Calculate total with optional fee
+    const feeRate = 0.035;
+    let totalAmount = Number(total_amount);
+    if (fee_option === "customer") {
+      totalAmount = Math.ceil(totalAmount * (1 + feeRate));
     }
 
-    // Nomba payload
+    // Create a single Nomba order for totalAmount
+    const orderReference = uuidv4();
+    const callbackUrl = `${baseUrl}/invoice-payment-callback?invoiceId=${invoiceId}&orderReference=${orderReference}`;
+
     const nombaPayload = {
       order: {
         orderReference,
         callbackUrl,
         customerEmail: signee_email,
-        amount: total_amount,
+        amount: totalAmount,
         currency: "NGN",
         accountId: process.env.NOMBA_ACCOUNT_ID,
       },
@@ -85,17 +89,10 @@ export async function POST(req: Request) {
       }
     );
 
-    console.log("Nomba Res:", nombaResponse);
-
     const nombaData = await nombaResponse.json();
-    console.log("Nomba Response:", nombaData);
-
     if (!nombaResponse.ok || !nombaData?.data?.checkoutLink) {
       return NextResponse.json(
-        {
-          message: "Failed to create Nomba checkout",
-          error: nombaData,
-        },
+        { message: "Failed to create Nomba checkout", error: nombaData },
         { status: 400 }
       );
     }
@@ -105,7 +102,9 @@ export async function POST(req: Request) {
     // Insert invoice into Supabase
     const { error: supabaseError } = await supabase.from("invoices").insert([
       {
+        user_id: userId,
         invoice_id: invoiceId,
+        order_reference: orderReference,
         initiator_email,
         initiator_name,
         signing_link: signingLink,
@@ -113,11 +112,12 @@ export async function POST(req: Request) {
         signee_email,
         message,
         bill_to,
-        issue_date,
-        due_date,
+        issue_date: new Date(issue_date).toISOString(),
+        due_date: new Date(due_date).toISOString(),
         customer_note,
-        invoice_items,
-        total_amount,
+        invoice_items: JSON.stringify(invoice_items),
+        total_amount: totalAmount,
+        paid_amount: 0,
         payment_type,
         fee_option,
         unit,
@@ -128,6 +128,8 @@ export async function POST(req: Request) {
       },
     ]);
 
+    console.log("supabaseError", supabaseError)
+
     if (supabaseError) {
       console.error("Supabase insert error:", supabaseError);
       return NextResponse.json(
@@ -136,7 +138,32 @@ export async function POST(req: Request) {
       );
     }
 
-    // Send email only if everything above succeeded
+    // Insert initial row in multiple_invoice_payments (for tracking partial payments)
+    const { error: paymentError } = await supabase
+      .from("multiple_invoice_payments")
+      .insert([
+        {
+          invoice_id: invoiceId,
+          order_reference: orderReference,
+          payment_link: paymentLink,
+          amount: totalAmount, 
+          paid_amount: 0,
+          status: "pending",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+     
+
+    if (paymentError) {
+      console.error("Multiple payments insert error:", paymentError);
+      return NextResponse.json(
+        { message: "Failed to save payment tracking", error: paymentError },
+        { status: 400 }
+      );
+    }
+
+    // Send email
     try {
       await transporter.sendMail({
         from: `Zidwell Invoice <${process.env.EMAIL_USER}>`,
@@ -146,13 +173,10 @@ export async function POST(req: Request) {
           <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #e0e0e0;">
             <p>Hello <strong>${signee_name}</strong>,</p>
             <p>You have received an invoice from <strong>${initiator_name}</strong>.</p>
-            <p>Please click the button below to pay securely:</p>
-            <a href="${signingLink}" target="_blank" 
-              style="display:inline-block; background-color:#C29307; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:bold; margin-bottom: 16px;">
+            <p>Pay securely using the link below:</p>
+            <p><a href="${paymentLink}" target="_blank" style="display:inline-block; background-color:#C29307; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:bold;">
               Pay Invoice
-            </a>
-            <p style="margin: 16px 0; font-weight:bold;">Or copy this link:</p>
-            <p style="margin: 8px 0; word-break: break-all; color:#555;">${signingLink}</p>
+            </a></p>
             <p>After payment, you’ll be redirected to sign the invoice.</p>
             <p>If you didn’t expect this, you can safely ignore this email.</p>
             <p style="margin-top: 32px; font-size: 13px; color: #888;">– Zidwell Contracts</p>
@@ -162,10 +186,7 @@ export async function POST(req: Request) {
     } catch (emailError: any) {
       console.error("Email send error:", emailError);
       return NextResponse.json(
-        {
-          message: "Invoice saved but failed to send email",
-          error: emailError.message,
-        },
+        { message: "Invoice saved but failed to send email", error: emailError.message },
         { status: 500 }
       );
     }
@@ -174,6 +195,7 @@ export async function POST(req: Request) {
       { message: "Invoice created and email sent", paymentLink },
       { status: 200 }
     );
+
   } catch (err: any) {
     console.error("Unexpected error:", err);
     return NextResponse.json(

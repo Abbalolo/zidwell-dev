@@ -45,6 +45,7 @@
     "@supabase/supabase-js": "^2.54.0",
     "aos": "^2.3.4",
     "axios": "^1.10.0",
+    "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
