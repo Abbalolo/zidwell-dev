@@ -14,7 +14,7 @@ const baseUrl =
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    // console.log("🔔 Nomba webhook payload:", payload);
+    console.log("🔔 Nomba webhook payload:", payload);
 
     if (payload.event_type !== "payment_success") {
       return NextResponse.json({ message: "Ignored event" }, { status: 200 });
@@ -163,6 +163,7 @@ console.log("userError", userError)
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("❌ Webhook stopped:", error);
     console.error("❌ Webhook stopped:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
