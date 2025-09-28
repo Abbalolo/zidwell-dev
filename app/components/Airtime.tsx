@@ -391,7 +391,7 @@ export default function AirtimePurchase() {
                   <Input
                     id="customAmount"
                     type="text"
-                    placeholder="Enter amount (min ₦50)"
+                    placeholder="Enter amount (min ₦100)"
                     value={customAmount}
                     onChange={(e) => handleCustomAmountChange(e.target.value)}
                     className={`pl-8 ${errors.amount ? "border-red-500" : ""}`}

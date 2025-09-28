@@ -129,10 +129,12 @@ export async function POST(req: NextRequest) {
       const { data: existingUser, error: userError } = await supabase
         .from("users")
         .select("id")
-        .eq("id", userId)
+        .eq("wallet_id", userId)
         .maybeSingle();
 console.log("existingUser", existingUser)
 console.log("userError", userError)
+
+
       if (userError) throw new Error("User lookup failed");
 
       if (!existingUser) {
@@ -163,7 +165,6 @@ console.log("userError", userError)
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("❌ Webhook stopped:", error);
     console.error("❌ Webhook stopped:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

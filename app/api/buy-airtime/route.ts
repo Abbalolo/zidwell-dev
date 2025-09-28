@@ -30,9 +30,10 @@ export async function POST(req: NextRequest) {
       pin,
     } = body;
 
-    if (!userId || !pin) {
+
+if (!userId || !pin || amount < 100) {
       return NextResponse.json(
-        { error: "User ID and PIN are required" },
+        { error: "Invalid input: userId and pin are required, and amount must be at least 100." },
         { status: 400 }
       );
     }
