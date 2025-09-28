@@ -20,10 +20,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { userId, amount, phoneNumber, network, merchantTxRef, senderName, pin } = body;
+    const {
+      userId,
+      amount,
+      phoneNumber,
+      network,
+      merchantTxRef,
+      senderName,
+      pin,
+    } = body;
 
     if (!userId || !pin) {
-      return NextResponse.json({ error: "User ID and PIN are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User ID and PIN are required" },
+        { status: 400 }
+      );
     }
 
     // ✅ Fetch user with PIN + wallet balance in a single query
@@ -45,7 +56,10 @@ export async function POST(req: NextRequest) {
 
     // ✅ Check wallet balance
     if (Number(user.wallet_balance) < Number(amount)) {
-      return NextResponse.json({ message: "Insufficient wallet balance" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Insufficient wallet balance" },
+        { status: 400 }
+      );
     }
 
     // ✅ Create pending transaction record
@@ -65,14 +79,17 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (txError) {
-      return NextResponse.json({ message: "Could not create transaction record" }, { status: 500 });
+      return NextResponse.json(
+        { message: "Could not create transaction record" },
+        { status: 500 }
+      );
     }
 
     transactionId = newTx.id;
 
     // ✅ Call Nomba API for airtime top-up
     const response = await axios.post(
-      "https://sandbox.nomba.com/v1/bill/topup",
+      "https://api.nomba.com/v1/bill/topup",
       {
         amount,
         phoneNumber,
@@ -120,9 +137,11 @@ export async function POST(req: NextRequest) {
       transaction: response.data,
       newWalletBalance,
     });
-
   } catch (error: any) {
-    console.error("Airtime Purchase Error:", error.response?.data || error.message);
+    console.error(
+      "Airtime Purchase Error:",
+      error.response?.data || error.message
+    );
 
     if (transactionId) {
       await supabase

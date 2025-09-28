@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { createClient } from "@supabase/supabase-js";
 import { getNombaToken } from "@/lib/nomba";
-import bcrypt from "bcryptjs"; 
+import bcrypt from "bcryptjs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     // ✅ 7. Call Nomba API
     try {
       const apiResponse = await axios.post(
-        "https://sandbox.nomba.com/v1/bill/electricity",
+        "https://api.nomba.com/v1/bill/electricity",
         {
           disco,
           customerId: meterNumber,
@@ -195,6 +195,9 @@ export async function POST(req: NextRequest) {
         .eq("id", transactionId);
     }
 
-    return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unexpected server error" },
+      { status: 500 }
+    );
   }
 }

@@ -10,7 +10,7 @@ export async function getNombaToken() {
     return cachedToken; 
   }
 
-  const url = 'https://sandbox.nomba.com/v1/auth/token/issue';
+  const url = 'https://api.nomba.com/v1/auth/token/issue';
   const options = {
     method: "POST",
     headers: {
@@ -29,7 +29,7 @@ export async function getNombaToken() {
   // console.log("🔑 Response:", response);
   const data = await response.json();
 
-  // console.log("🔑 Nomba Token Response:", data);
+  console.log("🔑 Nomba Token Response:", data);
 
   if (!response.ok) {
     throw new Error(data.error_description || "Failed to get Nomba token");

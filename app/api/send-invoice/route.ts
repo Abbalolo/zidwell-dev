@@ -52,7 +52,8 @@ export async function POST(req: Request) {
 
     // Get Nomba token
     const token = await getNombaToken();
-    if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    if (!token)
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     // Calculate total with optional fee
     const feeRate = 0.035;
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
     };
 
     const nombaResponse = await fetch(
-      "https://sandbox.nomba.com/v1/checkout/order",
+      "https://api.nomba.com/v1/checkout/order",
       {
         method: "POST",
         headers: {
@@ -128,7 +129,7 @@ export async function POST(req: Request) {
       },
     ]);
 
-    console.log("supabaseError", supabaseError)
+    console.log("supabaseError", supabaseError);
 
     if (supabaseError) {
       console.error("Supabase insert error:", supabaseError);
@@ -146,14 +147,12 @@ export async function POST(req: Request) {
           invoice_id: invoiceId,
           order_reference: orderReference,
           payment_link: paymentLink,
-          amount: totalAmount, 
+          amount: totalAmount,
           paid_amount: 0,
           status: "pending",
           created_at: new Date().toISOString(),
         },
       ]);
-
-     
 
     if (paymentError) {
       console.error("Multiple payments insert error:", paymentError);
@@ -186,7 +185,10 @@ export async function POST(req: Request) {
     } catch (emailError: any) {
       console.error("Email send error:", emailError);
       return NextResponse.json(
-        { message: "Invoice saved but failed to send email", error: emailError.message },
+        {
+          message: "Invoice saved but failed to send email",
+          error: emailError.message,
+        },
         { status: 500 }
       );
     }
@@ -195,7 +197,6 @@ export async function POST(req: Request) {
       { message: "Invoice created and email sent", paymentLink },
       { status: 200 }
     );
-
   } catch (err: any) {
     console.error("Unexpected error:", err);
     return NextResponse.json(

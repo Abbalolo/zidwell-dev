@@ -12,8 +12,8 @@ export async function POST(req: Request) {
     const { userId, amount, accountNumber, accountName, bankCode } =
       await req.json();
 
-    const feeRate = 0.0075; 
-    const fee = Math.ceil(amount * feeRate); 
+    const feeRate = 0.0075;
+    const fee = Math.ceil(amount * feeRate);
     const totalDeduction = amount + fee;
 
     // 2. Fetch user balance
@@ -24,14 +24,11 @@ export async function POST(req: Request) {
       .single();
 
     if (userError) {
-      console.log("here")
+      console.log("here");
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-
-
     if (!user || user.wallet_balance < totalDeduction) {
-    
       return NextResponse.json(
         { message: "Insufficient wallet balance (including fee)" },
         { status: 400 }
@@ -61,7 +58,7 @@ export async function POST(req: Request) {
       .single();
 
     if (txError) {
-      console.log("txError",txError)
+      console.log("txError", txError);
       return NextResponse.json(
         { error: "Could not create transaction record" },
         { status: 500 }
@@ -69,7 +66,7 @@ export async function POST(req: Request) {
     }
 
     // 5. Call Nomba Withdraw API
-    const res = await fetch(`https://sandbox.nomba.com/v1/transfers/bank`, {
+    const res = await fetch(`https://api.nomba.com/v1/transfers/bank`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -77,7 +74,7 @@ export async function POST(req: Request) {
         accountId: process.env.NOMBA_ACCOUNT_ID!,
       },
       body: JSON.stringify({
-        amount, 
+        amount,
         accountNumber,
         accountName,
         bankCode,
@@ -88,9 +85,10 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-console.log(data)
+    console.log(data);
     // 6. Update transaction status
-    const newStatus = res.ok && data?.status === "success" ? "success" : "failed";
+    const newStatus =
+      res.ok && data?.status === "success" ? "success" : "failed";
 
     await supabase
       .from("transactions")
@@ -125,7 +123,7 @@ console.log(data)
       totalDeduction,
     });
   } catch (error: any) {
-    console.log(error)
+    console.log(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

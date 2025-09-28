@@ -16,16 +16,38 @@ export async function POST(req: NextRequest) {
   try {
     const token = await getNombaToken();
     if (!token) {
-      return NextResponse.json({ error: "Unable to authenticate with Nomba" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unable to authenticate with Nomba" },
+        { status: 401 }
+      );
     }
 
     const body = await req.json();
-    const { userId, pin, amount, phoneNumber, network, merchantTxRef, senderName } = body;
+    const {
+      userId,
+      pin,
+      amount,
+      phoneNumber,
+      network,
+      merchantTxRef,
+      senderName,
+    } = body;
 
     // ✅ Basic validation
-    if (!userId || !pin || !amount || !phoneNumber || !network || !merchantTxRef || !senderName) {
+    if (
+      !userId ||
+      !pin ||
+      !amount ||
+      !phoneNumber ||
+      !network ||
+      !merchantTxRef ||
+      !senderName
+    ) {
       return NextResponse.json(
-        { error: "All required fields (userId, pin, amount, phoneNumber, network, merchantTxRef) must be provided" },
+        {
+          error:
+            "All required fields (userId, pin, amount, phoneNumber, network, merchantTxRef) must be provided",
+        },
         { status: 400 }
       );
     }
@@ -47,22 +69,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-
     if (!user.transaction_pin) {
-      
-      return NextResponse.json({ error: "Transaction PIN not set" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Transaction PIN not set" },
+        { status: 400 }
+      );
     }
 
     // ✅ Verify PIN
     const isValidPin = await bcrypt.compare(pin, user.transaction_pin);
     if (!isValidPin) {
-      return NextResponse.json({ error: "Invalid transaction PIN" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid transaction PIN" },
+        { status: 401 }
+      );
     }
 
     // ✅ Check wallet balance
     const walletBalance = Number(user.wallet_balance);
     if (walletBalance < parsedAmount) {
-      return NextResponse.json({ message: "Insufficient wallet balance" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Insufficient wallet balance" },
+        { status: 400 }
+      );
     }
 
     // ✅ 2. Create a pending transaction
@@ -82,14 +111,17 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (txError || !tx) {
-      return NextResponse.json({ error: "Failed to create transaction" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to create transaction" },
+        { status: 500 }
+      );
     }
 
     transactionId = tx.id;
 
     // ✅ 3. Call Nomba API for data purchase
     const response = await axios.post(
-      "https://sandbox.nomba.com/v1/bill/data",
+      "https://api.nomba.com/v1/bill/data",
       {
         amount: parsedAmount,
         phoneNumber,
@@ -141,7 +173,10 @@ export async function POST(req: NextRequest) {
       newWalletBalance,
     });
   } catch (error: any) {
-    console.error("❌ Data Purchase Error:", error.response?.data || error.message);
+    console.error(
+      "❌ Data Purchase Error:",
+      error.response?.data || error.message
+    );
 
     // ✅ Rollback transaction if any error occurs
     if (transactionId) {
@@ -152,7 +187,12 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.response?.data?.message || error.message || "Unexpected server error" },
+      {
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Unexpected server error",
+      },
       { status: 500 }
     );
   }

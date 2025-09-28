@@ -99,7 +99,10 @@ export async function POST(req: NextRequest) {
 
     if (userError) {
       console.error("❌ Upsert user error:", userError);
-      return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 }
+      );
     }
 
     // ✅ 5. Save business info
@@ -144,21 +147,18 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ 7. Create virtual wallet with Nomba
-    const nombaRes = await fetch(
-      "https://sandbox.nomba.com/v1/accounts/virtual",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          accountId: process.env.NOMBA_ACCOUNT_ID!,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          accountName: `${first_name} ${last_name}`,
-          accountRef: auth_id,
-        }),
-      }
-    );
+    const nombaRes = await fetch("https://api.nomba.com/v1/accounts/virtual", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accountId: process.env.NOMBA_ACCOUNT_ID!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        accountName: `${first_name} ${last_name}`,
+        accountRef: auth_id,
+      }),
+    });
 
     const wallet = await nombaRes.json();
 
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     // ✅ 8. Save wallet info
     const { error: walletError } = await supabase
       .from("users")
-      .update({   
+      .update({
         bank_name: wallet.data.bankName,
         bank_account_name: wallet.data.bankAccountName,
         bank_account_number: wallet.data.bankAccountNumber,

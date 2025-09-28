@@ -221,7 +221,7 @@ export async function POST(request: Request) {
     // Generate PDF with Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-api", "--disable-setuid-api"],
     });
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -229,7 +229,6 @@ export async function POST(request: Request) {
     const pdfBuffer = Buffer.from(pdfBytes);
     await browser.close();
 
- 
     const recipients = [
       {
         email: email,

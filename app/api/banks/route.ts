@@ -8,17 +8,14 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(
-      "https://sandbox.nomba.com/v1/transfers/banks",
-      {
-        method: "GET",
-        headers: {
-          accountId: process.env.NOMBA_ACCOUNT_ID as string,
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch("https://api.nomba.com/v1/transfers/banks", {
+      method: "GET",
+      headers: {
+        accountId: process.env.NOMBA_ACCOUNT_ID as string,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorText = await response.json();

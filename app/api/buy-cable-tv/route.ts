@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       !payerName ||
       !merchantTxRef
     ) {
-      console.log("here 4")
+      console.log("here 4");
       return NextResponse.json(
         { error: "All required fields must be provided" },
         { status: 400 }
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     // ✅ 2. Verify transaction PIN
     if (!user.transaction_pin) {
-        console.log("here3")
+      console.log("here3");
       return NextResponse.json(
         { error: "Transaction PIN not set" },
         { status: 400 }
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     const isValidPin = await bcrypt.compare(pin, user.transaction_pin);
     if (!isValidPin) {
-        console.log("here1")
+      console.log("here1");
       return NextResponse.json(
         { error: "Invalid transaction PIN" },
         { status: 401 }
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     // ✅ 3. Check balance
     if (Number(user.wallet_balance) < parsedAmount) {
-      console.log("here2")
+      console.log("here2");
       return NextResponse.json(
         { message: "Insufficient wallet balance" },
         { status: 400 }
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     // ✅ 6. Call Nomba API
     try {
       const response = await axios.post(
-        "https://sandbox.nomba.com/v1/bill/cabletv",
+        "https://api.nomba.com/v1/bill/cabletv",
         {
           customerId,
           amount: parsedAmount,

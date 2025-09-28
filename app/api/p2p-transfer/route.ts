@@ -42,7 +42,10 @@ export async function POST(req: Request) {
       .single();
 
     if (receiverError || !receiver) {
-      return NextResponse.json({ error: "Receiver not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Receiver not found" },
+        { status: 404 }
+      );
     }
 
     // 4. Create pending transaction for sender
@@ -69,28 +72,30 @@ export async function POST(req: Request) {
       );
     }
 
-  
-        const token = await getNombaToken();
-        if (!token) {
-          return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
+    const token = await getNombaToken();
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
     // ✅ 5. Call Nomba Wallet API for actual transfer
     try {
-      const nombaRes = await fetch("https://sandbox.nomba.com/v1/transfers/wallet", {
-        method: "POST",
-        headers: {
-          accountId: process.env.NOMBA_ACCOUNT_ID!,
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount,
-          receiverAccountId,
-          merchantTxRef,
-          narration: narration || "P2P Transfer",
-        }),
-      });
+      const nombaRes = await fetch(
+        "https://api.nomba.com/v1/transfers/wallet",
+        {
+          method: "POST",
+          headers: {
+            accountId: process.env.NOMBA_ACCOUNT_ID!,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount,
+            receiverAccountId,
+            merchantTxRef,
+            narration: narration || "P2P Transfer",
+          }),
+        }
+      );
 
       const nombaData = await nombaRes.json();
       console.log("🔁 Nomba API response:", nombaData);

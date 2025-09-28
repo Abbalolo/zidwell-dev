@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const url = "https://sandbox.nomba.com/v1/transfers/bank/lookup";
+    const url = "https://api.nomba.com/v1/transfers/bank/lookup";
 
     const response = await fetch(url, {
       method: "POST",

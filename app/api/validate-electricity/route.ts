@@ -13,8 +13,6 @@ export async function GET(req: NextRequest) {
     const disco = searchParams.get("disco");
     const customerId = searchParams.get("customerId");
 
-
- 
     if (!disco || !customerId) {
       return NextResponse.json(
         { error: "Missing service or meterNumber" },
@@ -27,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const response = await axios.get(
-      "https://sandbox.nomba.com/v1/bill/electricity/lookup",
+      "https://api.nomba.com/v1/bill/electricity/lookup",
       {
         params: {
           disco,
@@ -54,7 +52,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-
-
- 

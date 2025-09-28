@@ -7,7 +7,10 @@ export async function POST(req: NextRequest) {
     const { userId, first_name, last_name } = body;
 
     if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "userId is required" },
+        { status: 400 }
+      );
     }
 
     const token = await getNombaToken();
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
       ":" +
       String(expiry.getSeconds()).padStart(2, "0");
 
-    const res = await fetch("https://sandbox.nomba.com/v1/accounts/virtual", {
+    const res = await fetch("https://api.nomba.com/v1/accounts/virtual", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -41,7 +44,7 @@ export async function POST(req: NextRequest) {
         accountName: `${first_name} ${last_name}`,
         accountRef: `tmp-${userId}-${Date.now()}`,
         currency: "NGN",
-        expiryDate: expiryDate, 
+        expiryDate: expiryDate,
       }),
     });
 

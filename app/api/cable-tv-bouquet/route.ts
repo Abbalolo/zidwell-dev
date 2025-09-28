@@ -16,10 +16,10 @@ export async function GET(req: NextRequest) {
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  
+
   try {
     const response = await axios.get(
-      `https://sandbox.nomba.com/v1/bill/cableTvProduct?cableTvType=${service}`,
+      `https://api.nomba.com/v1/bill/cableTvProduct?cableTvType=${service}`,
       {
         maxBodyLength: Infinity,
         headers: {

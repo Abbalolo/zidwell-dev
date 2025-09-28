@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     }
 
     const response = await axios.get(
-      "https://sandbox.nomba.com/v1/bill/cabletv/lookup",
+      "https://api.nomba.com/v1/bill/cabletv/lookup",
       {
         params: {
           customerId,

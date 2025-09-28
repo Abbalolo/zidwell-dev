@@ -9,7 +9,7 @@ export async function GET() {
 
   try {
     const response = await axios.get(
-      "https://sandbox.nomba.com/v1/bill/electricity/discos",
+      "https://api.nomba.com/v1/bill/electricity/discos",
       {
         maxBodyLength: Infinity,
         headers: {

@@ -13,7 +13,7 @@ const base64Logo = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 export async function POST(request: Request) {
   try {
     const { email, receipt } = await request.json();
-// console.log(receipt)
+    // console.log(receipt)
     if (!email || !receipt) {
       return NextResponse.json(
         { message: "Email or receipt data missing" },
@@ -61,7 +61,9 @@ export async function POST(request: Request) {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <div>
         <h2 class="font-semibold text-gray-700 mb-2">From:</h2>
-        <p class="text-gray-800 whitespace-pre-line">${receipt.initiator_name}</p>
+        <p class="text-gray-800 whitespace-pre-line">${
+          receipt.initiator_name
+        }</p>
       </div>
       <div>
         <h2 class="font-semibold text-gray-700 mb-2">Bill To:</h2>
@@ -89,14 +91,26 @@ export async function POST(request: Request) {
         </thead>
         <tbody>
           ${
-            receipt.receipt_items?.map((item: any) => `
+            receipt.receipt_items
+              ?.map(
+                (item: any) => `
               <tr>
                 <td class="p-2">${item.item}</td>
                 <td class="text-center p-2">${item.quantity}</td>
-                <td class="text-right p-2">${Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}</td>
-                <td class="text-right p-2">${(item.quantity * item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}</td>
+                <td class="text-right p-2">${Number(item.price).toLocaleString(
+                  "en-NG",
+                  { style: "currency", currency: "NGN" }
+                )}</td>
+                <td class="text-right p-2">${(
+                  item.quantity * item.price
+                ).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}</td>
               </tr>
-            `).join("") || ""
+            `
+              )
+              .join("") || ""
           }
         </tbody>
       </table>
@@ -108,7 +122,9 @@ export async function POST(request: Request) {
 
     <div class="mb-6">
       <h3 class="font-semibold mb-2">Notes:</h3>
-      <p class="text-gray-700">${receipt.customer_note || "Thank you for your payment!"}</p>
+      <p class="text-gray-700">${
+        receipt.customer_note || "Thank you for your payment!"
+      }</p>
     </div>
 
     <div class="text-center text-sm text-gray-500 border-t pt-4">
@@ -122,7 +138,7 @@ export async function POST(request: Request) {
     // Generate PDF with Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-api", "--disable-setuid-api"],
     });
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -138,9 +154,11 @@ export async function POST(request: Request) {
         text: `Dear Partner,\n\nPlease find attached a copy of the receipt sent to the client for your records.\n\nBest regards,\nZidwell Team`,
       },
       {
-        email: receipt.signee_email, 
+        email: receipt.signee_email,
         subject: "Your Receipt from Zidwell",
-        text: `Dear ${receipt.bill_to || "Client"},\n\nPlease find attached your receipt for the recent transaction.\n\nThank you,\nZidwell`,
+        text: `Dear ${
+          receipt.bill_to || "Client"
+        },\n\nPlease find attached your receipt for the recent transaction.\n\nThank you,\nZidwell`,
       },
     ];
 

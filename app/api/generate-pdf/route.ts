@@ -1,4 +1,3 @@
-
 import puppeteer from "puppeteer";
 import { NextResponse } from "next/server";
 
@@ -8,7 +7,7 @@ export async function POST(req: Request) {
 
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-api", "--disable-setuid-api"],
     });
 
     const page = await browser.newPage();
