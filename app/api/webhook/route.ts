@@ -131,6 +131,7 @@ export async function POST(req: NextRequest) {
         .select("id")
         .eq("wallet_id", userId)
         .maybeSingle();
+        
 console.log("existingUser", existingUser)
 console.log("userError", userError)
 
@@ -149,6 +150,7 @@ console.log("userError", userError)
       );
       if (balanceError) throw new Error("Failed to update wallet balance");
 
+
       const { error: txError } = await supabase.from("transactions").insert({
         user_id: userId,
         type: "deposit",
@@ -158,6 +160,8 @@ console.log("userError", userError)
         reference: transactionId,
         merchant_tx_ref: `DEP_${Date.now()}`,
       });
+
+      console.log("txError", txError)
       if (txError) throw new Error("Failed to insert deposit transaction");
 
       console.log(`✅ Wallet deposit credited for user ${userId}`);
