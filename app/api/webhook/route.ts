@@ -186,7 +186,8 @@ const { error: txError } = await supabase.from("transactions").insert({
   type: "deposit",
   amount: netAmount,
   status: "success",
-  description: `Wallet deposit of ₦${transactionAmount} (₦${totalFee} total fee applied: ₦${appFee} app fee + ₦${nombaFee} Nomba fee)`,
+  // description: `Wallet deposit of ₦${transactionAmount} (₦${totalFee} total fee applied: ₦${appFee} app fee + ₦${nombaFee} Nomba fee)`,
+   description: `Wallet deposit of ₦${netAmount}`,
   reference: transactionId,
   merchant_tx_ref: `DEP_${Date.now()}`,
 });
