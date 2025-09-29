@@ -151,7 +151,7 @@ if (monthlyVolume > 30000) {
 
 // 3️⃣ Calculate total fees and net deposit
 const totalFee = appFee + nombaFee;
-const netAmount = parseFloat((transactionAmount - totalFee).toFixed(2));
+let netAmount = parseFloat((transactionAmount - totalFee).toFixed(2));
 
 console.log("Transaction:", transactionAmount);
 console.log("App fee:", appFee);
@@ -174,12 +174,13 @@ if (!existingUser) {
   throw new Error(`User with ID ${userId} not found. Cannot credit wallet.`);
 }
 
+const netAmountKobo = Math.round(netAmount * 100);
 // ✅ 5️⃣ Update wallet balance with rounded netAmount
 const { error: balanceError } = await supabase.rpc(
   "increment_wallet_balance",
   {
-    user_id: userId,
-    amt: netAmount, // clean decimal like 99.00
+    user_id: aliasAccountReference,
+    amt: netAmountKobo, // clean decimal like 99.00
   }
 );
 if (balanceError) throw new Error("Failed to update wallet balance");
