@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     // ✅ 3. Call Nomba API for data purchase
     const response = await axios.post(
-      "https://api.nomba.com/v1/bill/data",
+      `${process.env.NOMBA_URL}/v1/bill/data`,
       {
         amount: parsedAmount,
         phoneNumber,

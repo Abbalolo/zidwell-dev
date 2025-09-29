@@ -114,94 +114,64 @@ export async function POST(req: NextRequest) {
           `✅ Invoice paid. Initiator ${invoice.user_id} credited ₦${creditedAmount}`
         );
       }
-    } 
-    else {
-// ✅ WALLET DEPOSIT FLOW
-console.log("data", data);
+    } else {
+      // ✅ WALLET DEPOSIT FLOW
+      console.log("data", data);
 
-const { transactionAmount, transactionId, aliasAccountReference } = data.transaction;
-const { userId } = data.merchant;
+      const { transactionAmount, transactionId, fee } = data.transaction;
+      const { userId } = data.merchant;
 
-// 1️⃣ App owner fee (0.75%)
-const appFeeRate = 0.0075;
-const appFee = Math.ceil(transactionAmount * appFeeRate); // round up to whole naira
+      // 1️⃣ App owner fee (0.75%)
+      const appFeeRate = 0.0075;
+      const appFee = Math.ceil(transactionAmount * appFeeRate);
 
-// 2️⃣ Nomba fee logic — based on monthly transaction volume
-const { data: monthlyTx, error: txErr } = await supabase
-  .from("transactions")
-  .select("amount")
-  .eq("user_id", aliasAccountReference);
+      // 2️⃣ Net amount = amount - Nomba fee - App fee
+      const nombaFee = fee || 0;
+      const netAmount = parseFloat(
+        (transactionAmount - nombaFee - appFee).toFixed(2)
+      );
 
-if (txErr) throw new Error("Failed to fetch monthly transactions");
+      console.log("Transaction amount (₦):", transactionAmount);
+      console.log("Nomba fee (₦):", nombaFee);
+      console.log("App fee (₦):", appFee);
+      console.log("Net amount (₦):", netAmount);
 
-const monthlyVolume =
-  monthlyTx?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0;
+      // 3️⃣ Verify user exists
+      const { data: existingUser, error: userError } = await supabase
+        .from("users")
+        .select("id, wallet_balance")
+        .eq("wallet_id", userId)
+        .maybeSingle();
 
-let nombaFee = transactionAmount * 0.01; // 1%
+      if (userError) throw new Error("User lookup failed");
+      if (!existingUser) throw new Error(`User with ID ${userId} not found.`);
 
-if (monthlyVolume > 30000) {
-  // volume > 30k
-  if (nombaFee > 50) nombaFee = 50;
-  if (nombaFee < 10) nombaFee = 10;
-} else {
-  // volume < 30k
-  if (nombaFee > 150) nombaFee = 150;
-  if (nombaFee < 10) nombaFee = 10;
-}
+      // 4️⃣ Update wallet balance directly (no RPC)
+      const newBalance = parseFloat(existingUser.wallet_balance) + netAmount;
 
-// 3️⃣ Calculate total fees and net deposit
-const totalFee = appFee + nombaFee;
-let netAmount = parseFloat((transactionAmount - totalFee).toFixed(2));
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ wallet_balance: newBalance })
+        .eq("id", existingUser.id);
 
-console.log("Transaction:", transactionAmount);
-console.log("App fee:", appFee);
-console.log("Nomba fee:", nombaFee);
-console.log("Total fee:", totalFee);
-console.log("Net amount:", netAmount);
+      if (updateError) throw new Error("Failed to update wallet balance");
 
-// 4️⃣ Verify user exists
-const { data: existingUser, error: userError } = await supabase
-  .from("users")
-  .select("id")
-  .eq("wallet_id", userId)
-  .maybeSingle();
+      // 5️⃣ Record transaction
+      const { error: txError } = await supabase.from("transactions").insert({
+        user_id: existingUser.id,
+        type: "deposit",
+        amount: netAmount,
+        status: "success",
+        description: `Wallet deposit of ₦${transactionAmount}`,
+        reference: transactionId,
+        merchant_tx_ref: `DEP_${Date.now()}`,
+      });
 
-console.log("existingUser", existingUser);
-console.log("userError", userError);
+      if (txError) throw new Error("Failed to insert deposit transaction");
 
-if (userError) throw new Error("User lookup failed");
-if (!existingUser) {
-  throw new Error(`User with ID ${userId} not found. Cannot credit wallet.`);
-}
-
-const netAmountKobo = Math.round(netAmount * 100);
-// ✅ 5️⃣ Update wallet balance with rounded netAmount
-const { error: balanceError } = await supabase.rpc(
-  "increment_wallet_balance",
-  {
-    user_id: aliasAccountReference,
-    amt: netAmountKobo, // clean decimal like 99.00
-  }
-);
-if (balanceError) throw new Error("Failed to update wallet balance");
-
-// 6️⃣ Record transaction
-const { error: txError } = await supabase.from("transactions").insert({
-  user_id: existingUser?.id,
-  type: "deposit",
-  amount: netAmount,
-  status: "success",
-  description: `Wallet deposit of ₦${netAmount}`,
-  reference: transactionId,
-  merchant_tx_ref: `DEP_${Date.now()}`,
-});
-
-console.log("txError", txError);
-if (txError) throw new Error("Failed to insert deposit transaction");
-
-console.log(`✅ Wallet deposit credited for user ${userId} with ₦${netAmount}`);
-
-
+      console.log(
+        `✅ Wallet deposit credited for user ${userId} with ₦${netAmount}`
+      );
     }
 
     return NextResponse.json({ success: true });

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       ":" +
       String(expiry.getSeconds()).padStart(2, "0");
 
-    const res = await fetch("https://api.nomba.com/v1/accounts/virtual", {
+    const res = await fetch(`${process.env.NOMBA_URL}/v1/accounts/virtual`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

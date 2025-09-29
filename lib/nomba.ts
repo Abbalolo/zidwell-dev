@@ -1,5 +1,3 @@
-
-
 let cachedToken: string | null = null;
 let tokenExpiry = 0;
 
@@ -7,10 +5,10 @@ export async function getNombaToken() {
   const now = Math.floor(Date.now() / 1000);
 
   if (cachedToken && now < tokenExpiry) {
-    return cachedToken; 
+    return cachedToken;
   }
 
-  const url = 'https://api.nomba.com/v1/auth/token/issue';
+  const url = `${process.env.NOMBA_URL}/v1/auth/token/issue`;
   const options = {
     method: "POST",
     headers: {
@@ -29,14 +27,14 @@ export async function getNombaToken() {
   // console.log("🔑 Response:", response);
   const data = await response.json();
 
-  console.log("🔑 Nomba Token Response:", data);
+  // console.log("🔑 Nomba Token Response:", data);
 
   if (!response.ok) {
     throw new Error(data.error_description || "Failed to get Nomba token");
   }
 
   cachedToken = data.data.access_token;
-  tokenExpiry = Math.floor(Date.now() / 1000) + data.expiresAt - 60; 
+  tokenExpiry = Math.floor(Date.now() / 1000) + data.expiresAt - 60;
 
   return cachedToken;
 }

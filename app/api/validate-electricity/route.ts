@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const response = await axios.get(
-      "https://api.nomba.com/v1/bill/electricity/lookup",
+      `${process.env.NOMBA_URL}/v1/bill/electricity/lookup`,
       {
         params: {
           disco,
@@ -40,13 +40,17 @@ export async function GET(req: NextRequest) {
       }
     );
 
+    console.log(response)
+
     return NextResponse.json(response.data);
   } catch (error: any) {
+
     console.error(
       "❌ Electricity validation error:",
       error.response?.data || error.message
     );
     return NextResponse.json(
+      
       { error: "Failed to validate electricity meter" },
       { status: 500 }
     );

@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     // ✅ 6. Call Nomba API
     try {
       const response = await axios.post(
-        "https://api.nomba.com/v1/bill/cabletv",
+        `${process.env.NOMBA_URL}/v1/bill/cabletv`,
         {
           customerId,
           amount: parsedAmount,

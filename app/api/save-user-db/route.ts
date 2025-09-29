@@ -147,18 +147,21 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ 7. Create virtual wallet with Nomba
-    const nombaRes = await fetch("https://api.nomba.com/v1/accounts/virtual", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        accountId: process.env.NOMBA_ACCOUNT_ID!,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        accountName: `${first_name} ${last_name}`,
-        accountRef: auth_id,
-      }),
-    });
+    const nombaRes = await fetch(
+      `${process.env.NOMBA_URL}/v1/accounts/virtual`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accountId: process.env.NOMBA_ACCOUNT_ID!,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          accountName: `${first_name} ${last_name}`,
+          accountRef: auth_id,
+        }),
+      }
+    );
 
     const wallet = await nombaRes.json();
 

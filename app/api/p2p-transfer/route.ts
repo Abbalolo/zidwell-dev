@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     // ✅ 5. Call Nomba Wallet API for actual transfer
     try {
       const nombaRes = await fetch(
-        "https://api.nomba.com/v1/transfers/wallet",
+        `${process.env.NOMBA_URL}/v1/transfers/wallet`,
         {
           method: "POST",
           headers: {

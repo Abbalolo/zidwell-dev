@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const response = await axios.get(
-      `https://api.nomba.com/v1/bill/data-plan/${service}`,
+      `${process.env.NOMBA_URL}/v1/bill/data-plan/${service}`,
       {
         headers: {
           "Content-Type": "application/json",

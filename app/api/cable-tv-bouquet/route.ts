@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const response = await axios.get(
-      `https://api.nomba.com/v1/bill/cableTvProduct?cableTvType=${service}`,
+      `${process.env.NOMBA_URL}/v1/bill/cableTvProduct?cableTvType=${service}`,
       {
         maxBodyLength: Infinity,
         headers: {

@@ -30,10 +30,12 @@ export async function POST(req: NextRequest) {
       pin,
     } = body;
 
-
-if (!userId || !pin || amount < 100) {
+    if (!userId || !pin || amount < 100) {
       return NextResponse.json(
-        { error: "Invalid input: userId and pin are required, and amount must be at least 100." },
+        {
+          error:
+            "Invalid input: userId and pin are required, and amount must be at least 100.",
+        },
         { status: 400 }
       );
     }
@@ -90,7 +92,7 @@ if (!userId || !pin || amount < 100) {
 
     // ✅ Call Nomba API for airtime top-up
     const response = await axios.post(
-      "https://api.nomba.com/v1/bill/topup",
+      `${process.env.NOMBA_URL}/v1/bill/topup`,
       {
         amount,
         phoneNumber,

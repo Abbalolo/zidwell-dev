@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     };
 
     const nombaResponse = await fetch(
-      "https://api.nomba.com/v1/checkout/order",
+      `${process.env.NOMBA_URL}/v1/checkout/order`,
       {
         method: "POST",
         headers: {

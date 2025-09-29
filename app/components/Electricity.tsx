@@ -308,21 +308,41 @@ export default function ElectricityBills() {
     }
   };
 
-  useEffect(() => {
+ 
+useEffect(() => {
+  console.log("📡 meterNumber:", meterNumber);
+  console.log("⚡ selectedProvider:", selectedProvider);
+
+  // ✅ Make sure provider and ID exist
+  if (!meterNumber || !selectedProvider?.id) return;
+
+  // ✅ Validate meter number format
+  if (!/^[0-9]{10,14}$/.test(meterNumber)) {
+    setErrors((prev) => ({
+      ...prev,
+      meterNumber: "Meter must be 10–14 digits",
+    }));
+    return;
+  }
+
+  // ✅ Clear previous errors
+  setErrors((prev) => ({ ...prev, meterNumber: "" }));
+
+  // ✅ Delay validation to avoid multiple calls while typing
+  const timeout = setTimeout(() => {
+    console.log("🔎 Calling ValidateMeterNumber...");
+    ValidateMeterNumber();
+  }, 500); // 500ms debounce is better for API calls
+
+  return () => clearTimeout(timeout);
+}, [meterNumber, selectedProvider?.id]); 
+
+
+
+ useEffect(() => {
     getPowerProviders();
   }, []);
 
-  useEffect(() => {
-    if (!meterNumber || !selectedProvider) return;
-    if (!/^[0-9]{10,14}$/.test(meterNumber)) {
-      setErrors(prev => ({ ...prev, meterNumber: "Meter must be 10–14 digits" }));
-      return;
-    }
-    setErrors(prev => ({ ...prev, meterNumber: "" }));
-
-    const timeout = setTimeout(ValidateMeterNumber, 500);
-    return () => clearTimeout(timeout);
-  }, [meterNumber, selectedProvider]);
 
   console.log("Selected Provider:", selectedProvider);
 

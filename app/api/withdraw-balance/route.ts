@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     }
 
     // 5. Call Nomba Withdraw API
-    const res = await fetch(`https://api.nomba.com/v1/transfers/bank`, {
+    const res = await fetch(`${process.env.NOMBA_URL}/v1/transfers/bank`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
