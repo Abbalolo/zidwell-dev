@@ -9,6 +9,7 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const { authId, bvn } = await req.json();
+
     if (!bvn || !authId) {
       return new Response(
         JSON.stringify({ message: "Missing BVN or authId" }),
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 👉 Replace with real BVN API logic
+    // 👉 Simulated BVN validation logic
     const isValid = /^\d{11}$/.test(bvn);
     if (!isValid) {
       return new Response(
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Update pending_users
+    // ✅ Update pending_users as verified
     const { data, error: updateError } = await supabase
       .from("pending_users")
       .update({
@@ -35,8 +36,16 @@ export async function POST(req: Request) {
       .eq("auth_id", authId)
       .select("id, first_name, last_name, email");
 
-
+    // ❗ If update fails, revert back to pending
     if (updateError) {
+      await supabase
+        .from("pending_users")
+        .update({
+          bvn_verification: "pending",
+          verified: false,
+        })
+        .eq("auth_id", authId);
+
       return new Response(
         JSON.stringify({ message: "Failed to update BVN status" }),
         { status: 500 }
@@ -44,6 +53,15 @@ export async function POST(req: Request) {
     }
 
     if (!data || data.length === 0) {
+      // Revert since user not found
+      await supabase
+        .from("pending_users")
+        .update({
+          bvn_verification: "pending",
+          verified: false,
+        })
+        .eq("auth_id", authId);
+
       return new Response(
         JSON.stringify({ message: "No matching pending user found" }),
         { status: 404 }
@@ -61,6 +79,22 @@ export async function POST(req: Request) {
     );
   } catch (err) {
     console.error("❌ Unexpected server error:", err);
+
+    try {
+      const { authId } = await req.json(); 
+      if (authId) {
+        await supabase
+          .from("pending_users")
+          .update({
+            bvn_verification: "pending",
+            verified: false,
+          })
+          .eq("auth_id", authId);
+      }
+    } catch (rollbackErr) {
+      console.error("⚠️ Failed to rollback BVN status:", rollbackErr);
+    }
+
     return new Response(JSON.stringify({ message: "Server error" }), {
       status: 500,
     });
