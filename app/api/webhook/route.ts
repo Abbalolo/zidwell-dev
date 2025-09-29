@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         .select("id")
         .eq("wallet_id", userId)
         .maybeSingle();
-        
+
 console.log("existingUser", existingUser)
 console.log("userError", userError)
 
@@ -152,7 +152,7 @@ console.log("userError", userError)
 
 
       const { error: txError } = await supabase.from("transactions").insert({
-        user_id: userId,
+        user_id: existingUser?.id,
         type: "deposit",
         amount: netAmount,
         status: "success",
