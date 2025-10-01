@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // ✅ Verify PIN
     const isValid = await bcrypt.compare(pin, user.transaction_pin);
     if (!isValid) {
-      return NextResponse.json({ error: "Invalid PIN" }, { status: 401 });
+      return NextResponse.json({ message: "Invalid PIN" }, { status: 401 });
     }
 
     // ✅ Check wallet balance
@@ -90,7 +90,6 @@ export async function POST(req: NextRequest) {
 
     transactionId = newTx.id;
 
-    // ✅ Call Nomba API for airtime top-up
     const response = await axios.post(
       `${process.env.NOMBA_URL}/v1/bill/topup`,
       {

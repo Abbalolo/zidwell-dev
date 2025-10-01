@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, Plus, Receipt, Copy } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
@@ -44,6 +44,21 @@ export default function BalanceCard() {
     }
   };
 
+
+const handleEyeClick = () => {
+  const newShowBalance = !showBalance;
+  setShowBalance(newShowBalance);
+  localStorage.setItem("showBalance", JSON.stringify(newShowBalance));
+};
+
+useEffect(() => {
+  const storedShowBalance = localStorage.getItem("showBalance");
+  if (storedShowBalance !== null) {
+    setShowBalance(JSON.parse(storedShowBalance));
+  }
+}, []);
+
+
   return (
     <Card
       className={`shadow-sm ${
@@ -63,7 +78,7 @@ export default function BalanceCard() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowBalance(!showBalance)}
+                onClick={handleEyeClick}
                 className="text-gray-400 hover:text-gray-600"
               >
                 {showBalance ? (

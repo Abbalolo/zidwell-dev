@@ -4,26 +4,18 @@ import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useUserContextData } from "../context/userData";
-import { Banknote, Check, Copy, Landmark, Wallet } from "lucide-react";
+import { Banknote, Check, Copy, CopyIcon, Landmark, Wallet } from "lucide-react";
 import TransactionHistory from "./transaction-history";
 import ExpiryTimer from "./ExpiryTimer";
 
 export default function FundAccountMethods() {
-  const [copied, setCopied] = useState("");
+const [copyText, setCopyText] = useState(false);
   const [loading, setLoading] = useState(false);
   const [accountDetails, setAccountDetails] = useState<any>(null);
   const [details, setDetails] = useState<any>(null);
   const { userData, balance } = useUserContextData();
 
-  const copyToClipboard = async (text: string, type: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(type);
-      setTimeout(() => setCopied(""), 2000);
-    } catch (err) {
-      console.error("Failed to copy: ", err);
-    }
-  };
+
 
   const generateVirtualAccountNumber = async () => {
     if (!userData) {
@@ -101,11 +93,22 @@ export default function FundAccountMethods() {
     
       fetchAccountDetails();
     }, [userData?.id]);
+
+      const handleCopyReferral = async () => {
+    if (details) {
+      setCopyText(true);
+      await navigator.clipboard.writeText(details?.bank_account_number);
+
+      setTimeout(() => {
+        setCopyText(false);
+      }, 3000);
+    }
+  };
     
 
   return (
     <div className="space-y-6">
-      <div className="w-full flex justify-end items-end">
+      {/* <div className="w-full flex justify-end items-end">
         <Button
           className="bg-[#C29307]"
           onClick={handleDeposit}
@@ -113,7 +116,7 @@ export default function FundAccountMethods() {
         >
           {loading ? "Generating..." : "Quick Fund"}
         </Button>
-      </div>
+      </div> */}
 
       {/* Account Balance Card */}
       <div className="flex flex-col md:flex-row gap-3">
@@ -138,13 +141,15 @@ export default function FundAccountMethods() {
             <CardTitle className="text-base md:text-lg">
               <div className="flex flex-col items-start ">
                 Your Account Balance
-                <span className="font-semibold text-black">
-              { details?.bank_account_number}
-                </span>
-                
-               { details?.bank_name}
+                <div className="font-semibold text-black flex items-center gap-4">
+                  {details?.bank_account_number} <Button className="text-sm" variant="outline" onClick={handleCopyReferral}>
+                    {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
+                  </Button>
+                </div>
+
+                {details?.bank_name}
               </div>
-            </CardTitle>
+            </CardTitle> 
           </CardHeader>
           <CardContent>
             <Landmark className="md:text-2xl"/>
@@ -153,56 +158,61 @@ export default function FundAccountMethods() {
       </div>
 
       {/* Virtual Account Details */}
-      {accountDetails && accountDetails.success && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Virtual Account Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {/* Account Number */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Account Number:</span>
-                <div className="flex gap-3 items-center">
-                  <span className="font-mono">
-                    {accountDetails.account.bankAccountNumber}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      copyToClipboard(
-                        accountDetails.account.bankAccountNumber,
-                        "account"
-                      )
-                    }
-                  >
-                    {copied === "account" ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+       
+    
+   
 
-              {/* Bank Name */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Bank Name:</span>
-                <span>{accountDetails.account.bankName}</span>
-              </div>
-
-              {/* Expiry Date with Timer */}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Expires In:</span>
-                <ExpiryTimer expiryDate={accountDetails.account.expiryDate} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <TransactionHistory />
+      <TransactionHistory  />
     </div>
   );
 }
+
+
+  // {accountDetails && accountDetails.success && (
+  //       <Card>
+  //         <CardHeader>
+  //           <CardTitle>Virtual Account Details</CardTitle>
+  //         </CardHeader>
+  //         <CardContent>
+  //           <div className="space-y-3">
+  //             {/* Account Number */}
+  //             <div className="flex justify-between items-center">
+  //               <span className="text-gray-600">Account Number:</span>
+  //               <div className="flex gap-3 items-center">
+  //                 <span className="font-mono">
+  //                   {accountDetails.account.bankAccountNumber}
+  //                 </span>
+  //                 <Button
+  //                   variant="ghost"
+  //                   size="sm"
+  //                   onClick={() =>
+  //                     copyToClipboard(
+  //                       accountDetails.account.bankAccountNumber,
+  //                       "account"
+  //                     )
+  //                   }
+  //                 >
+  //                   {copied === "account" ? (
+  //                     <Check className="w-4 h-4" />
+  //                   ) : (
+  //                     <Copy className="w-4 h-4" />
+  //                   )}
+  //                 </Button>
+  //               </div>
+  //             </div>
+
+  //             {/* Bank Name */}
+  //             <div className="flex justify-between items-center">
+  //               <span className="text-gray-600">Bank Name:</span>
+  //               <span>{accountDetails.account.bankName}</span>
+  //             </div>
+
+  //             {/* Expiry Date with Timer */}
+  //             <div className="flex justify-between items-center">
+  //               <span className="text-gray-600">Expires In:</span>
+  //               <ExpiryTimer expiryDate={accountDetails.account.expiryDate} />
+  //             </div>
+  //           </div>
+  //         </CardContent>
+  //       </Card>
+  //     )}
