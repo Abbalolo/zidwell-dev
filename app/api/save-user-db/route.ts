@@ -165,6 +165,8 @@ export async function POST(req: NextRequest) {
 
     const wallet = await nombaRes.json();
 
+    console.log("💡 Nomba wallet response:", wallet);
+
     if (!nombaRes.ok || !wallet?.data) {
       console.error("❌ Nomba wallet error:", wallet);
       return NextResponse.json(

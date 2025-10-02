@@ -195,7 +195,7 @@ function RegisterForm() {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/login`,
+            emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
 
