@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
 
       const { transactionAmount, transactionId, fee } = data.transaction;
       const { userId } = data.merchant;
-
+console.log("User ID from merchant data:", userId);
 
       // 2️⃣ Net amount = amount - Nomba fee - App fee
       const nombaFee = fee || 0;
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
       const { data: existingUser, error: userError } = await supabase
         .from("users")
         .select("id, wallet_balance")
-        .eq("wallet_id", userId)
+        .eq("id", userId)
         .maybeSingle();
 
       if (userError) throw new Error("User lookup failed");
