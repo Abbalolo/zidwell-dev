@@ -118,8 +118,8 @@ export async function POST(req: NextRequest) {
       // ✅ WALLET DEPOSIT FLOW
       console.log("data", data);
 
-      const { transactionAmount, transactionId, fee } = data.transaction;
-      const { userId } = data.merchant;
+      const { transactionAmount, transactionId, fee, aliasAccountReference } = data.transaction;
+      const userId = aliasAccountReference; 
 console.log("User ID from merchant data:", userId);
 
       // 2️⃣ Net amount = amount - Nomba fee - App fee
