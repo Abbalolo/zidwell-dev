@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
         bank_name: wallet.data.bankName,
         bank_account_name: wallet.data.bankAccountName,
         bank_account_number: wallet.data.bankAccountNumber,
-        wallet_id: wallet.data.accountHolderId,
+        wallet_id: wallet.data.accountRef,
       })
       .eq("id", auth_id);
 
