@@ -121,19 +121,15 @@ export async function POST(req: NextRequest) {
       const { transactionAmount, transactionId, fee } = data.transaction;
       const { userId } = data.merchant;
 
-      // 1️⃣ App owner fee (0.75%)
-      const appFeeRate = 0.0075;
-      const appFee = Math.ceil(transactionAmount * appFeeRate);
 
       // 2️⃣ Net amount = amount - Nomba fee - App fee
       const nombaFee = fee || 0;
       const netAmount = parseFloat(
-        (transactionAmount - nombaFee - appFee).toFixed(2)
+        (transactionAmount - nombaFee).toFixed(2)
       );
 
       console.log("Transaction amount (₦):", transactionAmount);
       console.log("Nomba fee (₦):", nombaFee);
-      console.log("App fee (₦):", appFee);
       console.log("Net amount (₦):", netAmount);
 
       // 3️⃣ Verify user exists

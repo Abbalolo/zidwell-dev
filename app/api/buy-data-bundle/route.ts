@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     const isValidPin = await bcrypt.compare(pin, user.transaction_pin);
     if (!isValidPin) {
       return NextResponse.json(
-        { error: "Invalid transaction PIN" },
+        { message: "Invalid transaction PIN" },
         { status: 401 }
       );
     }

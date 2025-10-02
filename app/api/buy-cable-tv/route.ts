@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     if (!isValidPin) {
       console.log("here1");
       return NextResponse.json(
-        { error: "Invalid transaction PIN" },
+        { message: "Invalid transaction PIN" },
         { status: 401 }
       );
     }

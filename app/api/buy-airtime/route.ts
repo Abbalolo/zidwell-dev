@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
     // ✅ Verify PIN
     const isValid = await bcrypt.compare(pin, user.transaction_pin);
     if (!isValid) {
-      console.log("here")
       return NextResponse.json({ message: "Invalid PIN" }, { status: 401 });
     }
 

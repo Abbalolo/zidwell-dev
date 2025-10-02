@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     const isValid = await bcrypt.compare(pin, user.transaction_pin);
     if (!isValid) {
-      return NextResponse.json({ error: "Invalid transaction PIN" }, { status: 401 });
+      return NextResponse.json({ message: "Invalid transaction PIN" }, { status: 401 });
     }
 
     const currentBalance = Number(user.wallet_balance ?? 0);
