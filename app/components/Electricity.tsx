@@ -55,6 +55,9 @@ export default function ElectricityBills() {
   const { userData, setUserData } = useUserContextData();
   const router = useRouter();
   const meterTypes = ["Prepaid", "Postpaid"];
+  const [validatedMeters, setValidatedMeters] = useState<{
+    [key: string]: any;
+  }>({});
 
   const validateAmount = (amt: number | null) => {
     if (!amt) return "Amount is required";
@@ -184,7 +187,7 @@ export default function ElectricityBills() {
 
       if (!response.ok) throw data;
 
-        if (data.newWalletBalance !== undefined) {
+      if (data.newWalletBalance !== undefined) {
         setUserData((prev: any) => {
           const updated = { ...prev, walletBalance: data.newWalletBalance };
           localStorage.setItem("userData", JSON.stringify(updated));
@@ -254,95 +257,72 @@ export default function ElectricityBills() {
     }
   };
 
-  const ValidateMeterNumber = async () => {
+  const validateMeterNumber = async () => {
     const newErrors: { [key: string]: string } = {};
 
-    // Input validation before making request
     if (!selectedProvider?.id) {
       newErrors.provider = "Please select an electricity provider";
     }
 
+    if (!meterNumber) {
+      newErrors.meterNumber = "Meter number is required";
+    } else if (!/^\d{10,14}$/.test(meterNumber)) {
+      newErrors.meterNumber = "Meter number must be 10–14 digits";
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setIsVerified(false);
+      return;
+    }
+
+    // ✅ Check cache first
+    if (validatedMeters[meterNumber]) {
+      setUserInfo(validatedMeters[meterNumber]);
+      setIsVerified(true);
+      setErrors({});
       return;
     }
 
     const params = new URLSearchParams({
-      disco: selectedProvider?.id || "",
+      disco: selectedProvider.id || "",
       customerId: meterNumber.trim(),
     });
 
     try {
       setLoading(true);
+
       const response = await fetch(`/api/validate-electricity?${params}`, {
         method: "GET",
       });
-
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to validate meter number");
-      }
+      console.log("Meter validation response:", data);
 
-      setUserInfo(data.data);
+      if (!response.ok) throw new Error(data?.error || "Validation failed");
+
+      // Success
+      setUserInfo(data);
       setIsVerified(true);
-      setErrors((prev) => ({
-        ...prev,
-        meterNumber: "",
-        provider: "",
-        meterType: "",
-      }));
-      console.log("✅ Meter validation response:", data);
-    } catch (error: any) {
+      setErrors({});
+      setValidatedMeters((prev) => ({ ...prev, [meterNumber]: data.data }));
+      console.log("✅ Meter validation:", data.data);
+    } catch (err: any) {
       setIsVerified(false);
       setUserInfo(null);
-      console.error("❌ Meter validation failed:", error.message);
-
-      setErrors((prev) => ({
-        ...prev,
+      setErrors({
         meterNumber:
           "Meter number validation failed. Please check and try again.",
-      }));
+      });
+      console.error("❌ Validation failed:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
- 
-useEffect(() => {
-  console.log("📡 meterNumber:", meterNumber);
-  console.log("⚡ selectedProvider:", selectedProvider);
-
-  // ✅ Make sure provider and ID exist
-  if (!meterNumber || !selectedProvider?.id) return;
-
-  // ✅ Validate meter number format
-  if (!/^[0-9]{10,14}$/.test(meterNumber)) {
-    setErrors((prev) => ({
-      ...prev,
-      meterNumber: "Meter must be 10–14 digits",
-    }));
-    return;
-  }
-
-  // ✅ Clear previous errors
-  setErrors((prev) => ({ ...prev, meterNumber: "" }));
-
-  // ✅ Delay validation to avoid multiple calls while typing
-  const timeout = setTimeout(() => {
-    console.log("🔎 Calling ValidateMeterNumber...");
-    ValidateMeterNumber();
-  }, 500); // 500ms debounce is better for API calls
-
-  return () => clearTimeout(timeout);
-}, [meterNumber, selectedProvider?.id]); 
-
-
-
- useEffect(() => {
+  useEffect(() => {
     getPowerProviders();
   }, []);
-
 
   console.log("Selected Provider:", selectedProvider);
 
@@ -359,7 +339,7 @@ useEffect(() => {
           className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-         <span className="hidden md:block">Back</span>
+          <span className="hidden md:block">Back</span>
         </Button>
 
         <div className="">
@@ -377,7 +357,6 @@ useEffect(() => {
         <div className="lg:col-span-2 space-y-6">
           {/* Provider Selection */}
 
-          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -390,7 +369,6 @@ useEffect(() => {
                 {powerProviders?.map((provider: any) => {
                   const isSelected = selectedProvider?.name === provider.name;
 
-                  
                   return (
                     <div
                       key={provider.id}
@@ -485,6 +463,7 @@ useEffect(() => {
                       value={meterNumber}
                       onChange={(e) => handleMeterNumberChange(e.target.value)}
                       className={errors.meterNumber ? "border-destructive" : ""}
+                      onBlur={validateMeterNumber}
                       maxLength={13}
                     />
                     {errors.meterNumber && (
@@ -560,33 +539,30 @@ useEffect(() => {
             </CardContent>
           </Card>
 
+          {/* Pin Input */}
+          <div className="border-t pt-4">
+            <Label htmlFor="pin">Transaction Pin</Label>
 
-           {/* Pin Input */}
-        <div className="border-t pt-4">
-          <Label htmlFor="pin">Transaction Pin</Label>
-
-          <Input
-            id="pin"
-            type="password"
-            inputMode="numeric"
-            pattern="\d*"
-            placeholder="Enter Pin here.."
-            value={pin}
-            maxLength={4}
-            onChange={(e) => setPin(e.target.value)}
-            className={` ${errors.pin ? "border-red-500" : ""}`}
-          />
-        </div>
+            <Input
+              id="pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d*"
+              placeholder="Enter Pin here.."
+              value={pin}
+              maxLength={4}
+              onChange={(e) => setPin(e.target.value)}
+              className={` ${errors.pin ? "border-red-500" : ""}`}
+            />
+          </div>
 
           {errors.pin && (
-                        <div className="flex items-center gap-2 text-red-600">
-                          <AlertCircle className="w-4 h-4" />
-                          <span className="text-sm">{errors.pin}</span>
-                        </div>
-                      )}
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{errors.pin}</span>
+            </div>
+          )}
         </div>
-
-       
 
         {/* Payment Summary */}
         <div className="lg:col-span-1">
