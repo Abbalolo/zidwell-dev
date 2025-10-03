@@ -100,6 +100,7 @@ console.log(userData)
 
     // Step 2️⃣ Save user to DB
     const newData = {
+      bvn,
       userId: userData?.id,
       dateOfBirth: data.profile.dateOfBirth,
       transactionPin: data.kyc.transactionPin,

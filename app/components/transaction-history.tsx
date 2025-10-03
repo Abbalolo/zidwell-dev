@@ -11,6 +11,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { useUserContextData } from "../context/userData";
+import Loader from "./Loader";
 
 const statusConfig: any = {
   success: { color: "text-green-600", dotColor: "bg-green-500" },
@@ -22,28 +23,38 @@ export default function TransactionHistory() {
   const [filter, setFilter] = useState("All transactions");
   const [searchTerm, setSearchTerm] = useState("");
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const { userData } = useUserContextData();
 
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!userData?.id) return;
 
-      const params = new URLSearchParams({
-        userId: userData.id,
-        limit: "5", 
-      });
+      setLoading(true);
 
-      if (searchTerm) {
-        params.set("search", searchTerm);
+      try {
+        const params = new URLSearchParams({
+          userId: userData.id,
+          limit: "5",
+        });
+
+        if (searchTerm) {
+          params.set("search", searchTerm);
+        }
+
+        const res = await fetch(`/api/bill-transactions?${params.toString()}`);
+        const data = await res.json();
+        setTransactions(data.transactions || []);
+      } catch (error) {
+        console.error("Failed to fetch transactions:", error);
+        setTransactions([]);
+      } finally {
+        setLoading(false);
       }
-
-      const res = await fetch(`/api/bill-transactions?${params.toString()}`);
-      const data = await res.json();
-      setTransactions(data.transactions || []);
     };
 
     fetchTransactions();
-  }, [userData?.id, searchTerm]); 
+  }, [userData?.id, searchTerm]);
 
   const filteredTransactions = transactions.filter((tx) => {
     const matchesFilter =
@@ -56,7 +67,9 @@ export default function TransactionHistory() {
     <Card className="bg-white shadow-sm">
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Transaction History</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Transaction History
+          </h2>
 
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="relative">
@@ -71,7 +84,10 @@ export default function TransactionHistory() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 bg-transparent"
+                >
                   {filter}
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -80,9 +96,15 @@ export default function TransactionHistory() {
                 <DropdownMenuItem onClick={() => setFilter("All transactions")}>
                   All transactions
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilter("success")}>Success</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilter("pending")}>Pending</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilter("failed")}>Failed</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilter("success")}>
+                  Success
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilter("pending")}>
+                  Pending
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilter("failed")}>
+                  Failed
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -90,8 +112,15 @@ export default function TransactionHistory() {
       </CardHeader>
 
       <div className="space-y-4 p-3">
-        {filteredTransactions.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No transactions found.</div>
+        {/* ✅ Loading State */}
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader />
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No transactions found.
+          </div>
         ) : (
           filteredTransactions.map((tx) => (
             <div
@@ -101,15 +130,27 @@ export default function TransactionHistory() {
               <div className="flex justify-start gap-3">
                 <div className="flex items-center gap-2 md:hidden">
                   {tx.status?.toLowerCase() === "success" ? (
-                    <Button variant="outline" size="sm" className="text-green-600 border-green-600">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-green-600 border-green-600"
+                    >
                       <Check className="w-4 h-4" />
                     </Button>
                   ) : tx.status?.toLowerCase() === "pending" ? (
-                    <Button variant="outline" size="sm" className="text-blue-600 border-blue-600">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 border-blue-600"
+                    >
                       <Clock className="w-4 h-4 animate-pulse" />
                     </Button>
                   ) : (
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-600">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-600"
+                    >
                       <X className="w-4 h-4" />
                     </Button>
                   )}
@@ -132,12 +173,14 @@ export default function TransactionHistory() {
                 <div className="hidden md:flex items-center gap-2">
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      statusConfig[tx.status?.toLowerCase()]?.dotColor || "bg-gray-400"
+                      statusConfig[tx.status?.toLowerCase()]?.dotColor ||
+                      "bg-gray-400"
                     }`}
                   />
                   <span
                     className={`text-sm font-medium ${
-                      statusConfig[tx.status?.toLowerCase()]?.color || "text-gray-500"
+                      statusConfig[tx.status?.toLowerCase()]?.color ||
+                      "text-gray-500"
                     }`}
                   >
                     {tx.status}

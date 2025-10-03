@@ -73,6 +73,7 @@ const Page = () => {
 
       // 2️⃣ Save profile locally
       setUserData(profile);
+
       localStorage.setItem("userData", JSON.stringify(profile));
 
       // 3️⃣ Save verification state in a cookie (optional)

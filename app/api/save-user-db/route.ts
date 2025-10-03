@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
+      bvn,
       userId,
       dateOfBirth,
       transactionPin,
@@ -159,6 +160,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           accountName: `${first_name} ${last_name}`,
           accountRef: auth_id,
+          bvn: bvn || undefined,
         }),
       }
     );

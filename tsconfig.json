@@ -23,6 +23,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "middleware.ts", "app/supabase/supabase.ts", "app/auth/login/error.tsz"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "middleware.ts", "app/supabase/supabase.ts", "app/auth/login/error.tsz", "app/components/admin-components/layout"],
   "exclude": ["node_modules"]
 }

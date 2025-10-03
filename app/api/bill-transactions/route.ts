@@ -34,6 +34,8 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await query;
 
+    console.log("Fetched transactions from DB:", data, error);
+
     if (error) throw error;
 
     return NextResponse.json({ transactions: data });
