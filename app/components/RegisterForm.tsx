@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import React from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -19,14 +19,12 @@ function RegisterForm() {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
-
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) setReferralCode(ref);
   }, [searchParams]);
 
-
-  console.log(referralCode)
+  console.log(referralCode);
 
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -170,10 +168,10 @@ function RegisterForm() {
         throw new Error(data.error || "Something went wrong");
       }
 
-      return data; // return the saved user if needed
+      return data;
     } catch (err: any) {
       console.error("saveToDatabase error:", err.message);
-      throw err; // re-throw so handleSubmit can catch it
+      throw err;
     }
   };
 
@@ -195,7 +193,7 @@ function RegisterForm() {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/auth/confirm-email`,
           },
         });
 
@@ -227,10 +225,9 @@ function RegisterForm() {
 
       await saveToDatabase(userData);
 
-      // 3. Show success message only if no error
       Swal.fire({
-        title: "Successfully registered account",
-        text: "Please check your email and verify your account before logging in.",
+        title: "Account Created!",
+        text: "Please check your email and verify your account.",
         icon: "success",
       });
 

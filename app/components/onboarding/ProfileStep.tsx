@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -22,7 +22,7 @@ interface ProfileStepProps {
 export const ProfileStep = ({ data, onUpdate, onNext }: ProfileStepProps) => {
    console.log("from profile", data)
   const [errors, setErrors] = useState<Partial<ProfileData>>({});
-const {userData} = useUserContextData()
+const {userData, setUserData} = useUserContextData()
   const handleInputChange = (field: keyof ProfileData, value: string) => {
     onUpdate({ [field]: value });
     if (errors[field]) {
@@ -72,6 +72,13 @@ const {userData} = useUserContextData()
       onNext();
     }
   };
+
+  useEffect(() => {
+  const stored = localStorage.getItem("userData");
+  if (stored && !userData) {
+    setUserData(JSON.parse(stored));
+  }
+}, []);
 
  
 
