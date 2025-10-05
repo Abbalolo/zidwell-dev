@@ -305,8 +305,8 @@ export default function ElectricityBills() {
       setUserInfo(data);
       setIsVerified(true);
       setErrors({});
-      setValidatedMeters((prev) => ({ ...prev, [meterNumber]: data.data }));
-      console.log("✅ Meter validation:", data.data);
+      setValidatedMeters((prev) => ({ ...prev, [meterNumber]: data }));
+      console.log("✅ Meter validation:", data);
     } catch (err: any) {
       setIsVerified(false);
       setUserInfo(null);
@@ -567,11 +567,9 @@ export default function ElectricityBills() {
         {/* Payment Summary */}
         <div className="lg:col-span-1">
           <ElectricityCustomerCard
-            customerName={userInfo?.data || ""}
-            customerAddress={userInfo?.customerAddress || ""}
-            meterNumber={userInfo?.meterNumber || ""}
-            meterType={userInfo?.meterType || ""}
-            minVendAmount={userInfo?.minVendAmount || 0}
+            customerName={userInfo || ""}
+            meterNumber={meterNumber || ""}
+            meterType={meterType || ""}
             selectedProvider={selectedProvider}
             selectedPlan={selectedPlan}
             amount={amount}

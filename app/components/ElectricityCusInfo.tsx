@@ -5,10 +5,8 @@ import Image from "next/image";
 
 interface ElectricityCustomerInfoProps {
   customerName: string;
-  customerAddress: string;
   meterNumber: string;
   meterType: string;
-  minVendAmount: number;
   selectedProvider?: {
     logo: string;
     name: string;
@@ -26,10 +24,8 @@ interface ElectricityCustomerInfoProps {
 
 export default function ElectricityCustomerCard({
   customerName,
-  customerAddress,
   meterNumber,
   meterType,
-  minVendAmount,
   selectedProvider,
   selectedPlan,
   amount,
@@ -60,13 +56,7 @@ export default function ElectricityCustomerCard({
 
           )}
 
-          {customerAddress && (
-          <div className="flex gap-2">
-            <span className="font-medium">Address:</span>
-            <p className="font-semibold">{customerAddress}</p>
-          </div>
-
-          )}
+        
           {meterNumber && (
           <div className="flex gap-2">
             <span className="font-medium">Meter Number:</span>
@@ -83,13 +73,7 @@ export default function ElectricityCustomerCard({
 
           )}
 
-          {minVendAmount && (
-
-          <div className="flex gap-2">
-            <span className="font-medium">Min Vend Amount:</span>
-            <p className="font-semibold">₦{minVendAmount.toLocaleString()}</p>
-          </div>
-          )}
+         
         </CardContent>
       </Card>
 
