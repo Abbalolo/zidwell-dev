@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
       const { transactionAmount, transactionId, fee, aliasAccountReference } = data.transaction;
       const userId = aliasAccountReference; 
 console.log("User ID from merchant data:", userId);
+console.log("transactionAmount", typeof transactionAmount, "fee", typeof fee);
 
       // 2️⃣ Net amount = amount - Nomba fee - App fee
       const nombaFee = fee || 0;

@@ -43,7 +43,7 @@ const Page = () => {
     const checkSession = async () => {
       const res = await fetch("/api/session");
       const data = await res.json();
-      console.log("Session data:", data);
+     
       if (data?.session) {
         // Optional: redirect admin directly
         if (data.session.role === "admin") {
