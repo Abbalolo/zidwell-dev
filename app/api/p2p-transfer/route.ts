@@ -11,15 +11,11 @@ export async function POST(req: Request) {
   try {
     const { userId, receiverAccountId, amount, narration } = await req.json();
 
-    // 1. Calculate fee and total deduction
-    const feeRate = 0.0075; // 0.75%
-    const fee = Math.ceil(amount * feeRate);
-    const totalDeduction = amount + fee;
 
     // 2. Fetch sender balance
     const { data: sender, error: senderError } = await supabase
       .from("users")
-      .select("first_name, last_name,wallet_balance")
+      .select("first_name, last_name, wallet_balance")
       .eq("id", userId)
       .single();
 
@@ -27,7 +23,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sender not found" }, { status: 404 });
     }
 
-    if (sender.wallet_balance < totalDeduction) {
+    if (sender.wallet_balance < amount) {
       return NextResponse.json(
         { message: "Insufficient wallet balance (including fee)" },
         { status: 400 }
@@ -119,7 +115,7 @@ export async function POST(req: Request) {
     await supabase
       .from("users")
       .update({
-        wallet_balance: sender.wallet_balance - totalDeduction,
+        wallet_balance: sender.wallet_balance - amount,
       })
       .eq("id", userId);
 
@@ -139,15 +135,7 @@ export async function POST(req: Request) {
       })
       .eq("id", pendingTx.id);
 
-    // ✅ 8. Insert fee transaction
-    await supabase.from("transactions").insert({
-      user_id: userId,
-      type: "fee",
-      amount: fee,
-      status: "success",
-      description: `P2P transfer fee (0.75%) for ₦${amount}`,
-      merchant_tx_ref: `FEE_${merchantTxRef}`,
-    });
+   
 
     // ✅ 9. Add transaction history for receiver
     await supabase.from("transactions").insert({
@@ -155,7 +143,7 @@ export async function POST(req: Request) {
       type: "p2p_received",
       amount,
       status: "success",
-      description: `Received ₦${amount} from user ${sender?.first_name} ${sender?.last_name}`,
+      description: `Received ₦${amount} from ${sender?.first_name} ${sender?.last_name}`,
       merchant_tx_ref: merchantTxRef,
     });
 
@@ -163,8 +151,6 @@ export async function POST(req: Request) {
       status: "success",
       message: "P2P transfer completed successfully",
       amount,
-      fee,
-      totalDeduction,
       reference: merchantTxRef,
     });
   } catch (error: any) {

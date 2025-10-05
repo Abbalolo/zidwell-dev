@@ -41,13 +41,21 @@ const Page = () => {
   }, []);
 
  
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) router.push("/dashboard");
-    };
-    checkSession();
-  }, [router]);
+ useEffect(() => {
+  const checkSession = async () => {
+    const res = await fetch("/api/session");
+    const data = await res.json();
+    if (data?.session) {
+      // Optional: redirect admin directly
+      if (data.session.role === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
+    }
+  };
+  checkSession();
+}, [router]);
 
 
 

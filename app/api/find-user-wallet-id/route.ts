@@ -8,16 +8,16 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    const { accNumber } = await req.json();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    if (!accNumber) {
+      return NextResponse.json({ error: "Account Number is required" }, { status: 400 });
     }
 
     const { data: user, error } = await supabase
       .from("users")
       .select("id, first_name, last_name, wallet_id")
-      .eq("email", email)
+      .eq("bank_account_number", accNumber)
       .single();
 
     if (error || !user) {
