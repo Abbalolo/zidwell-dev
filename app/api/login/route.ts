@@ -34,7 +34,7 @@
 //       secure: process.env.NODE_ENV === "production",
 //       sameSite: "strict",
 //       path: "/",
-//       maxAge: 60 * 60 * 24 * 30, 
+//       maxAge: 60 * 60 * 24 * 30,
 //     });
 
 //     // 3️⃣ Try to fetch profile from `users`
@@ -107,8 +107,6 @@
 //   }
 // }
 
-
-
 import { NextResponse } from "next/server";
 import supabase from "@/app/supabase/supabase";
 import { cookies } from "next/headers";
@@ -118,10 +116,11 @@ export async function POST(req: Request) {
     const { email, password } = await req.json();
 
     // 1️⃣ Sign in the user
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
     if (authError || !authData?.session) {
       return NextResponse.json(
@@ -184,13 +183,17 @@ export async function POST(req: Request) {
       dateOfBirth: userProfile.date_of_birth,
     };
 
+    // console.log("Login successful for user:", profile);
+
     return NextResponse.json({
       profile,
       isVerified: profile.bvnVerification === "verified",
     });
   } catch (err: any) {
     console.error("Login API Error:", err.message);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
-

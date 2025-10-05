@@ -22,7 +22,6 @@ import Carousel from "@/app/components/Carousel";
 import { useRouter } from "next/navigation";
 import supabase from "@/app/supabase/supabase";
 
-
 const Page = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,38 +32,35 @@ const Page = () => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
     const checkScreenSize = () => setIsMobile(window.innerWidth < 768);
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
- 
- useEffect(() => {
-  const checkSession = async () => {
-    const res = await fetch("/api/session");
-    const data = await res.json();
-    if (data?.session) {
-      // Optional: redirect admin directly
-      if (data.session.role === "admin") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/dashboard");
+  useEffect(() => {
+    const checkSession = async () => {
+      const res = await fetch("/api/session");
+      const data = await res.json();
+      console.log("Session data:", data);
+      if (data?.session) {
+        // Optional: redirect admin directly
+        if (data.session.role === "admin") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
       }
-    }
-  };
-  checkSession();
-}, [router]);
+    };
+    checkSession();
+  }, [router]);
 
-
-
- const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-    
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +81,10 @@ const Page = () => {
       localStorage.setItem("userData", JSON.stringify(profile));
 
       // 3️⃣ Save verification state in a cookie (optional)
-      Cookies.set("verified", isVerified ? "true" : "false", { expires: 7, path: "/" });
+      Cookies.set("verified", isVerified ? "true" : "false", {
+        expires: 7,
+        path: "/",
+      });
 
       // 4️⃣ Show success and redirect
       Swal.fire({
@@ -107,10 +106,6 @@ const Page = () => {
       setLoading(false);
     }
   };
-
-
-
-
 
   return (
     <div className="lg:flex lg:justify-between bg-gray-50 min-h-screen fade-in">
