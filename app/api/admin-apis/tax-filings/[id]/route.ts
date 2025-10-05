@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -7,11 +7,16 @@ const supabaseAdmin = createClient(
 );
 
 // 📄 GET: Retrieve a single tax filing by ID
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(  req: NextRequest,
+   { params }: { params: Promise<{ id: any }> }
+) {
+
+   const id = (await params).id;
+
   const { data, error } = await supabaseAdmin
     .from("tax_filings")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error) {
@@ -22,13 +27,14 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 // 🔄 PATCH: Update a single tax filing status or fields
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: any }> }) {
+  const id = (await params).id;
   const body = await req.json();
 
   const { data, error } = await supabaseAdmin
     .from("tax_filings")
     .update(body)
-    .eq("id", params.id)
+    .eq("id", id)
     .select();
 
   if (error) {
@@ -39,11 +45,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // 🗑️ DELETE: Delete a single tax filing
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+   _: NextRequest,
+   { params }: { params: Promise<{ id: any }> }
+) {
+
+  const id = (await params).id; 
+
   const { error } = await supabaseAdmin
     .from("tax_filings")
     .delete()
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -7,13 +7,19 @@ const supabaseAdmin = createClient(
 );
 
 // 🔄 PATCH: Update contract status
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+   { params }: { params: Promise<{ id: any }> }
+) {
+
+   const id = (await params).id;
+
   const { status } = await req.json();
 
   const { data, error } = await supabaseAdmin
     .from("contracts")
     .update({ status })
-    .eq("id", params.id)
+    .eq("id", id)
     .select();
 
   if (error) {
@@ -23,8 +29,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // 🗑️ DELETE: Remove a contract
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const { error } = await supabaseAdmin.from("contracts").delete().eq("id", params.id);
+export async function DELETE(
+   _: NextRequest,
+   { params }: { params: Promise<{ id: any }> }
+) {
+
+  const id = (await params).id; 
+  const { error } = await supabaseAdmin.from("contracts").delete().eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

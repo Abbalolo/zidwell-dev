@@ -1,6 +1,12 @@
 // app/api/admin/transactions/route.ts
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+
+
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 
 export async function GET(req: Request) {
