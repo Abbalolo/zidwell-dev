@@ -25,6 +25,7 @@ import ElectricityCustomerCard from "./ElectricityCusInfo";
 import Swal from "sweetalert2";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import PinPopOver from "./PinPopOver";
 
 interface AirtimeAmount {
   value: number;
@@ -38,12 +39,14 @@ const airtimeAmounts: AirtimeAmount[] = [
 ];
 
 export default function ElectricityBills() {
+  const inputCount = 4;
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [powerProviders, setPowerProviders] = useState<any[]>([]);
   const [userInfo, setUserInfo] = useState<any | null>(null);
   const [meterNumber, setMeterNumber] = useState("");
   const [meterType, setMeterType] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [amount, setAmount] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
@@ -63,6 +66,7 @@ export default function ElectricityBills() {
     if (!amt) return "Amount is required";
     if (amt < 1000) return "Minimum amount is ₦1000";
     if (amt > 50000) return "Maximum amount is ₦50,000";
+
     return "";
   };
 
@@ -109,16 +113,16 @@ export default function ElectricityBills() {
       newErrors.amount = amountError;
     }
 
-    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
-
-    if (!pin) newErrors.pin = "Please enter transaction pin";
-
     if (!meterNumber) {
       newErrors.meterNumber = "Please enter your meter number";
     }
     if (!meterType) {
       newErrors.meterType = "Please select a meter type";
     }
+
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+
+    if (!pin) newErrors.pin = "Please enter transaction pin";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -202,10 +206,12 @@ export default function ElectricityBills() {
       });
 
       // Clear form
+      setPin(Array(inputCount).fill(""));
       setSelectedProvider(null);
       setSelectedPlan(null);
       setAmount(null);
       setUserInfo(null);
+      window.location.reload();
     } catch (error: any) {
       Swal.fire({
         icon: "error",
@@ -331,6 +337,17 @@ export default function ElectricityBills() {
   return (
     <div className="space-y-6 md:max-w-5xl md:mx-auto">
       {/* Header */}
+      <PinPopOver
+        setIsOpen={setIsOpen}
+        isOpen={isOpen}
+        pin={pin}
+        setPin={setPin}
+        inputCount={inputCount}
+        onConfirm={() => {
+          handlePayment();
+        }}
+      />
+
       <div className="flex items-start  space-x-4">
         <Button
           variant="ghost"
@@ -540,7 +557,7 @@ export default function ElectricityBills() {
           </Card>
 
           {/* Pin Input */}
-          <div className="border-t pt-4">
+          {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -561,7 +578,7 @@ export default function ElectricityBills() {
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm">{errors.pin}</span>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Payment Summary */}
@@ -574,7 +591,8 @@ export default function ElectricityBills() {
             selectedPlan={selectedPlan}
             amount={amount}
             loading={loading}
-            handlePayment={handlePayment}
+            validateForm={validateForm}
+            setIsOpen={setIsOpen}
             errors={errors}
           />
         </div>

@@ -29,11 +29,14 @@ import DashboardSidebar from "@/app/components/dashboard-sidebar";
 import DashboardHeader from "@/app/components/dashboard-hearder";
 import Swal from "sweetalert2";
 import { useUserContextData } from "@/app/context/userData";
+import PinPopOver from "@/app/components/PinPopOver";
 
 const Page = () => {
   const { templateId } = useParams();
+  const inputCount = 4;
   const router = useRouter();
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [template, setTemplate] = useState<ContractTemplateType | null>(null);
   const [contractTitle, setContractTitle] = useState("");
   const [contractContent, setContractContent] = useState("");
@@ -187,9 +190,9 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     return !Object.values(newErrors).some((error) => error);
   };
 
-
   const handleSend = async () => {
-    setLoading(true);
+
+
     if (!validateInputs()) {
       Swal.fire({
         icon: "error",
@@ -216,6 +219,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     });
 
     try {
+      setLoading(true);
       const res = await fetch("/api/send-contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -348,6 +352,16 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
           <DashboardHeader />
 
           {/* Header */}
+          <PinPopOver
+            setIsOpen={setIsOpen}
+            isOpen={isOpen}
+            pin={pin}
+            setPin={setPin}
+            inputCount={inputCount}
+            onConfirm={() => {
+              handleSend();
+            }}
+          />
           <div className="border-b bg-card">
             <div className="container mx-auto px-6 py-4">
               <div className="flex items-center justify-between">
@@ -459,7 +473,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                       )}
                     </div>
 
-                    <div className="border-t pt-4">
+                    {/* <div className="border-t pt-4">
                       <Label htmlFor="pin">Transaction Pin</Label>
 
                       <Input
@@ -480,7 +494,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                         <AlertCircle className="w-4 h-4" />
                         <span className="text-sm">{errors.pin}</span>
                       </div>
-                    )}
+                    )} */}
                   </CardContent>
                 </Card>
               </div>
@@ -509,7 +523,11 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                     ? "bg-gray-500 cursor-not-allowed"
                     : "bg-[#C29307] hover:bg-[#b28a06]"
                 }`}
-                onClick={handleSend}
+                onClick={() => {
+                  if (validateInputs()) {
+                    setIsOpen(true);
+                  }
+                }}
               >
                 {loading ? (
                   <>

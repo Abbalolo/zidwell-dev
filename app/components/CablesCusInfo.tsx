@@ -11,7 +11,8 @@ export default function CableCustomerCard(props: any) {
     selectedProvider,
     selectedPlan,
     loading,
-    handlePayment,
+    validateForm,
+    setIsOpen,
     errors,
   } = props;
 
@@ -83,7 +84,11 @@ export default function CableCustomerCard(props: any) {
           )}
 
           <Button
-            onClick={handlePayment}
+            onClick={() => {
+                  if (validateForm()) {
+                    setIsOpen(true);
+                  }
+                }}
             disabled={!selectedPlan}
             className="w-full bg-[#C29307] hover:opacity-90 py-3 font-semibold rounded-lg shadow-electric-glow transition-all duration-300"
           >

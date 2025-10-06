@@ -23,10 +23,13 @@ import DashboardHeader from "@/app/components/dashboard-hearder";
 import { useRouter } from "next/navigation";
 import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2";
+import PinPopOver from "@/app/components/PinPopOver";
 
 const Page = () => {
+  const inputCount = 4;
   const [contractTitle, setContractTitle] = useState("Untitled Contract");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [contractContent, setContractContent] = useState("");
@@ -64,10 +67,9 @@ const Page = () => {
     if (!contractContent.trim())
       newErrors.contractContent = "Contract content cannot be empty.";
     if (status === "") newErrors.status = "Please select a status.";
-
     if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
-    if (!pin) newErrors.pin = "Please enter transaction pin";
 
+    if (!pin) newErrors.pin = "Please enter transaction pin";
     setErrors(newErrors);
 
     // Return true if there are no errors, otherwise return false
@@ -90,7 +92,6 @@ const Page = () => {
   };
 
   const handleSend = async () => {
-    setLoading(true)
     if (!validateInputs()) {
       Swal.fire({
         icon: "error",
@@ -117,6 +118,7 @@ const Page = () => {
     });
 
     try {
+      setLoading(true);
       const res = await fetch("/api/send-contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,6 +252,16 @@ const Page = () => {
           <DashboardHeader />
 
           {/* Header */}
+          <PinPopOver
+            setIsOpen={setIsOpen}
+            isOpen={isOpen}
+            pin={pin}
+            setPin={setPin}
+            inputCount={inputCount}
+            onConfirm={() => {
+              handleSend();
+            }}
+          />
           <div className="border-b bg-card">
             <div className="container mx-auto px-6 py-4">
               <div className="flex items-center justify-between">
@@ -282,7 +294,7 @@ const Page = () => {
                     Download
                   </Button> */}
 
-                <Button
+                  <Button
                     disabled={loading}
                     className={`md:flex items-center text-white transition hidden  ${
                       loading
@@ -365,7 +377,7 @@ const Page = () => {
                         <p className="text-red-500 text-sm">{errors.status}</p>
                       )}
                     </div>
-
+                    {/* 
                     <div className="border-t pt-4">
                       <Label htmlFor="pin">Transaction Pin</Label>
 
@@ -387,7 +399,7 @@ const Page = () => {
                         <AlertCircle className="w-4 h-4" />
                         <span className="text-sm">{errors.pin}</span>
                       </div>
-                    )}
+                    )} */}
                   </CardContent>
                 </Card>
               </div>
@@ -414,27 +426,31 @@ const Page = () => {
                 </Card>
               </div>
 
-               <Button
-                    disabled={loading}
-                    className={`flex items-center text-white transition md:hidden ${
-                      loading
-                        ? "bg-gray-500 cursor-not-allowed"
-                        : "bg-[#C29307] hover:bg-[#b28a06]"
-                    }`}
-                    onClick={handleSend}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Send for Signature
-                      </>
-                    )}
-                  </Button>
+              <Button
+                disabled={loading}
+                className={`flex items-center text-white transition md:hidden ${
+                  loading
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-[#C29307] hover:bg-[#b28a06]"
+                }`}
+                onClick={() => {
+                  if (validateInputs()) {
+                    setIsOpen(true);
+                  }
+                }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send for Signature
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

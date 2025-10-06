@@ -19,6 +19,7 @@ import { useUserContextData } from "../context/userData";
 import Image from "next/image";
 import Loader from "./Loader";
 import { useRouter } from "next/navigation";
+import PinPopOver from "./PinPopOver";
 
 interface AirtimeAmount {
   value: number;
@@ -76,9 +77,11 @@ const airtimeAmounts: AirtimeAmount[] = [
 ];
 
 export default function AirtimePurchase() {
+  const inputCount = 4;
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
@@ -150,6 +153,8 @@ export default function AirtimePurchase() {
   const purchaseAirtime = async () => {
     if (!validateForm()) return;
 
+   
+
     const payload = {
       userId: userData?.id,
       pin: pin,
@@ -192,19 +197,18 @@ export default function AirtimePurchase() {
       });
 
       // Reset form
-      setPhoneNumber("");
-      setPin("");
-      setSelectedProvider(null);
-      setSelectedAmount(null);
-      setCustomAmount("");
-      setIsCustomAmount(false);
+      // setPhoneNumber("");
+      // setPin(Array(inputCount).fill(""));
+      // setSelectedProvider(null);
+      // setSelectedAmount(null);
+      // setCustomAmount("");
+      // setIsCustomAmount(false);
+       window.location.reload();
     } catch (error: any) {
       Swal.fire({
         icon: "error",
         title: "Airtime Purchase Failed",
-        html: `<strong>${error.message}</strong><br/><small>${
-          error.detail || ""
-        }</small>`,
+        html: `<strong>${error.message}</strong><br/><small></small>`,
         confirmButtonColor: "#dc2626",
       });
     } finally {
@@ -228,6 +232,16 @@ export default function AirtimePurchase() {
   return (
     <div className="space-y-6 md:max-w-5xl md:mx-auto">
       {/* Header */}
+      <PinPopOver
+        setIsOpen={setIsOpen}
+        isOpen={isOpen}
+        pin={pin}
+        setPin={setPin}
+        inputCount={inputCount}
+        onConfirm={() => {
+          purchaseAirtime();
+        }}
+      />
 
       <div className="flex items-start  space-x-4">
         <Button
@@ -407,7 +421,7 @@ export default function AirtimePurchase() {
               )}
 
               {/* Pin Input */}
-              <div className="border-t pt-4">
+              {/* <div className="border-t pt-4">
                 <Label htmlFor="pin">Transaction Pin</Label>
 
                 <Input
@@ -428,7 +442,7 @@ export default function AirtimePurchase() {
                   <AlertCircle className="w-4 h-4" />
                   <span className="text-sm">{errors.pin}</span>
                 </div>
-              )}
+              )} */}
             </CardContent>
           </Card>
         </div>
@@ -493,7 +507,11 @@ export default function AirtimePurchase() {
               </div>
 
               <Button
-                onClick={purchaseAirtime}
+                onClick={() => {
+                  if (validateForm()) {
+                    setIsOpen(true);
+                  }
+                }}
                 disabled={
                   !selectedProvider || !phoneNumber || !finalAmount || loading
                 }

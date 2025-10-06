@@ -20,6 +20,7 @@ import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { useUserContextData } from "../context/userData";
 import { Textarea } from "./ui/textarea";
+import PinPopOver from "./PinPopOver";
 
 type InvoiceItem = {
   item: string;
@@ -55,8 +56,10 @@ const generateInvoiceId = () => {
 };
 
 function CreateInvoice() {
+    const inputCount = 4;
   const [errors, setErrors] = useState<Record<string, string>>({});
-   const [pin, setPin] = useState("");
+   const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [form, setForm] = useState<InvoiceForm>({
@@ -246,10 +249,11 @@ function CreateInvoice() {
     if (form.payment_type === "multiple" && (!form.unit || form.unit <= 0)) {
       newErrors.unit = "Unit must be greater than 0 for multiple payment.";
     }
-
-    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+  if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
     if (!pin) newErrors.pin = "Please enter transaction pin";
+
+    
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -263,10 +267,14 @@ function CreateInvoice() {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+   
   const handleSubmit = async (e?: React.FormEvent) => {
+
     if (e) e.preventDefault();
 
     if (!validateInvoiceForm()) return;
+
+
 
     setLoading(true);
 
@@ -377,6 +385,17 @@ function CreateInvoice() {
   }, []);
 
   return (
+    <>
+      <PinPopOver
+            setIsOpen={setIsOpen}
+            isOpen={isOpen}
+            pin={pin}
+            setPin={setPin}
+            inputCount={inputCount}
+            onConfirm={() => {
+              handleSubmit();
+            }}
+          />
     <TabsContent value="create" className="space-y-6">
       <Card>
         <CardHeader>
@@ -728,7 +747,7 @@ function CreateInvoice() {
             )}
           </div>
 
-          <div className="border-t pt-4">
+          {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -749,12 +768,16 @@ function CreateInvoice() {
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm">{errors.pin}</span>
             </div>
-          )}
+          )} */}
 
           {/* Buttons */}
           <div className="flex flex-col md:flex-row gap-3">
             <Button
-              onClick={handleSubmit}
+               onClick={() => {
+                  if (validateInvoiceForm()) {
+                    setIsOpen(true);
+                  }
+                }}
               disabled={loading}
               className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
             >
@@ -793,6 +816,7 @@ function CreateInvoice() {
         <InvoicePreview form={form} onClose={() => setShowPreview(false)} />
       )}
     </TabsContent>
+    </>
   );
 }
 

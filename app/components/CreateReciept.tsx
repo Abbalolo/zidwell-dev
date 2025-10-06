@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { Label } from "./ui/label";
 import ReceiptPreview from "./previews/RecieptPreview";
 import { AlertCircle, Plus } from "lucide-react";
+import PinPopOver from "./PinPopOver";
 
 interface ReceiptItem {
   item: string;
@@ -33,7 +34,9 @@ interface ReceiptForm {
 function CreateReceipt() {
   const router = useRouter();
   const { userData, setUserData } = useUserContextData();
-  const [pin, setPin] = useState("");
+  const inputCount = 4;
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<ReceiptForm>({
     name: "",
     email: "",
@@ -130,7 +133,7 @@ function CreateReceipt() {
       newErrors.customer_note = "Customer note is required";
     if (!form.payment_for.trim())
       newErrors.payment_for = "Payment description is required.";
-
+    
     if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
     if (!pin) newErrors.pin = "Please enter transaction pin";
 
@@ -201,6 +204,8 @@ function CreateReceipt() {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+
+
     console.log("form data", form);
 
     const paid = await handleDeduct();
@@ -212,6 +217,7 @@ function CreateReceipt() {
 
     setLoading(true);
     await handleSaveReceipt();
+     setPin(Array(inputCount).fill(""));
     setForm({
       name: "",
       email: "",
@@ -223,6 +229,7 @@ function CreateReceipt() {
       payment_for: "",
       receipt_items: [],
     });
+     window.location.reload();
     setLoading(false);
   };
 
@@ -307,7 +314,18 @@ function CreateReceipt() {
   };
 
   return (
-    <TabsContent value="create" className="space-y-6">
+    <>
+       <PinPopOver
+            setIsOpen={setIsOpen}
+            isOpen={isOpen}
+            pin={pin}
+            setPin={setPin}
+            inputCount={inputCount}
+            onConfirm={() => {
+              handleSubmit();
+            }}
+          />
+           <TabsContent value="create" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Create New Receipt</CardTitle>
@@ -519,7 +537,7 @@ function CreateReceipt() {
             )}
           </div>
 
-          <div className="border-t pt-4">
+          {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -540,11 +558,15 @@ function CreateReceipt() {
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm">{errors.pin}</span>
             </div>
-          )}
+          )} */}
 
           <div className="flex gap-3">
             <Button
-              onClick={handleSubmit}
+               onClick={() => {
+                  if (validateForm()) {
+                    setIsOpen(true);
+                  }
+                }}
               disabled={loading}
               className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
             >
@@ -573,6 +595,8 @@ function CreateReceipt() {
         <ReceiptPreview form={form} onClose={() => setShowPreview(false)} />
       )}
     </TabsContent>
+    </>
+   
   );
 }
 

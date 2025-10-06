@@ -118,16 +118,14 @@ export async function POST(req: NextRequest) {
       // ✅ WALLET DEPOSIT FLOW
       console.log("data", data);
 
-      const { transactionAmount, transactionId, fee, aliasAccountReference } = data.transaction;
-      const userId = aliasAccountReference; 
-console.log("User ID from merchant data:", userId);
-console.log("transactionAmount", typeof transactionAmount, "fee", typeof fee);
+      const { transactionAmount, transactionId, fee, aliasAccountReference } =
+        data.transaction;
+      const userId = aliasAccountReference;
+      console.log("User ID from merchant data:", userId);
 
       // 2️⃣ Net amount = amount - Nomba fee - App fee
       const nombaFee = fee || 0;
-      const netAmount = parseFloat(
-        (transactionAmount - nombaFee).toFixed(2)
-      );
+      const netAmount = parseFloat((transactionAmount - nombaFee).toFixed(2));
 
       console.log("Transaction amount (₦):", transactionAmount);
       console.log("Nomba fee (₦):", nombaFee);

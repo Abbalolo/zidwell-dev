@@ -52,9 +52,14 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Verify PIN
-    const isValid = await bcrypt.compare(pin, user.transaction_pin);
+    const plainPin = Array.isArray(pin) ? pin.join("") : pin;
+    const isValid = await bcrypt.compare(plainPin, user.transaction_pin);
+
     if (!isValid) {
-      return NextResponse.json({ message: "Invalid Transaction PIN" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Invalid Transaction PIN" },
+        { status: 401 }
+      );
     }
 
     // ✅ Check wallet balance

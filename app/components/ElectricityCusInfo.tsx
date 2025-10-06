@@ -3,24 +3,7 @@ import { Button } from "./ui/button";
 import { ArrowRight, Receipt, AlertCircle } from "lucide-react";
 import Image from "next/image";
 
-interface ElectricityCustomerInfoProps {
-  customerName: string;
-  meterNumber: string;
-  meterType: string;
-  selectedProvider?: {
-    logo: string;
-    name: string;
-    description?: string;
-  };
-  selectedPlan?: {
-    name: string;
-    duration: string;
-  };
-  amount: number | null;
-  loading: boolean;
-  handlePayment: () => void;
-  errors: { verification?: string };
-}
+
 
 export default function ElectricityCustomerCard({
   customerName,
@@ -30,9 +13,10 @@ export default function ElectricityCustomerCard({
   selectedPlan,
   amount,
   loading,
-  handlePayment,
+  setIsOpen,
+  validateForm,
   errors,
-}: ElectricityCustomerInfoProps) {
+}: any) {
   const parsedAmount = typeof amount === "string" ? parseFloat(amount) : amount;
   const total = parsedAmount 
 
@@ -133,7 +117,11 @@ export default function ElectricityCustomerCard({
 
           {/* Payment Button */}
           <Button
-            onClick={handlePayment}
+            onClick={() => {
+                  if (validateForm()) {
+                    setIsOpen(true);
+                  }
+                }}
             disabled={!parsedAmount || loading}
             className="w-full bg-[#C29307] hover:opacity-90 py-3 font-semibold rounded-lg shadow-electric-glow transition-all duration-300"
           >

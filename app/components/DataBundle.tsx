@@ -22,6 +22,7 @@ import DataPlanSelector from "./DataPlansSelector";
 import Image from "next/image";
 import Loader from "./Loader";
 import { useRouter } from "next/navigation";
+import PinPopOver from "./PinPopOver";
 
 const prefixColorMap = [
   {
@@ -63,11 +64,11 @@ const prefixColorMap = [
 ];
 
 export default function DataBundlePurchase() {
+  const inputCount = 4;
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
-  // const [providers, setProviders] = useState<any[] | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [pin, setPin] = useState("");
-
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [bundles, setBundles] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -100,6 +101,7 @@ export default function DataBundlePurchase() {
     if (phoneError) newErrors.phoneNumber = phoneError;
     if (!selectedProvider) newErrors.provider = "Please select a provider";
     if (!selectedPlan) newErrors.plan = "Please select a plan";
+
     if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
     if (!pin) newErrors.pin = "Please enter transaction pin";
@@ -175,10 +177,11 @@ export default function DataBundlePurchase() {
       });
 
       // Clear inputs after successful purchase
-      setPin("");
+      setPin(Array(inputCount).fill(""));
       setPhoneNumber("");
       setSelectedProvider(null);
       setSelectedPlan(null);
+      window.location.reload();
     } catch (error: any) {
       Swal.fire({
         icon: "error",
@@ -283,6 +286,16 @@ export default function DataBundlePurchase() {
   return (
     <div className="space-y-6 md:max-w-5xl md:mx-auto">
       {/* Header */}
+      <PinPopOver
+        setIsOpen={setIsOpen}
+        isOpen={isOpen}
+        pin={pin}
+        setPin={setPin}
+        inputCount={inputCount}
+        onConfirm={() => {
+          purchaseDatabundle();
+        }}
+      />
 
       <div className="flex items-start  space-x-4">
         <Button
@@ -417,7 +430,7 @@ export default function DataBundlePurchase() {
           </div>
 
           {/* Pin Input */}
-          <div className="border-t pt-4">
+          {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -438,7 +451,7 @@ export default function DataBundlePurchase() {
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm">{errors.pin}</span>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Purchase Summary */}
@@ -497,7 +510,11 @@ export default function DataBundlePurchase() {
 
               {/* Purchase Button */}
               <Button
-                onClick={purchaseDatabundle}
+                onClick={() => {
+                  if (validateForm()) {
+                    setIsOpen(true);
+                  }
+                }}
                 disabled={!phoneNumber || !selectedPlan}
                 className="w-full bg-[#C29307] hover:bg-[#C29307] text-white py-3 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
               >

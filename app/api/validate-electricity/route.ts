@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
 
     const disco = searchParams.get("disco");
     const customerId = searchParams.get("customerId");
-console.log("disco", disco)
-console.log("customerId", customerId)
+    console.log("disco", disco);
+    console.log("customerId", customerId);
     if (!disco || !customerId) {
       return NextResponse.json(
         { error: "Missing service or meterNumber" },
@@ -38,22 +38,21 @@ console.log("customerId", customerId)
           "Content-Type": "application/json",
         },
         maxBodyLength: Infinity,
+      
       }
     );
 
-    console.log(response)
+    console.log(response);
 
     return NextResponse.json(response.data);
   } catch (error: any) {
-
     console.error(
       "❌ Electricity validation error:",
       error.response?.data || error.message
     );
 
-     console.log("error", error)
+    console.log("error", error);
     return NextResponse.json(
-     
       { error: "Failed to validate electricity meter" },
       { status: 500 }
     );

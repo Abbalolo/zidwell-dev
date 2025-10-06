@@ -21,16 +21,19 @@ import Swal from "sweetalert2";
 import Loader from "./Loader";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import PinPopOver from "./PinPopOver";
 interface Plan {
   code: string;
   description: string;
   price: string;
 }
 export default function CableBills() {
+  const inputCount = 4;
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [userInfo, setUserInfo] = useState<any | null>(null);
   const [decorderNumber, setdecorderNumber] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [isOpen, setIsOpen] = useState(false);
   const [bundles, setBundles] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -101,16 +104,16 @@ export default function CableBills() {
     if (!decorderNumber) {
       newErrors.decorderNumber = "Please verify your decorder number first";
     }
-
     if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
     if (!pin) newErrors.pin = "Please enter transaction pin";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-
   const handlePayment = async () => {
+    const newErrors: { [key: string]: string } = {};
     // Step 1: Validate form
     if (!validateForm()) return;
 
@@ -178,9 +181,11 @@ export default function CableBills() {
       });
 
       // Clear form
-      setSelectedProvider(null);
-      setSelectedPlan(null);
-      setUserInfo(null);
+      //   setPin(Array(inputCount).fill(""));
+      // setSelectedProvider(null);
+      // setSelectedPlan(null);
+      // setUserInfo(null);
+      window.location.reload();
     } catch (error: any) {
       Swal.fire({
         icon: "error",
@@ -304,7 +309,16 @@ export default function CableBills() {
   return (
     <div className="space-y-6  md:max-w-5xl md:mx-auto">
       {/* Header */}
-
+      <PinPopOver
+        setIsOpen={setIsOpen}
+        isOpen={isOpen}
+        pin={pin}
+        setPin={setPin}
+        inputCount={inputCount}
+        onConfirm={() => {
+          handlePayment();
+        }}
+      />
       <div className="flex items-start  space-x-4">
         <Button
           variant="ghost"
@@ -435,7 +449,7 @@ export default function CableBills() {
           )}
 
           {/* Pin Input */}
-          <div className="border-t pt-4">
+          {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -456,7 +470,7 @@ export default function CableBills() {
               <AlertCircle className="w-4 h-4" />
               <span className="text-sm">{errors.pin}</span>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Payment Summary */}
@@ -468,7 +482,8 @@ export default function CableBills() {
             selectedProvider={selectedProvider}
             selectedPlan={selectedPlan}
             loading={loading}
-            handlePayment={handlePayment}
+            validateForm={validateForm}
+            setIsOpen={setIsOpen}
             errors={errors}
           />
         </div>
