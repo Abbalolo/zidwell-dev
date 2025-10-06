@@ -584,7 +584,7 @@ export default function ElectricityBills() {
         {/* Payment Summary */}
         <div className="lg:col-span-1">
           <ElectricityCustomerCard
-            customerName={userInfo || ""}
+            customerName={userInfo.data || ""}
             meterNumber={meterNumber || ""}
             meterType={meterType || ""}
             selectedProvider={selectedProvider}
