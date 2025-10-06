@@ -308,7 +308,7 @@ export default function ElectricityBills() {
       if (!response.ok) throw new Error(data?.error || "Validation failed");
 
       // Success
-      setUserInfo(data);
+      setUserInfo(data.data);
       setIsVerified(true);
       setErrors({});
       setValidatedMeters((prev) => ({ ...prev, [meterNumber]: data }));
@@ -584,7 +584,7 @@ export default function ElectricityBills() {
         {/* Payment Summary */}
         <div className="lg:col-span-1">
           <ElectricityCustomerCard
-            customerName={userInfo.data || ""}
+            customerName={userInfo || ""}
             meterNumber={meterNumber || ""}
             meterType={meterType || ""}
             selectedProvider={selectedProvider}
