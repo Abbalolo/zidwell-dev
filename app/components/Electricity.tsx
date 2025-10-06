@@ -132,7 +132,7 @@ export default function ElectricityBills() {
     if (!validateForm()) return;
 
     // Step 2: Ensure critical selections exist
-    if (!selectedProvider?.slug) {
+    if (!selectedProvider?.id) {
       Swal.fire({
         icon: "error",
         title: "Missing Information",
