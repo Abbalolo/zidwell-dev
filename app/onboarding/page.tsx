@@ -1,25 +1,21 @@
-"use client"
+"use client";
+
 import { useState } from "react";
-
 import { CheckCircle } from "lucide-react";
-
-
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import Swal from "sweetalert2";
 import { useUserContextData } from "@/app/context/userData";
+
 import { ProfileStep } from "../components/onboarding/ProfileStep";
 import { BusinessStep } from "../components/onboarding/BusinessStep";
 import { KYCStep } from "../components/onboarding/KYCStep";
+import { AccountDetailsStep } from "../components/onboarding/AccountDetails";
+
 import { Card } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 
 interface OnboardingData {
   profile: {
-    // firstName: string;
-    // lastName: string;
-    // email: string;
-    // phone: string;
     dateOfBirth: string;
   };
   business: {
@@ -31,6 +27,12 @@ interface OnboardingData {
     taxId: string;
     registrationNumber: string;
   };
+  accountDetails: {
+    bankName: string;
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+  };
   kyc: {
     documentNumber: string;
     transactionPin: string;
@@ -40,23 +42,17 @@ interface OnboardingData {
 const steps = [
   { id: 1, title: "Profile", description: "Personal information" },
   { id: 2, title: "Business", description: "Company details (optional)" },
-  { id: 3, title: "Verification", description: "Identity verification" },
+  { id: 3, title: "Account", description: "Bank account details" },
+  { id: 4, title: "Verification", description: "Identity verification" },
 ];
 
-
- export default function page () {
+export default function Page() {
   const [currentStep, setCurrentStep] = useState(1);
-const {userData} = useUserContextData()
- const [loading, setLoading] = useState(false);
-console.log(userData)
+  const { userData } = useUserContextData();
+  const [loading, setLoading] = useState(false);
+
   const [data, setData] = useState<OnboardingData>({
-    profile: {
-      //   firstName: "",
-      //   lastName: "",
-      //   email: "",
-      //   phone:"",
-      dateOfBirth: "",
-    },
+    profile: { dateOfBirth: "" },
     business: {
       businessName: "",
       role: "",
@@ -66,110 +62,110 @@ console.log(userData)
       taxId: "",
       registrationNumber: "",
     },
+    accountDetails: {
+      bankName: "",
+      bankCode: "",
+      accountNumber: "",
+      accountName: "",
+    },
     kyc: {
       documentNumber: "",
       transactionPin: "",
     },
   });
 
+
+  console.log(data.accountDetails)
   const handleVerify = async (bvn: string) => {
-  setLoading(true);
-  try {
-    // Step 1️⃣ Verify BVN
-    const verifyRes = await fetch("/api/verify-bvn", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        authId: userData?.id,
-        bvn,
-        
-      }),
-    });
-
-    const verifyData = await verifyRes.json();
-
-    if (!verifyRes.ok) {
-      Swal.fire({
-        icon: "error",
-        title: "Verification Failed",
-        text: verifyData.error || "Invalid BVN, please try again.",
-        confirmButtonColor: "#C29307",
+    setLoading(true);
+    try {
+      // 1️⃣ Verify BVN
+      const verifyRes = await fetch("/api/verify-bvn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authId: userData?.id, bvn }),
       });
-      return;
-    }
 
-    // Step 2️⃣ Save user to DB
-    const newData = {
-      bvn,
-      userId: userData?.id,
-      dateOfBirth: data.profile.dateOfBirth,
-      transactionPin: data.kyc.transactionPin,
-      businessName: data.business.businessName,
-      role: data.business.role,
-      businessAddress: data.business.businessAddress,
-      businessCategory: data.business.businessCategory,
-      businessDescription: data.business.businessDescription,
-      taxId: data.business.taxId,
-      registrationNumber: data.business.registrationNumber,
-    };
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        Swal.fire({
+          icon: "error",
+          title: "Verification Failed",
+          text: verifyData.error || "Invalid BVN, please try again.",
+          confirmButtonColor: "#C29307",
+        });
+        return;
+      }
 
-    const saveRes = await fetch("/api/save-user-db", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newData),
-    });
-
-    const saveData = await saveRes.json();
-
-    if (!saveRes.ok) {
-      throw new Error(saveData.error || "Failed to save user data");
-    }
-
-    // Step  Store latest user in localStorage
-    const user = saveData.user || saveData;
-    if (user?.id && typeof window !== "undefined") {
-      const userInfo = {
-        id: user.id,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        dob: user.date_of_birth,
-        walletBalance: user.wallet_balance,
-        zidcoinBalance: user.zidcoin_balance,
-        bvnVerification: user.bvn_verification,
-        referralCode: user.referral_code,
+      // 2️⃣ Save user data
+      const payload = {
+        bvn,
+        userId: userData?.id,
+        dateOfBirth: data.profile.dateOfBirth,
+        transactionPin: data.kyc.transactionPin,
+        businessName: data.business.businessName,
+        role: data.business.role,
+        businessAddress: data.business.businessAddress,
+        businessCategory: data.business.businessCategory,
+        businessDescription: data.business.businessDescription,
+        taxId: data.business.taxId,
+        registrationNumber: data.business.registrationNumber,
+        bankName: data.accountDetails.bankName,
+        bankCode: data.accountDetails.bankCode,
+        bankAccountNumber: data.accountDetails.accountNumber,
+        bankAccountName: data.accountDetails.accountName,
       };
 
-      localStorage.setItem("userData", JSON.stringify(userInfo));
+      const saveRes = await fetch("/api/save-user-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      // Set verified cookie
-      document.cookie = `verified=true; path=/; max-age=${60 * 60 * 24 * 7};`;
+      const saveData = await saveRes.json();
+      if (!saveRes.ok)
+        throw new Error(saveData.error || "Failed to save user data");
+
+      // ✅ Store user locally
+      const user = saveData.user || saveData;
+      if (user?.id && typeof window !== "undefined") {
+        const userInfo = {
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+          phone: user.phone,
+          dob: user.date_of_birth,
+          walletBalance: user.wallet_balance,
+          zidcoinBalance: user.zidcoin_balance,
+          bvnVerification: user.bvn_verification,
+          referralCode: user.referral_code,
+        };
+
+        localStorage.setItem("userData", JSON.stringify(userInfo));
+        document.cookie = `verified=true; path=/; max-age=${60 * 60 * 24 * 7};`;
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Onboarding Complete 🎉",
+        text: "Your information has been successfully verified.",
+        confirmButtonColor: "#C29307",
+      }).then(() => {
+        window.location.href = "/dashboard";
+      });
+    } catch (error) {
+      console.error("❌ Verification flow error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Network Error",
+        text: "Something went wrong. Please try again.",
+        confirmButtonColor: "#C29307",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-
-    Swal.fire({
-      icon: "success",
-      title: "Onboarding Complete 🎉",
-      text: "Your Information has been successfully verified.",
-      confirmButtonColor: "#C29307",
-    }).then(() => {
-   
-      window.location.href = "/dashboard";
-    });
-  } catch (error: unknown) {
-    setLoading(false);
-    console.error("❌ Verification flow error:", error);
-    Swal.fire({
-      icon: "error",
-      title: "Network Error",
-      text: "Something went wrong. Please try again.",
-      confirmButtonColor: "#C29307",
-    });
-  }
-};
-
+  };
 
   const updateData = (section: keyof OnboardingData, newData: any) => {
     setData((prev) => ({
@@ -178,9 +174,11 @@ console.log(userData)
     }));
   };
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 3));
+  const nextStep = () =>
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
-  const skipStep = () => currentStep === 2 && setCurrentStep(3);
+  const skipStep = () =>
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
 
   const renderStep = () => {
     switch (currentStep) {
@@ -203,6 +201,17 @@ console.log(userData)
           />
         );
       case 3:
+        return (
+          <AccountDetailsStep
+            data={data.accountDetails}
+            onUpdate={(newData) => updateData("accountDetails", newData)}
+            onNext={nextStep}
+            onPrev={prevStep}
+            onSkip={skipStep}
+            userData={userData}
+          />
+        );
+      case 4:
         return (
           <KYCStep
             data={data.kyc}
@@ -238,10 +247,8 @@ console.log(userData)
             </p>
           </div>
 
-          {/* Main Content */}
           <div className="flex flex-col md:flex-row gap-6">
             {/* Sidebar Steps */}
-          
             <Card className="p-6 w-full md:w-1/3 shadow-elegant">
               <div className="flex flex-col relative">
                 {steps.map((step, idx) => (
@@ -249,22 +256,17 @@ console.log(userData)
                     key={step.id}
                     className="flex items-start space-x-3 relative"
                   >
-                    {/* Step Circle + Connector */}
                     <div className="flex flex-col items-center">
-                      {/* Circle */}
                       <motion.div
                         initial={false}
                         animate={{
                           backgroundColor:
                             currentStep > step.id
-                              ? "#22c55e" // green-500
+                              ? "#22c55e"
                               : currentStep === step.id
                               ? "#C29307"
-                              : "#d1d5db", // gray-300
-                          color:
-                            currentStep > step.id || currentStep === step.id
-                              ? "#fff"
-                              : "#374151", // gray-600
+                              : "#d1d5db",
+                          color: currentStep >= step.id ? "#fff" : "#374151",
                           scale: currentStep === step.id ? 1.1 : 1,
                         }}
                         transition={{ duration: 0.3 }}
@@ -277,12 +279,11 @@ console.log(userData)
                         )}
                       </motion.div>
 
-                      {/* Connector Line */}
                       {idx < steps.length - 1 && (
                         <motion.div
                           initial={{ height: 0, backgroundColor: "#d1d5db" }}
                           animate={{
-                            height: currentStep > step.id ? 64 : 64, // h-16 → 64px
+                            height: 64,
                             backgroundColor:
                               currentStep > step.id ? "#22c55e" : "#d1d5db",
                           }}
@@ -292,7 +293,6 @@ console.log(userData)
                       )}
                     </div>
 
-                    {/* Step Text */}
                     <div className="ml-2">
                       <p className="font-medium">{step.title}</p>
                       <p className="text-xs text-gray-500">
@@ -303,11 +303,11 @@ console.log(userData)
                 ))}
               </div>
 
-              {/* Progress bar for mobile only */}
               <div className="mt-6 block md:hidden">
                 <Progress value={progress} className="h-2" />
               </div>
             </Card>
+
             {/* Step Content */}
             <Card className="flex-1 p-4 md:p-8 shadow-elegant">
               {renderStep()}
@@ -322,6 +322,4 @@ console.log(userData)
       </motion.div>
     </AnimatePresence>
   );
-};
-
-
+}

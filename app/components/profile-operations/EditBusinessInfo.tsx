@@ -16,7 +16,6 @@ import {
 import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2";
 import supabase from "@/app/supabase/supabase";
-import { banks } from "@/lib/banks";
 import Loader from "../Loader";
 
 interface BusinessForm {
@@ -77,8 +76,21 @@ const EditBusinessInfo: React.FC = () => {
     accountNumber: "",
     accountName: "",
   });
-
+  const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchBanks = async () => {
+      try {
+        const res = await fetch("/api/banks");
+        const data = await res.json();
+        setBanks(data?.data || []);
+      } catch (err) {
+        console.error("Error fetching banks:", err);
+      }
+    };
+    fetchBanks();
+  }, []);
 
   // ✅ Fetch business info on mount
   useEffect(() => {

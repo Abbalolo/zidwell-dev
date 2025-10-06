@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         bvn_verification: "verified",
         verified: true,
       })
-      .eq("auth_id", authId)
+      .eq("id", authId)
       .select("id, first_name, last_name, email");
 
     // ❗ If update fails, revert back to pending
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
           bvn_verification: "pending",
           verified: false,
         })
-        .eq("auth_id", authId);
+        .eq("id", authId);
 
       return new Response(
         JSON.stringify({ message: "Failed to update BVN status" }),
@@ -60,8 +60,8 @@ export async function POST(req: Request) {
           bvn_verification: "pending",
           verified: false,
         })
-        .eq("auth_id", authId);
-
+        .eq("id", authId);
+console.log("No matching pending user found for authId:", authId);
       return new Response(
         JSON.stringify({ message: "No matching pending user found" }),
         { status: 404 }
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
             bvn_verification: "pending",
             verified: false,
           })
-          .eq("auth_id", authId);
+          .eq("id", authId);
       }
     } catch (rollbackErr) {
       console.error("⚠️ Failed to rollback BVN status:", rollbackErr);

@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+  
+
     const body = await req.json();
     const {
       bvn,
@@ -32,6 +34,11 @@ export async function POST(req: NextRequest) {
       businessDescription,
       taxId,
       registrationNumber,
+      bankName,
+      bankCode,
+      bankAccountNumber,
+      bankAccountName,
+
     } = body;
 
     // ✅ 1. Validate required fields early
@@ -54,7 +61,7 @@ export async function POST(req: NextRequest) {
     const { data: pendingUser, error: pendingError } = await supabase
       .from("pending_users")
       .select("*")
-      .eq("auth_id", userId)
+      .eq("id", userId)
       .eq("bvn_verification", "verified")
       .single();
 
@@ -117,6 +124,10 @@ export async function POST(req: NextRequest) {
         business_description: businessDescription || "",
         tax_id: taxId || "",
         registration_number: registrationNumber || "",
+        bank_name: bankName || "",
+        bank_code: bankCode || "",
+        bank_account_number: bankAccountNumber || "",
+        bank_account_name: bankAccountName || "",
         created_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
@@ -197,7 +208,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ 9. Delete pending record
-    await supabase.from("pending_users").delete().eq("auth_id", auth_id);
+    await supabase.from("pending_users").delete().eq("id", userId);
+
 
     // ✅ 10. Send welcome email (non-blocking)
     (async () => {
