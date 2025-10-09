@@ -24,7 +24,7 @@ function RegisterForm() {
     if (ref) setReferralCode(ref);
   }, [searchParams]);
 
-  console.log(referralCode);
+  // console.log(referralCode);
 
   const router = useRouter();
   const [formData, setFormData] = useState({

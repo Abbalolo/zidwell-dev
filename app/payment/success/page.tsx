@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { useUserContextData } from "../../context/userData";
 
-export default function PaymentSuccessPage() {
+ function PaymentSuccessContent() {
   const params = useSearchParams();
   const reference = params.get("orderReference");
   const userId = params.get("userId");
@@ -84,5 +84,14 @@ useEffect(() => {
         <h2 className="text-xl font-semibold animate-pulse">🔄 Verifying your payment...</h2>
       )}
     </div>
+  );
+}
+
+
+export default function PaymentCallback() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }
