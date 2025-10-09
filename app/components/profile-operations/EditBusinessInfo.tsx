@@ -155,7 +155,7 @@ const EditBusinessInfo: React.FC = () => {
   setLoading(true);
 
   try {
-    const response = await fetch("/api/update-business-info", {
+    const response = await fetch("/api/profile/update-business-info", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

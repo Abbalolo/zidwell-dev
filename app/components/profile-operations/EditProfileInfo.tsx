@@ -16,7 +16,7 @@ function EditProfileInfo() {
     lastName: userData?.lastName || "",
     email: userData?.email || "",
     phone: userData?.phone || "",
-    dob: userData?.dob || "",
+    dob: userData?.dateOfBirth,
     address: userData?.address || "",
     city: userData?.city || "",
     state: userData?.state || "",
@@ -27,6 +27,8 @@ function EditProfileInfo() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<any>({});
+
+  console.log("profile", profile);
 
   const handleProfileChange = (field: keyof typeof profile, value: string) => {
     setProfile((prev: any) => ({ ...prev, [field]: value }));
@@ -50,7 +52,7 @@ function EditProfileInfo() {
         lastName: userData.lastName,
         email: userData.email,
         phone: userData.phone,
-        dob: userData.dob,
+        dob: userData.dateOfBirth,
         address: userData.address,
         city: userData.city,
         state: userData.state,
@@ -82,7 +84,7 @@ function EditProfileInfo() {
     }
 
     try {
-      const response = await fetch("/api/update-profile", {
+      const response = await fetch("/api/profile/update-profile-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,7 +111,7 @@ function EditProfileInfo() {
         firstName: profile.firstName,
         lastName: profile.lastName,
         phone: profile.phone,
-        dob: profile.dob,
+        dateOfBirth: profile.dob,
         address: profile.address,
         city: profile.city,
         state: profile.state,
@@ -196,6 +198,7 @@ function EditProfileInfo() {
             <Input
               disabled={!isEditing}
               value={profile.address}
+              placeholder="10, Lagos street"
               onChange={(e) => handleProfileChange("address", e.target.value)}
             />
           </div>
