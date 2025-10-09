@@ -77,7 +77,7 @@ export default function Withdraw() {
     const fetchDetails = async () => {
       setLoading2(true);
       try {
-        const [accountRes,banksRes, ] = await Promise.all([
+        const [accountRes,banksRes ] = await Promise.all([
           fetch("/api/get-business-account-details", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -94,7 +94,7 @@ export default function Withdraw() {
         const accountData = accountRes.ok ? await accountRes.json() : {};
         // const walletData = walletRes.ok ? await walletRes.json() : {};
         const banksData = banksRes.ok ? await banksRes.json() : {};
-
+console.log("accountData",accountData);
         setUserDetails(accountData || {});
         // setWalletDetails(walletData || {});
         setBanks(banksData?.data || []);
