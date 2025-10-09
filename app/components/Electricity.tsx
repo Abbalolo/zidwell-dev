@@ -336,7 +336,7 @@ export default function ElectricityBills() {
   // 0209227217814
 
   return (
-    <div className="space-y-6 md:max-w-5xl md:mx-auto">
+    <div className="space-y-6 md:max-w-5xl md:mx-auto pointer-events-none opacity-50">
       {/* Header */}
       <PinPopOver
         setIsOpen={setIsOpen}
