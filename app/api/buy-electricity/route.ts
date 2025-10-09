@@ -155,6 +155,8 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", transaction.id);
 
+        console.log("Electricity purchase successful:", apiResponse.data);
+
       return NextResponse.json({
         success: true,
         token: apiResponse.data,

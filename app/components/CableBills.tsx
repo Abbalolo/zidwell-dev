@@ -39,6 +39,8 @@ export default function CableBills() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isVerified, setIsVerified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loading2, setLoading2] = useState(false);
+  const [loading3, setLoading3] = useState(false);
   const router = useRouter();
   const { setUserData, userData } = useUserContextData();
 
@@ -113,7 +115,6 @@ export default function CableBills() {
   };
 
   const handlePayment = async () => {
-    const newErrors: { [key: string]: string } = {};
     // Step 1: Validate form
     if (!validateForm()) return;
 
@@ -154,7 +155,7 @@ export default function CableBills() {
 
     // Step 6: Make the request
     try {
-      setLoading(true);
+      setLoading3(true);
 
       const response = await fetch("/api/buy-cable-tv", {
         method: "POST",
@@ -196,7 +197,7 @@ export default function CableBills() {
         confirmButtonColor: "#dc2626",
       });
     } finally {
-      setLoading(false);
+      setLoading3(false);
     }
   };
 
@@ -243,7 +244,7 @@ export default function CableBills() {
       setUserInfo(data);
       setIsVerified(true);
 
-      console.log("✅ decoder validation response:", data);
+      // console.log("✅ decoder validation response:", data);
     } catch (error: any) {
       console.error("❌ decoder validation failed:", error.message);
       setIsVerified(false);
@@ -260,7 +261,7 @@ export default function CableBills() {
     if (!selectedProvider?.id) return;
 
     try {
-      setLoading(true);
+      setLoading2(true);
       const response = await fetch(
         `/api/cable-tv-bouquet?service=${selectedProvider?.id}`
       );
@@ -268,11 +269,11 @@ export default function CableBills() {
       if (!response.ok)
         throw new Error(data.error || "Failed to fetch bundles");
       setBundles(data.data);
-      console.log("data", data);
+      // console.log("data", data);
     } catch (error: any) {
       console.error("Fetch error:", error.message);
     } finally {
-      setLoading(false);
+      setLoading2(false);
     }
   };
 
@@ -304,7 +305,7 @@ export default function CableBills() {
 
   // 8057900967
 
-  console.log("Selected :", selectedPlan);
+  // console.log("Selected :", selectedPlan);
 
   return (
     <div className="space-y-6  md:max-w-5xl md:mx-auto">
@@ -411,7 +412,8 @@ export default function CableBills() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="decorderNumber">Decoder Number</Label>
-                  <Input
+                  <div className="flex items-center gap-3">
+                     <Input
                     id="decorderNumber"
                     type="text"
                     placeholder="Enter decorder number"
@@ -422,6 +424,24 @@ export default function CableBills() {
                     }
                     maxLength={13}
                   />
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                    ) : isVerified ? (
+                      <div className="text-green-600" title="Verified">
+                        <Check className="w-6 h-6" />
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={validatedecorderNumber}
+                        disabled={!decorderNumber}
+                      >
+                        Verify
+                      </Button>
+                    )}
+                  </div>
+                 
                   {errors.decorderNumber && (
                     <div className="flex items-center gap-2 mt-1 text-destructive">
                       <AlertCircle className="w-4 h-4" />
@@ -441,6 +461,7 @@ export default function CableBills() {
                 plans={bundles}
                 selectedPlan={selectedPlan}
                 onSelect={(plan) => setSelectedPlan(plan)}
+                loading={loading2}
               />
               {errors.plan && (
                 <p className="text-sm text-red-500">{errors.plan}</p>
@@ -481,7 +502,7 @@ export default function CableBills() {
             service={userInfo?.service || ""}
             selectedProvider={selectedProvider}
             selectedPlan={selectedPlan}
-            loading={loading}
+            loading={loading3}
             validateForm={validateForm}
             setIsOpen={setIsOpen}
             errors={errors}

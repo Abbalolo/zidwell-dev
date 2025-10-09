@@ -11,7 +11,6 @@ export async function POST(req: Request) {
   try {
     const { userId, receiverAccountId, amount, narration } = await req.json();
 
-
     // 2. Fetch sender balance
     const { data: sender, error: senderError } = await supabase
       .from("users")
@@ -55,6 +54,7 @@ export async function POST(req: Request) {
         amount,
         status: "pending",
         description: `P2P transfer to ${receiver?.first_name} ${receiver?.last_name}`,
+        narration: narration || "p2p Transfer",
         merchant_tx_ref: merchantTxRef,
       })
       .select("id")
@@ -135,8 +135,6 @@ export async function POST(req: Request) {
       })
       .eq("id", pendingTx.id);
 
-   
-
     // ✅ 9. Add transaction history for receiver
     await supabase.from("transactions").insert({
       user_id: receiverAccountId,
@@ -144,6 +142,7 @@ export async function POST(req: Request) {
       amount,
       status: "success",
       description: `Received ₦${amount} from ${sender?.first_name} ${sender?.last_name}`,
+      narration: narration || "p2p Transfer",
       merchant_tx_ref: merchantTxRef,
     });
 

@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   );
 
   try {
-    const { userId, amount, accountNumber, accountName, bankCode } =
+    const { userId, amount, accountNumber, accountName, bankCode, narration } =
       await req.json();
 
     const feeRate = 0.0075;
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
         amount,
         status: "pending",
         description: `Withdrawal to ${accountName} (${accountNumber})`,
+        narration: narration || "Withdrawal",
         merchant_tx_ref: merchantTxRef,
       })
       .select("id")
@@ -110,9 +111,10 @@ export async function POST(req: Request) {
       await supabase.from("transactions").insert({
         user_id: userId,
         type: "fee",
-        amount: fee,
+        amount: fee, 
         status: "success",
         description: `Withdrawal fee (0.75%) for ₦${amount}`,
+        narration: narration || "Withdrawal",
         merchant_tx_ref: `FEE_${merchantTxRef}`,
       });
     }

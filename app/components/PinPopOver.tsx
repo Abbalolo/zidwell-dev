@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { set } from "react-hook-form";
 import { Button } from "./ui/button";
 
 interface PinPopOverProps {
@@ -104,10 +103,10 @@ export default function PinPopOver({
 
               <header className="mb-8">
                 <h1 className="text-2xl font-bold mb-1">
-                  Mobile Phone Verification
+                  Transaction Pin Verification
                 </h1>
                 <p className="text-[15px] text-slate-500">
-                  Enter the 4-digit verification code sent to your phone number.
+                  Input your 4-digit pin to complete transaction.
                 </p>
               </header>
 
@@ -141,15 +140,7 @@ export default function PinPopOver({
                 </div>
               </form>
 
-              <div className="text-sm text-slate-500 mt-4">
-                Didn't receive code?{" "}
-                <a
-                  className="font-medium text-indigo-500 hover:text-indigo-600"
-                  href="#"
-                >
-                  Resend
-                </a>
-              </div>
+             
             </div>
           </motion.div>
         </>

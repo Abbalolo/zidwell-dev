@@ -4,17 +4,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { CheckCircle2 } from "lucide-react";
 
 interface BouquePlanSelectorProps {
-  plans: any;
+  plans: any[];
   selectedPlan: any | null;
   onSelect: (plan: any) => void;
+  loading?: boolean;
 }
 
 export default function BouquePlanSelector({
   plans,
   selectedPlan,
   onSelect,
+  loading = false,
 }: BouquePlanSelectorProps) {
-
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card
+            key={i}
+            className="border-gray-200 animate-pulse rounded-xl"
+          >
+            <CardHeader>
+              <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   if (!plans?.length) {
     return (
@@ -26,10 +46,10 @@ export default function BouquePlanSelector({
 
   return (
     <div>
-      {/* Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
         {plans.map((plan: any, idx: number) => {
-          const isSelected = selectedPlan?.subScriptionType === plan.subScriptionType;
+          const isSelected =
+            selectedPlan?.subScriptionType === plan.subScriptionType;
           const planPrice = parseFloat(plan.amount);
 
           return (

@@ -55,6 +55,8 @@ export default function ElectricityBills() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isVerified, setIsVerified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loading2, setLoading2] = useState(false);
+  const [loading3, setLoading3] = useState(false);
   const { userData, setUserData } = useUserContextData();
   const router = useRouter();
   const meterTypes = ["Prepaid", "Postpaid"];
@@ -179,7 +181,7 @@ export default function ElectricityBills() {
 
     // Step 6: Make the request
     try {
-      setLoading(true);
+      setLoading3(true);
 
       const response = await fetch("/api/buy-electricity", {
         method: "POST",
@@ -222,7 +224,7 @@ export default function ElectricityBills() {
         confirmButtonColor: "#dc2626",
       });
     } finally {
-      setLoading(false);
+      setLoading3(false);
     }
   };
 
@@ -254,7 +256,7 @@ export default function ElectricityBills() {
         logo: prefixLogos[provider.id] || null,
       }));
 
-      console.log("Enriched providers:", enrichedProviders);
+      // console.log("Enriched providers:", enrichedProviders);
       setPowerProviders(enrichedProviders);
     } catch (error: any) {
       console.error("Fetch error:", error.message);
@@ -264,6 +266,7 @@ export default function ElectricityBills() {
   };
 
   const validateMeterNumber = async () => {
+    
     const newErrors: { [key: string]: string } = {};
 
     if (!selectedProvider?.id) {
@@ -296,14 +299,13 @@ export default function ElectricityBills() {
     });
 
     try {
-      setLoading(true);
+      setLoading2(true);
 
       const response = await fetch(`/api/validate-electricity?${params}`, {
         method: "GET",
       });
       const data = await response.json();
 
-      console.log("Meter validation response:", data);
 
       if (!response.ok) throw new Error(data?.error || "Validation failed");
 
@@ -322,7 +324,7 @@ export default function ElectricityBills() {
       });
       console.error("❌ Validation failed:", err.message);
     } finally {
-      setLoading(false);
+      setLoading2(false);
     }
   };
 
@@ -330,7 +332,6 @@ export default function ElectricityBills() {
     getPowerProviders();
   }, []);
 
-  console.log("Selected Provider:", selectedProvider);
 
   // 0209227217814
 
@@ -373,7 +374,6 @@ export default function ElectricityBills() {
         {/* Main Payment Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Provider Selection */}
-
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -381,50 +381,63 @@ export default function ElectricityBills() {
                 Select Network Provider
               </CardTitle>
             </CardHeader>
+
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {powerProviders?.map((provider: any) => {
-                  const isSelected = selectedProvider?.name === provider.name;
-
-                  return (
+              {loading ? (
+                // 🔄 Loading skeleton (while fetching)
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
                     <div
-                      key={provider.id}
-                      onClick={() => setSelectedProvider(provider)}
-                      className={`relative p-4 border-2 rounded-md transition-all duration-200 cursor-pointer${
-                        isSelected
-                          ? "bg-gray-100 border-[#C29307] text-gray-900 shadow-md"
-                          : "bg-white border-gray-200 hover:border-gray-300"
-                      } `}
+                      key={i}
+                      className="p-4 border-2 rounded-md bg-gray-100 animate-pulse"
                     >
-                      <div className="text-center">
-                        <div className="w-16 h-16 mx-auto mb-3 relative">
-                          <Image
-                            src={provider.logo}
-                            alt={`${provider.name} logo`}
-                            fill
-                            className="rounded-lg object-contain"
-                          />
-                        </div>
-
-                        <h3 className="font-semibold text-gray-900 text-sm">
-                          {provider.name}
-                        </h3>
-                        {/* <p className="text-sm text-gray-500">
-                          {provider.status ? "VTU Available" : "Unavailable"}
-                        </p> */}
-                      </div>
-
-                      {isSelected && (
-                        <div className="absolute -top-2 -right-2">
-                          <div className="w-6 h-6 bg-[#C29307] rounded-full flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white" />
-                          </div>
-                        </div>
-                      )}
+                      <div className="w-16 h-16 bg-gray-300 rounded mx-auto mb-3"></div>
+                      <div className="h-4 bg-gray-300 rounded w-3/4 mx-auto"></div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : (
+               
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {powerProviders?.map((provider: any) => {
+                    const isSelected = selectedProvider?.name === provider.name;
+
+                    return (
+                      <div
+                        key={provider.id}
+                        onClick={() => setSelectedProvider(provider)}
+                        className={`relative p-4 border-2 rounded-md transition-all duration-200 cursor-pointer ${
+                          isSelected
+                            ? "bg-gray-100 border-[#C29307] text-gray-900 shadow-md"
+                            : "bg-white border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="w-16 h-16 mx-auto mb-3 relative">
+                            <Image
+                              src={provider.logo}
+                              alt={`${provider.name} logo`}
+                              fill
+                              className="rounded-lg object-contain"
+                            />
+                          </div>
+                          <h3 className="font-semibold text-gray-900 text-sm">
+                            {provider.name}
+                          </h3>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute -top-2 -right-2">
+                            <div className="w-6 h-6 bg-[#C29307] rounded-full flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {errors.provider && (
                 <div className="flex items-center gap-2 mt-3 text-red-600">
                   <AlertCircle className="w-4 h-4" />
@@ -473,6 +486,7 @@ export default function ElectricityBills() {
 
                   <div>
                     <Label htmlFor="meterNumber">Meter Number</Label>
+                    <div className="flex items-center gap-3">
                     <Input
                       id="meterNumber"
                       type="text"
@@ -483,6 +497,23 @@ export default function ElectricityBills() {
                       onBlur={validateMeterNumber}
                       maxLength={13}
                     />
+                    {loading2 ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                    ) : isVerified ? (
+                      <div className="text-green-600" title="Verified">
+                        <Check className="w-6 h-6" />
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={validateMeterNumber}
+                        disabled={!meterNumber || !meterType}
+                      >
+                        Verify
+                      </Button>
+                    )}
+                    </div>
                     {errors.meterNumber && (
                       <div className="flex items-center gap-2 mt-1 text-destructive">
                         <AlertCircle className="w-4 h-4" />
@@ -590,7 +621,7 @@ export default function ElectricityBills() {
             selectedProvider={selectedProvider}
             selectedPlan={selectedPlan}
             amount={amount}
-            loading={loading}
+            loading={loading3}
             validateForm={validateForm}
             setIsOpen={setIsOpen}
             errors={errors}

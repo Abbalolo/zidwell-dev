@@ -336,7 +336,7 @@ export default function Withdraw() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="my-account">My Bank Account</SelectItem>
-                <SelectItem value="other-bank">Other Bank Account</SelectItem>
+                {/* <SelectItem value="other-bank">Other Bank Account</SelectItem> */}
                 <SelectItem value="p2p">Zidwell User (P2P)</SelectItem>
               </SelectContent>
             </Select>
