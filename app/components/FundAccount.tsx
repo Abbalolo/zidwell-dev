@@ -7,7 +7,6 @@ import { useUserContextData } from "../context/userData";
 import { CopyIcon, Landmark, Wallet, X } from "lucide-react";
 import TransactionHistory from "./transaction-history";
 import { Input } from "./ui/input";
-import FeeDisplay from "./FeeDisplay";
 
 export default function FundAccountMethods() {
   const [copyText, setCopyText] = useState(false);
@@ -160,7 +159,9 @@ useEffect(() => {
                 <span className=" font-semibold">
                   ₦{formatNumber(balance ?? 0)}
                 </span>
-                <FeeDisplay monthlyVolume={monthlyVolume} type="card" amount={Number(amount) || undefined} />
+                <p className="text-xs mb-4 text-center">
+                  Note: 1% transaction fee applies (capped at ₦50 to ₦150).
+                </p>
               </div>
             </CardTitle>
           </CardHeader>

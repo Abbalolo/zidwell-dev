@@ -39,6 +39,7 @@ export default function Withdraw() {
   const [narration, setNarration] = useState<string>("");
   const [recepientAcc, setRecepientAcc] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const [loading2, setLoading2] = useState<boolean>(false);
   const [lookupLoading, setLookupLoading] = useState<boolean>(false);
   const [userDetails, setUserDetails] = useState<any>(null);
   const [walletDetails, setWalletDetails] = useState<any>(null);
@@ -71,6 +72,7 @@ export default function Withdraw() {
     if (!userData?.id) return;
 
     const fetchDetails = async () => {
+      setLoading2(true);
       try {
         const [accountRes, walletRes, banksRes] = await Promise.all([
           fetch("/api/get-business-account-details", {
@@ -95,6 +97,11 @@ export default function Withdraw() {
         setBanks(banksData?.data || []);
       } catch (err) {
         console.error("Error fetching details:", err);
+        setUserDetails(null);
+        setWalletDetails(null);
+        setBanks([]);
+      } finally {
+        setLoading2(false);
       }
     };
 
@@ -382,36 +389,47 @@ export default function Withdraw() {
           </div>
 
           {/* My Bank Account */}
-          {withdrawType === "my-account" &&
-            (userDetails?.bank_account_number &&
-            userDetails?.bank_account_name ? (
-              <div className="bg-gray-50 p-3 rounded-lg border space-y-1 text-sm">
-                <p>
-                  <strong>Bank:</strong> {userDetails.bank_name}
-                </p>
-                <p>
-                  <strong>Account Number:</strong>{" "}
-                  {userDetails.bank_account_number}
-                </p>
-                <p>
-                  <strong>Account Name:</strong> {userDetails.bank_account_name}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-red-50 p-3 rounded-lg border text-sm text-red-600">
-                You have not set your bank account details yet.{" "}
-                <Link
-                  href="/dashboard/profile"
-                  className="text-blue-500 hover:underline"
-                >
-                  Click here
-                </Link>{" "}
-                to add them.
-                {errors.myAccount && (
-                  <p className="text-red-600 text-sm">{errors.myAccount}</p>
-                )}
-              </div>
-            ))}
+          {withdrawType === "my-account" && (
+            <>
+              {loading2 ? (
+                // ⏳ Loading State
+                <div className="bg-gray-50 p-3 rounded-lg border text-sm text-gray-600 animate-pulse">
+                  Loading your bank details...
+                </div>
+              ) : userDetails?.bank_account_number &&
+                userDetails?.bank_account_name ? (
+                // ✅ Bank details found
+                <div className="bg-gray-50 p-3 rounded-lg border space-y-1 text-sm">
+                  <p>
+                    <strong>Bank:</strong> {userDetails.bank_name}
+                  </p>
+                  <p>
+                    <strong>Account Number:</strong>{" "}
+                    {userDetails.bank_account_number}
+                  </p>
+                  <p>
+                    <strong>Account Name:</strong>{" "}
+                    {userDetails.bank_account_name}
+                  </p>
+                </div>
+              ) : (
+                // ❌ No bank details yet
+                <div className="bg-red-50 p-3 rounded-lg border text-sm text-red-600">
+                  You have not set your bank account details yet.{" "}
+                  <Link
+                    href="/dashboard/profile"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Click here
+                  </Link>{" "}
+                  to add them.
+                  {errors.myAccount && (
+                    <p className="text-red-600 text-sm">{errors.myAccount}</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           {/* Other Bank */}
           {withdrawType === "other-bank" && (
