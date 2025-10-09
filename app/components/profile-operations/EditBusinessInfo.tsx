@@ -150,73 +150,52 @@ const EditBusinessInfo: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!userData?.id) return;
+  if (!userData?.id) return;
 
-    setLoading(true);
-    try {
-      const { data: existing } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("user_id", userData.id)
-        .maybeSingle();
+  setLoading(true);
 
-      let error;
-      if (existing) {
-        ({ error } = await supabase
-          .from("businesses")
-          .update({
-            business_name: form.businessName,
-            business_category: form.businessType,
-            registration_number: form.rcNumber,
-            tax_id: form.taxId,
-            business_address: form.businessAddress,
-            business_description: form.businessDescription,
-            bank_name: form.bankName,
-            bank_code: form.bankCode,
-            bank_account_number: form.accountNumber,
-            bank_account_name: form.accountName,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", userData.id));
-      } else {
-        ({ error } = await supabase.from("businesses").insert([
-          {
-            user_id: userData.id,
-            business_name: form.businessName,
-            business_category: form.businessType,
-            registration_number: form.rcNumber,
-            tax_id: form.taxId,
-            business_address: form.businessAddress,
-            business_description: form.businessDescription,
-            bank_name: form.bankName,
-            bank_code: form.bankCode,
-            bank_account_number: form.accountNumber,
-            bank_account_name: form.accountName,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ]));
-      }
+  try {
+    const response = await fetch("/api/update-business-info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userData.id,
+        businessName: form.businessName,
+        businessType: form.businessType,
+        rcNumber: form.rcNumber,
+        taxId: form.taxId,
+        businessAddress: form.businessAddress,
+        businessDescription: form.businessDescription,
+        bankName: form.bankName,
+        bankCode: form.bankCode,
+        accountNumber: form.accountNumber,
+        accountName: form.accountName,
+      }),
+    });
 
-      if (error) {
-        console.error("Save Error:", error);
-        Swal.fire("Error", "Could not save business info.", "error");
-      } else {
-        Swal.fire({
-          icon: "success",
-          title: "Saved",
-          text: "Business info saved successfully",
-          timer: 2000,
-          showConfirmButton: false,
-        });
-      }
-    } catch (err: any) {
-      console.error(err);
-      Swal.fire("Error", "Something went wrong. Please try again.", "error");
-    } finally {
-      setLoading(false);
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error);
     }
-  };
+
+    Swal.fire({
+      icon: "success",
+      title: "Success",
+      text: "Business info updated successfully ✅",
+    });
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Could not save business info. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
   if (loading) {

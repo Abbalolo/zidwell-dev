@@ -6,19 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useUserContextData } from "@/app/context/userData";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Swal from "sweetalert2";
 
 function EditProfileInfo() {
-  const supabase = createClientComponentClient();
-  const { userData } = useUserContextData();
+  const { userData, setUserData } = useUserContextData();
 
   const initialProfile: any = {
     firstName: userData?.firstName || "",
     lastName: userData?.lastName || "",
     email: userData?.email || "",
     phone: userData?.phone || "",
-    dob: userData?.dateOfBirth || "",
+    dob: userData?.dob || "",
     address: userData?.address || "",
     city: userData?.city || "",
     state: userData?.state || "",
@@ -39,11 +37,7 @@ function EditProfileInfo() {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
     return age;
@@ -66,50 +60,50 @@ function EditProfileInfo() {
   }, [userData]);
 
   const handleSave = async () => {
-  const newErrors: Partial<any> = {};
-  setErrors({});
-  setLoading(true);
+    const newErrors: Partial<any> = {};
+    setErrors({});
+    setLoading(true);
 
-  if (!profile.dob) {
-    newErrors.dob = "Date of birth is required";
-  } else if (calculateAge(profile.dob) < 18) {
-    newErrors.dob = "You must be at least 18 years old";
-  }
+    if (!profile.dob) {
+      newErrors.dob = "Date of birth is required";
+    } else if (calculateAge(profile.dob) < 18) {
+      newErrors.dob = "You must be at least 18 years old";
+    }
 
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    setLoading(false);
-    Swal.fire({
-      icon: "error",
-      title: "Validation Error",
-      text: "Please fix the highlighted fields before saving.",
-    });
-    return;
-  }
-
-  try {
-    const { error } = await supabase
-      .from("users")
-      .update({
-        first_name: profile.firstName,
-        last_name: profile.lastName,
-        phone: profile.phone,
-        date_of_birth: profile.dob,
-        address: profile.address,
-        city: profile.city,
-        state: profile.state,
-      })
-      .eq("id", userData?.id);
-
-    if (error) {
-      console.error("Update error:", error.message);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLoading(false);
       Swal.fire({
         icon: "error",
-        title: "Update Failed",
-        text: "Failed to update profile. Try again.",
+        title: "Validation Error",
+        text: "Please fix the highlighted fields before saving.",
       });
-    } else {
-     
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/update-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          phone: profile.phone,
+          dob: profile.dob,
+          address: profile.address,
+          city: profile.city,
+          state: profile.state,
+          country: profile.country,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update profile");
+      }
+
+      // ✅ Update context and localStorage
       const updatedUserData = {
         ...userData,
         firstName: profile.firstName,
@@ -118,9 +112,11 @@ function EditProfileInfo() {
         dob: profile.dob,
         address: profile.address,
         city: profile.city,
-        state: profile.state
+        state: profile.state,
+        country: profile.country,
       };
 
+      setUserData(updatedUserData);
       localStorage.setItem("userData", JSON.stringify(updatedUserData));
 
       Swal.fire({
@@ -132,19 +128,17 @@ function EditProfileInfo() {
       });
 
       setIsEditing(false);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Unexpected Error",
+        text: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    Swal.fire({
-      icon: "error",
-      title: "Unexpected Error",
-      text: "Something went wrong. Please try again.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <Card>
@@ -157,55 +151,39 @@ function EditProfileInfo() {
           {isEditing ? "Cancel" : "Edit"}
         </Button>
       </CardHeader>
+
       <CardContent className="space-y-4">
         {/* First + Last Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="firstName">First Name</Label>
-            <Input
-              id="firstName"
-              value={profile.firstName}
-              onChange={(e) => handleProfileChange("firstName", e.target.value)}
-              disabled
-            />
+            <Input disabled id="firstName" value={profile.firstName} />
           </div>
           <div>
             <Label htmlFor="lastName">Last Name</Label>
-            <Input
-              id="lastName"
-              value={profile.lastName}
-              onChange={(e) => handleProfileChange("lastName", e.target.value)}
-              disabled
-            />
+            <Input disabled id="lastName" value={profile.lastName} />
           </div>
         </div>
 
         {/* Email + Phone */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                id="email"
-                type="email"
-                value={profile.email}
-                onChange={(e) => handleProfileChange("email", e.target.value)}
-                disabled
-                className="pl-10"
-              />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <Input disabled id="email" className="pl-10" value={profile.email} />
             </div>
           </div>
           <div>
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Phone</Label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <Input
                 id="phone"
-                value={profile.phone}
-                onChange={(e) => handleProfileChange("phone", e.target.value)}
-                disabled={!isEditing}
                 className="pl-10"
+                value={profile.phone}
+                disabled={!isEditing}
+                onChange={(e) => handleProfileChange("phone", e.target.value)}
               />
             </div>
           </div>
@@ -214,76 +192,45 @@ function EditProfileInfo() {
         {/* Address + DOB */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="address">Address</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                id="address"
-                value={profile.address}
-                onChange={(e) => handleProfileChange("address", e.target.value)}
-                placeholder="Enter your address"
-                className="pl-10"
-                disabled={!isEditing}
-              />
-            </div>
+            <Label>Address</Label>
+            <Input
+              disabled={!isEditing}
+              value={profile.address}
+              onChange={(e) => handleProfileChange("address", e.target.value)}
+            />
           </div>
           <div>
-            <Label htmlFor="dob">Date of Birth</Label>
-            <div className="relative">
-              <Baby className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                id="dob"
-                type="date"
-                value={profile.dob}
-                onChange={(e) => handleProfileChange("dob", e.target.value)}
-                className="pl-10"
-                disabled={!isEditing}
-              />
-            </div>
-            {errors.dob && (
-              <p className="text-sm text-red-500">{errors.dob}</p>
-            )}
+            <Label>Date of Birth</Label>
+            <Input
+              type="date"
+              disabled={!isEditing}
+              value={profile.dob}
+              onChange={(e) => handleProfileChange("dob", e.target.value)}
+            />
+            {errors.dob && <p className="text-sm text-red-500">{errors.dob}</p>}
           </div>
         </div>
 
         {/* City + State */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="city">City</Label>
-            <Input
-              id="city"
-              value={profile.city}
-              onChange={(e) => handleProfileChange("city", e.target.value)}
-              placeholder="Enter your city"
-              disabled={!isEditing}
-            />
-          </div>
-          <div>
-            <Label htmlFor="state">State</Label>
-            <Input
-              id="state"
-              value={profile.state}
-              onChange={(e) => handleProfileChange("state", e.target.value)}
-              placeholder="Enter your state"
-              disabled={!isEditing}
-            />
-          </div>
+          <Input
+            disabled={!isEditing}
+            value={profile.city}
+            onChange={(e) => handleProfileChange("city", e.target.value)}
+            placeholder="City"
+          />
+          <Input
+            disabled={!isEditing}
+            value={profile.state}
+            onChange={(e) => handleProfileChange("state", e.target.value)}
+            placeholder="State"
+          />
         </div>
 
-        {/* Save Buttons */}
         {isEditing && (
-          <div className="flex gap-3">
-            <Button
-              disabled={loading}
-              className="bg-[#C29307] hover:opacity-100 transition-smooth"
-              onClick={handleSave}
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-          </div>
+          <Button disabled={loading} onClick={handleSave}>
+            {loading ? "Saving..." : "Save Changes"}
+          </Button>
         )}
       </CardContent>
     </Card>
