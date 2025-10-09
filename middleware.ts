@@ -102,25 +102,60 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
-  const accessToken = req.cookies.get("sb-access-token")?.value;
+  let accessToken = req.cookies.get("sb-access-token")?.value;
+  const refreshToken = req.cookies.get("sb-refresh-token")?.value;
   const verified = req.cookies.get("verified")?.value;
 
-  // 🔐 Require session for dashboard
+  // 🔐 Protect dashboard and admin routes
   if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/admin")) {
-    if (!accessToken) {
-      const res = NextResponse.redirect(new URL("/auth/login", req.url));
-      res.cookies.delete("sb-access-token");
-      res.cookies.delete("sb-refresh-token");
-      res.cookies.delete("verified");
+    // ⛔ Redirect if not logged in
+    if (!accessToken && !refreshToken) {
+      return redirectToLogin(req);
+    }
+
+    // ✅ Create Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // ♻️ Refresh expired access token automatically
+    if (!accessToken && refreshToken) {
+      const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+
+      if (error || !data.session) {
+        return redirectToLogin(req);
+      }
+
+      // ✅ Store new tokens in cookies
+      accessToken = data.session.access_token;
+      const res = NextResponse.next();
+
+      res.cookies.set("sb-access-token", data.session.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 60 * 60,
+        path: "/",
+      });
+
+      res.cookies.set("sb-refresh-token", data.session.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
+      });
+
       return res;
     }
 
-    // ⛔️ Require verification before dashboard
+    // ✅ Check verification before dashboard access
     if (verified === "false") {
       return NextResponse.redirect(new URL("/onboarding", req.url));
     }
 
-    // 🔑 Admin protection
+    // 🔐 Admin protection
     if (req.nextUrl.pathname.startsWith("/admin")) {
       const supabaseAdmin = createClient(
         process.env.SUPABASE_URL!,
@@ -128,7 +163,7 @@ export async function middleware(req: NextRequest) {
       );
 
       const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
-      if (!user) return NextResponse.redirect(new URL("/auth/login", req.url));
+      if (!user) return redirectToLogin(req);
 
       const { data: profile } = await supabaseAdmin
         .from("users")
@@ -143,6 +178,14 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
+}
+
+function redirectToLogin(req: NextRequest) {
+  const res = NextResponse.redirect(new URL("/auth/login", req.url));
+  res.cookies.delete("sb-access-token");
+  res.cookies.delete("sb-refresh-token");
+  res.cookies.delete("verified");
+  return res;
 }
 
 export const config = {

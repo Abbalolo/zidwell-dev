@@ -106,6 +106,7 @@
 //     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 //   }
 // }
+
 import { NextResponse } from "next/server";
 import supabase from "@/app/supabase/supabase";
 import { cookies } from "next/headers";
@@ -127,6 +128,7 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
+
 
     const { access_token, refresh_token, expires_in } = authData.session;
     const userId = authData.user.id;
