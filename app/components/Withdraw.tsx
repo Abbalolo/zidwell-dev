@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useUserContextData } from "../context/userData";
 import Link from "next/link";
 import Swal from "sweetalert2";
+import FeeDisplay from "./FeeDisplay";
 
 interface Bank {
   name: string;
@@ -46,6 +47,24 @@ export default function Withdraw() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const { userData } = useUserContextData();
+
+  const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchVolumes = async () => {
+      if (!userData?.id) return;
+      try {
+        const res = await fetch(
+          `/api/get-monthly-volumes?userId=${userData.id}`
+        );
+        const data = await res.json();
+        setMonthlyVolume(data.monthlyVolume || 0);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchVolumes();
+  }, [userData?.id]);
 
   // Fetch user and wallet details
   useEffect(() => {
@@ -147,7 +166,6 @@ export default function Withdraw() {
         });
 
         const data = res.ok ? await res.json() : null;
-        
 
         if (data?.receiverName || data?.full_name) {
           setP2pDetails({
@@ -178,128 +196,128 @@ export default function Withdraw() {
 
   // Withdraw submission
   const handleWithdraw = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  const newErrors: { [key: string]: string } = {};
+    const newErrors: { [key: string]: string } = {};
 
-  // ✅ Validation checks
-  if (!amount || Number(amount) <= 0) newErrors.amount = "Enter a valid amount.";
-  if (!narration) newErrors.narration = "Narration is required.";
-  if (narration.length > 100) newErrors.narration = "Narration too long.";
+    // ✅ Validation checks
+    if (!amount || Number(amount) <= 0)
+      newErrors.amount = "Enter a valid amount.";
+    if (!narration) newErrors.narration = "Narration is required.";
+    if (narration.length > 100) newErrors.narration = "Narration too long.";
 
-  if (
-    withdrawType === "my-account" &&
-    (!userDetails?.bank_account_number || !userDetails?.bank_account_name)
-  ) {
-    newErrors.myAccount = "Your bank details are incomplete.";
-  }
-
-  if (withdrawType === "other-bank") {
-    if (!bankCode || !accountNumber || !accountName) {
-      newErrors.otherBank = "Please complete all bank fields.";
-    }
     if (
-      accountNumber &&
-      (accountNumber.length !== 10 || !/^\d+$/.test(accountNumber))
+      withdrawType === "my-account" &&
+      (!userDetails?.bank_account_number || !userDetails?.bank_account_name)
     ) {
-      newErrors.accountNumber = "Account number must be 10 digits.";
-    }
-  }
-
-  if (withdrawType === "p2p" && (!recepientAcc || !p2pDetails?.id)) {
-    newErrors.recepientAcc = "Recipient not found or invalid.";
-  }
-
-  // ✅ If validation fails - show all errors in SweetAlert
-  if (Object.keys(newErrors).length > 0) {
-    const errorMessages = Object.values(newErrors).join("<br>");
-    Swal.fire({
-      icon: "error",
-      title: "Validation Failed",
-      html: errorMessages,
-    });
-    setErrors(newErrors);
-    setLoading(false);
-    return;
-  }
-
-  try {
-    // ✅ Prepare payload
-    const payload: any = {
-      userId: userData?.id,
-      amount: Number(amount),
-      narration,
-      type: withdrawType,
-    };
-
-    if (withdrawType === "my-account") {
-      payload.bankCode = userDetails.bank_code;
-      payload.accountNumber = userDetails.bank_account_number;
-      payload.accountName = userDetails.bank_account_name;
+      newErrors.myAccount = "Your bank details are incomplete.";
     }
 
     if (withdrawType === "other-bank") {
-      payload.bankCode = bankCode;
-      payload.accountNumber = accountNumber;
-      payload.accountName = accountName;
+      if (!bankCode || !accountNumber || !accountName) {
+        newErrors.otherBank = "Please complete all bank fields.";
+      }
+      if (
+        accountNumber &&
+        (accountNumber.length !== 10 || !/^\d+$/.test(accountNumber))
+      ) {
+        newErrors.accountNumber = "Account number must be 10 digits.";
+      }
     }
 
-    if (withdrawType === "p2p") {
-      payload.receiverAccountId = p2pDetails?.id;
+    if (withdrawType === "p2p" && (!recepientAcc || !p2pDetails?.id)) {
+      newErrors.recepientAcc = "Recipient not found or invalid.";
     }
 
-    const endpoint =
-      withdrawType === "p2p" ? "/api/p2p-transfer" : "/api/withdraw-balance";
-
-    // ✅ Make API call
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      // ✅ Success Alert
-      Swal.fire({
-        icon: "success",
-        title: "Withdrawal Successful",
-        text: "Your transaction has been processed successfully.",
-      });
-
-      // Reset fields
-      setAmount("");
-      setAccountNumber("");
-      setAccountName("");
-      setNarration("");
-      setRecepientAcc("");
-      setErrors({});
-    } else {
-      // ❌ Server error
+    // ✅ If validation fails - show all errors in SweetAlert
+    if (Object.keys(newErrors).length > 0) {
+      const errorMessages = Object.values(newErrors).join("<br>");
       Swal.fire({
         icon: "error",
-        title: "Withdrawal Failed",
-        text: data?.message,
+        title: "Validation Failed",
+        html: errorMessages,
       });
-     
-      setErrors({ form: data?.message || "Withdrawal failed." });
+      setErrors(newErrors);
+      setLoading(false);
+      return;
     }
-  } catch (err: any) {
-    // ❌ Catch error
-    Swal.fire({
-      icon: "error",
-      title: "Something went wrong",
-      text: err?.message || "Please try again later.",
-    });
-    
-    setErrors({ form: err?.message || "Something went wrong." });
-  } finally {
-    setLoading(false);
-  }
-};
 
+    try {
+      // ✅ Prepare payload
+      const payload: any = {
+        userId: userData?.id,
+        amount: Number(amount),
+        narration,
+        type: withdrawType,
+      };
+
+      if (withdrawType === "my-account") {
+        payload.bankCode = userDetails.bank_code;
+        payload.accountNumber = userDetails.bank_account_number;
+        payload.accountName = userDetails.bank_account_name;
+      }
+
+      if (withdrawType === "other-bank") {
+        payload.bankCode = bankCode;
+        payload.accountNumber = accountNumber;
+        payload.accountName = accountName;
+      }
+
+      if (withdrawType === "p2p") {
+        payload.receiverAccountId = p2pDetails?.id;
+      }
+
+      const endpoint =
+        withdrawType === "p2p" ? "/api/p2p-transfer" : "/api/withdraw-balance";
+
+      // ✅ Make API call
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // ✅ Success Alert
+        Swal.fire({
+          icon: "success",
+          title: "Withdrawal Successful",
+          text: "Your transaction has been processed successfully.",
+        });
+
+        // Reset fields
+        setAmount("");
+        setAccountNumber("");
+        setAccountName("");
+        setNarration("");
+        setRecepientAcc("");
+        setErrors({});
+      } else {
+        // ❌ Server error
+        Swal.fire({
+          icon: "error",
+          title: "Withdrawal Failed",
+          text: data?.message,
+        });
+
+        setErrors({ form: data?.message || "Withdrawal failed." });
+      }
+    } catch (err: any) {
+      // ❌ Catch error
+      Swal.fire({
+        icon: "error",
+        title: "Something went wrong",
+        text: err?.message || "Please try again later.",
+      });
+
+      setErrors({ form: err?.message || "Something went wrong." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const isDisabled =
     loading ||
@@ -351,6 +369,13 @@ export default function Withdraw() {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="e.g. 5000"
             />
+            {withdrawType == "my-account" && (
+              <FeeDisplay
+                monthlyVolume={monthlyVolume}
+                type="withdrawal"
+                amount={Number(amount) || undefined}
+              />
+            )}
             {errors.amount && (
               <p className="text-red-600 text-sm">{errors.amount}</p>
             )}
@@ -502,7 +527,6 @@ export default function Withdraw() {
             <p className="text-red-600 text-sm">{errors.narration}</p>
           )}
 
-      
           <Button
             type="submit"
             disabled={isDisabled}

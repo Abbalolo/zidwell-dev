@@ -7,6 +7,7 @@ import { useUserContextData } from "../context/userData";
 import { CopyIcon, Landmark, Wallet, X } from "lucide-react";
 import TransactionHistory from "./transaction-history";
 import { Input } from "./ui/input";
+import FeeDisplay from "./FeeDisplay";
 
 export default function FundAccountMethods() {
   const [copyText, setCopyText] = useState(false);
@@ -17,6 +18,23 @@ export default function FundAccountMethods() {
   const [amount, setAmount] = useState<number | string>("");
 
   const { userData, balance } = useUserContextData();
+
+  const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
+
+// fetch monthlyVolume when user loads (add useEffect)
+useEffect(() => {
+  const fetchVolumes = async () => {
+    if (!userData?.id) return;
+    try {
+      const res = await fetch(`/api/get-monthly-volumes?userId=${userData.id}`);
+      const data = await res.json();
+      setMonthlyVolume(data.monthlyVolume || 0);
+    } catch (err) {
+      console.error("failed to fetch volumes", err);
+    }
+  };
+  fetchVolumes();
+}, [userData?.id]);
 
   const generateVirtualAccountNumber = async () => {
     if (!userData) return null;
@@ -117,6 +135,8 @@ export default function FundAccountMethods() {
     }
   };
 
+  
+
   return (
     <div className="space-y-6 relative">
       {/* ✅ Quick Fund Button */}
@@ -140,6 +160,7 @@ export default function FundAccountMethods() {
                 <span className=" font-semibold">
                   ₦{formatNumber(balance ?? 0)}
                 </span>
+                <FeeDisplay monthlyVolume={monthlyVolume} type="card" amount={Number(amount) || undefined} />
               </div>
             </CardTitle>
           </CardHeader>
@@ -155,13 +176,12 @@ export default function FundAccountMethods() {
                 Your Account Number
                 <div className="font-semibold text-black flex items-center gap-4">
                   {details?.bank_account_number}{" "}
-                  <Button
-                    className="text-sm"
-                    variant="outline"
+                  <button
+                    className="text-sm border p-2 rounded-md cursor-pointer hover:bg-gray-200 transition"
                     onClick={handleCopyReferral}
                   >
                     {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
-                  </Button>
+                  </button>
                 </div>
                 {details?.bank_name}
               </div>
