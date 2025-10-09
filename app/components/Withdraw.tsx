@@ -94,7 +94,7 @@ export default function Withdraw() {
         const accountData = accountRes.ok ? await accountRes.json() : {};
         // const walletData = walletRes.ok ? await walletRes.json() : {};
         const banksData = banksRes.ok ? await banksRes.json() : {};
-console.log("accountData",accountData);
+        console.log("accountData",accountData);
         setUserDetails(accountData || {});
         // setWalletDetails(walletData || {});
         setBanks(banksData?.data || []);
