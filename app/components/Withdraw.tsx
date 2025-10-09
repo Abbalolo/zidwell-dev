@@ -51,6 +51,9 @@ export default function Withdraw() {
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
 
+  console.log("User details:", userDetails);
+  console.log("Wallet details:", walletDetails);
+
   useEffect(() => {
     const fetchVolumes = async () => {
       if (!userData?.id) return;
@@ -74,26 +77,26 @@ export default function Withdraw() {
     const fetchDetails = async () => {
       setLoading2(true);
       try {
-        const [accountRes, walletRes, banksRes] = await Promise.all([
+        const [accountRes,banksRes, ] = await Promise.all([
           fetch("/api/get-business-account-details", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: userData.id }),
           }),
-          fetch("/api/get-wallet-account-details", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: userData.id }),
-          }),
           fetch("/api/banks"),
+          // fetch("/api/get-wallet-account-details", {
+          //   method: "POST",
+          //   headers: { "Content-Type": "application/json" },
+          //   body: JSON.stringify({ userId: userData.id }),
+          // }),
         ]);
 
         const accountData = accountRes.ok ? await accountRes.json() : {};
-        const walletData = walletRes.ok ? await walletRes.json() : {};
+        // const walletData = walletRes.ok ? await walletRes.json() : {};
         const banksData = banksRes.ok ? await banksRes.json() : {};
 
         setUserDetails(accountData || {});
-        setWalletDetails(walletData || {});
+        // setWalletDetails(walletData || {});
         setBanks(banksData?.data || []);
       } catch (err) {
         console.error("Error fetching details:", err);
