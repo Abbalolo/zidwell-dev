@@ -1,8 +1,6 @@
 import DashboardHeader from "@/app/components/dashboard-hearder";
 import DashboardSidebar from "@/app/components/dashboard-sidebar";
 import ElectricityBills from "@/app/components/Electricity";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-
 export default function page() {
   return (
 

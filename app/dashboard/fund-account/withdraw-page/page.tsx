@@ -1,7 +1,6 @@
 "use client";
 import DashboardSidebar from "@/app/components/dashboard-sidebar";
 import DashboardHeader from "@/app/components/dashboard-hearder";
-import FundAccountMethods from "@/app/components/FundAccount";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "next/navigation";

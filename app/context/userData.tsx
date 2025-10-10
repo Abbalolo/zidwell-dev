@@ -9,8 +9,6 @@ import {
   SetStateAction,
   Dispatch,
 } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import Swal from "sweetalert2";
 import supabase from "../supabase/supabase";
 
 export type PodcastEpisode = {
@@ -46,6 +44,9 @@ interface UserContextType {
   setUserData: Dispatch<SetStateAction<any | null>>;
   loading: boolean;
   episodes: PodcastEpisode[];
+  transactions: any[];
+  searchTerm: any;
+  setSearchTerm: Dispatch<SetStateAction<any>>;
   // login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   isDarkMode: boolean;
@@ -61,20 +62,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   // Logout
   const logout = async () => {
     await supabase.auth.signOut();
-    
+
     setUser(null);
     setUserData(null);
-   
   };
 
- 
   // Fetch blog episodes (static)
   const fetchEpisodes = async () => {
     try {
@@ -86,27 +84,56 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-useEffect(() => {
-  const fetchBalance = async () => {
-    if (!userData?.id) return; 
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!userData?.id) return;
 
-    try {
-      const res = await fetch("/api/wallet-balance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: userData.id }),
-      });
+      try {
+        const res = await fetch("/api/wallet-balance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: userData.id }),
+        });
 
-      const data = await res.json();
-      setBalance(data.wallet_balance ?? 0);
-    } catch (error) {
-      console.error("Error fetching balance:", error);
-    }
-  };
+        const data = await res.json();
+        setBalance(data.wallet_balance ?? 0);
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+      }
+    };
 
-  fetchBalance();
-}, [userData?.id]);
+    fetchBalance();
+  }, [userData?.id]);
 
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!userData?.id) return;
+
+      setLoading(true);
+
+      try {
+        const params = new URLSearchParams({
+          userId: userData.id,
+          limit: "5",
+        });
+
+        if (searchTerm) {
+          params.set("search", searchTerm);
+        }
+
+        const res = await fetch(`/api/bill-transactions?${params.toString()}`);
+        const data = await res.json();
+        setTransactions(data.transactions || []);
+      } catch (error) {
+        console.error("Failed to fetch transactions:", error);
+        setTransactions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [userData?.id, searchTerm]);
 
   // Handle theme
   useEffect(() => {
@@ -117,15 +144,15 @@ useEffect(() => {
     }
   }, []);
 
-  // Protect dashboard route
-  useEffect(() => {
-    if (pathname.startsWith("/dashboard") && !loading && !user) {
-      router.push("/auth/login");
-    }
-    if (["/", "/podcasts"].includes(pathname)) {
-      fetchEpisodes();
-    }
-  }, [pathname, user]);
+  // // Protect dashboard route
+  // useEffect(() => {
+  //   if (pathname.startsWith("/dashboard") && !loading && !user) {
+  //     router.push("/auth/login");
+  //   }
+  //   if (["/", "/podcasts"].includes(pathname)) {
+  //     fetchEpisodes();
+  //   }
+  // }, [pathname, user]);
 
   const handleDarkModeToggle = () => {
     const newTheme = !isDarkMode;
@@ -133,8 +160,6 @@ useEffect(() => {
     document.documentElement.classList.toggle("dark", newTheme);
     localStorage.setItem("theme", newTheme ? "dark" : "light");
   };
-
-
 
   return (
     <UserContext.Provider
@@ -149,6 +174,9 @@ useEffect(() => {
         isDarkMode,
         setIsDarkMode,
         handleDarkModeToggle,
+        transactions,
+        searchTerm,
+        setSearchTerm,
       }}
     >
       {children}

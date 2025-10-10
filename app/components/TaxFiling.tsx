@@ -1,8 +1,5 @@
 "use client";
 import { useState } from "react";
-
-import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button"; 
 import FirstTimeForm from "@/app/components/FirstTimeForm";
@@ -13,7 +10,6 @@ import TaxFilingGen from "./TaxGen";
 type ViewType = 'main' | 'first-time' | 'returning';
 
 const TaxFiling = () => {
-  const navigate = useRouter();
   const [currentView, setCurrentView] = useState<ViewType>('main');
 
   const renderMainView = () => (
@@ -34,8 +30,9 @@ const TaxFiling = () => {
         <div className="">
           <h3 className="text-xl font-semibold mb-3">How Our Tax Filing Process Works</h3>
           <ul className="space-y-2 text-muted-foreground">
-            <li>• Submit your required documents through our secure platform</li>
-            <li>• Our certified tax professionals review your information</li>
+            <li>• Complete your business profile</li>
+            <li>• Download your bank statement from your banking app and upload it here</li>
+            <li>• Our certified tax professionals will review your information</li>
             <li>• We calculate your taxes and provide a detailed breakdown</li>
             <li>• You receive an invoice with tax amounts and service charges</li>
             <li>• Upon payment, we file your taxes and provide official receipts</li>
@@ -58,7 +55,7 @@ const TaxFiling = () => {
           </ul>
           <Button
             size="lg"
-            className="w-full bg-[#C29307] hover:bg-[#C29307] text-white cursor-pointer"
+            className="w-full bg-[#C29307] text-white cursor-pointer"
             onClick={() => setCurrentView('first-time')}
           >
             Start First-Time Filing
@@ -79,7 +76,7 @@ const TaxFiling = () => {
           <Button
             size="lg"
            
-            className="w-full  bg-[#C29307] text-white cursor-pointer"
+            className="w-full bg-[#C29307] text-white cursor-pointer"
             onClick={() => setCurrentView('returning')}
           >
             Continue as Returning Client
