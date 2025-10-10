@@ -231,7 +231,9 @@ function EditProfileInfo() {
         </div>
 
         {isEditing && (
-          <Button disabled={loading} onClick={handleSave}>
+          <Button disabled={loading}
+           className="bg-[#C29307] hover:opacity-100 transition-smooth"
+          onClick={handleSave}>
             {loading ? "Saving..." : "Save Changes"}
           </Button>
         )}
