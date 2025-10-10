@@ -6,8 +6,8 @@ import {
   useEffect,
   useContext,
   ReactNode,
-  SetStateAction,
   Dispatch,
+  SetStateAction,
 } from "react";
 import supabase from "../supabase/supabase";
 
@@ -40,20 +40,22 @@ export interface UserData {
 interface UserContextType {
   user: SupabaseUser | null;
   userData: any | null;
-  balance: any | null;
+  balance: number | null;
   setUserData: Dispatch<SetStateAction<any | null>>;
   loading: boolean;
   episodes: PodcastEpisode[];
   transactions: any[];
-  allTransactions: any[];
-  searchTerm: any;
-  setSearchTerm: Dispatch<SetStateAction<any>>;
-  // login: (credentials: { email: string; password: string }) => Promise<void>;
+  lifetimeBalance: number;
+  totalOutflow: number;
+  successRate: number;
+  searchTerm: string;
+  setSearchTerm: Dispatch<SetStateAction<string>>;
   logout: () => Promise<void>;
   isDarkMode: boolean;
   setIsDarkMode: Dispatch<SetStateAction<boolean>>;
   handleDarkModeToggle: () => void;
 }
+
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
@@ -65,17 +67,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [lifetimeBalance, setLifetimeBalance] = useState(0);
+  const [totalOutflow, setTotalOutflow] = useState(0);
+  const [successRate, setSuccessRate] = useState(0);
 
   // Logout
   const logout = async () => {
     await supabase.auth.signOut();
-
     setUser(null);
     setUserData(null);
   };
 
-  // Fetch blog episodes (static)
+  // Fetch podcast episodes
   const fetchEpisodes = async () => {
     try {
       const res = await fetch("/api/medium-feed");
@@ -86,6 +89,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Fetch wallet balance
   useEffect(() => {
     const fetchBalance = async () => {
       if (!userData?.id) return;
@@ -96,17 +100,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: userData.id }),
         });
-
         const data = await res.json();
         setBalance(data.wallet_balance ?? 0);
       } catch (error) {
         console.error("Error fetching balance:", error);
       }
     };
-
     fetchBalance();
   }, [userData?.id]);
 
+  // Fetch all transactions
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!userData?.id) return;
@@ -116,7 +119,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       try {
         const params = new URLSearchParams({
           userId: userData.id,
-          limit: "5",
         });
 
         if (searchTerm) {
@@ -133,29 +135,33 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
       }
     };
-
     fetchTransactions();
   }, [userData?.id, searchTerm]);
 
-
+  // Fetch lifetime stats: inflow, outflow, success rate
   useEffect(() => {
-  const fetchAllTransactions = async () => {
-    if (!userData?.id) return;
+    const fetchTransactionStats = async () => {
+      if (!userData?.id) return;
 
-    try {
-      const res = await fetch(`/api/bill-transactions?userId=${userData.id}`);
-      const data = await res.json();
-      setAllTransactions(data.transactions || []);
-    } catch (error) {
-      console.error("Failed to fetch all transactions:", error);
-      setAllTransactions([]);
-    }
-  };
+      try {
+        const res = await fetch("/api/total-inflow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: userData.id }),
+        });
 
-  fetchAllTransactions();
-}, [userData?.id]);
+        const data = await res.json();
+        setLifetimeBalance(data.totalInflow || 0);
+        setTotalOutflow(data.totalOutflow || 0);
+        setSuccessRate(data.successRate || 0);
+      } catch (error) {
+        console.error("Failed to fetch transaction stats:", error);
+      }
+    };
+    fetchTransactionStats();
+  }, [userData?.id]);
 
-  // Handle theme
+  // Dark mode
   useEffect(() => {
     const theme = localStorage.getItem("theme");
     if (theme === "dark") {
@@ -163,16 +169,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       document.documentElement.classList.add("dark");
     }
   }, []);
-
-  // // Protect dashboard route
-  // useEffect(() => {
-  //   if (pathname.startsWith("/dashboard") && !loading && !user) {
-  //     router.push("/auth/login");
-  //   }
-  //   if (["/", "/podcasts"].includes(pathname)) {
-  //     fetchEpisodes();
-  //   }
-  // }, [pathname, user]);
 
   const handleDarkModeToggle = () => {
     const newTheme = !isDarkMode;
@@ -195,7 +191,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setIsDarkMode,
         handleDarkModeToggle,
         transactions,
-        allTransactions,
+        lifetimeBalance,
+        totalOutflow,
+        successRate,
         searchTerm,
         setSearchTerm,
       }}
