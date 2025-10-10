@@ -7,24 +7,19 @@ export async function middleware(req: NextRequest) {
   const refreshToken = req.cookies.get("sb-refresh-token")?.value;
   const verified = req.cookies.get("verified")?.value;
 
-  // Protect dashboard and admin
-<<<<<<< HEAD
+  // ✅ Protect dashboard and admin routes
   if (
     req.nextUrl.pathname.startsWith("/dashboard") ||
     req.nextUrl.pathname.startsWith("/admin")
   ) {
-=======
-  if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/admin")) {
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
-    // No session at all → login
+    // No session at all → redirect to login
     if (!accessToken && !refreshToken) {
       return redirectToLogin(req);
     }
 
-    // ✅ Refresh token if access token expired
+    // ✅ Refresh access token using refresh token
     if (!accessToken && refreshToken) {
       const supabase = createClient(
-<<<<<<< HEAD
         process.env.SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
@@ -32,19 +27,12 @@ export async function middleware(req: NextRequest) {
       const { data, error } = await supabase.auth.refreshSession({
         refresh_token: refreshToken,
       });
-=======
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-
-      const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
 
       if (error || !data.session) {
         return redirectToLogin(req);
       }
 
-      // ✅ Save new tokens
+      // Save new tokens
       const res = NextResponse.next();
       res.cookies.set("sb-access-token", data.session.access_token, {
         httpOnly: true,
@@ -62,14 +50,7 @@ export async function middleware(req: NextRequest) {
     }
 
     // ✅ Block unverified users
-<<<<<<< HEAD
-    if (
-      verified !== "true" &&
-      !req.nextUrl.pathname.startsWith("/onboarding")
-    ) {
-=======
     if (verified !== "true" && !req.nextUrl.pathname.startsWith("/onboarding")) {
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
       return NextResponse.redirect(new URL("/onboarding", req.url));
     }
 
@@ -83,6 +64,7 @@ export async function middleware(req: NextRequest) {
       const {
         data: { user },
       } = await supabaseAdmin.auth.getUser(accessToken);
+
       if (!user) return redirectToLogin(req);
 
       const { data: profile } = await supabaseAdmin

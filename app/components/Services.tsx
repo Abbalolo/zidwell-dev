@@ -13,7 +13,6 @@ import {
   Receipt,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { link } from "fs";
 
 const Services = () => {
   const router = useRouter();
@@ -24,11 +23,7 @@ const Services = () => {
       description:
         "Pay for your cable TV subscriptions from all major providers instantly.",
       color: "from-red-500 to-red-600",
-<<<<<<< HEAD
       link: "/platform-services",
-=======
-      link: "/platform-services"
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <Smartphone className="h-10 w-10" />,
@@ -36,17 +31,14 @@ const Services = () => {
       description:
         "Top up your mobile phone with airtime for all networks quickly.",
       color: "from-green-500 to-green-600",
+      link: "/platform-services",
     },
     {
       icon: <Receipt className="h-10 w-10" />,
-      title: "Reciepts",
-      description: "Create reciepts to backup your transactions.",
+      title: "Receipts",
+      description: "Create receipts to back up your transactions.",
       color: "from-blue-500 to-blue-600",
-<<<<<<< HEAD
-=======
-      
-     
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
+      link: "/receipts",
     },
     {
       icon: <Zap className="h-10 w-10" />,
@@ -61,53 +53,34 @@ const Services = () => {
       title: "Buy Data",
       description: "Get data bundles for all networks at competitive rates.",
       color: "from-purple-500 to-purple-600",
-<<<<<<< HEAD
       link: "/platform-services",
-=======
-  link: "/platform-services"
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <Calculator className="h-10 w-10" />,
       title: "Tax Filing",
       description: "File your taxes easily with our guided process.",
       color: "from-indigo-500 to-indigo-600",
-<<<<<<< HEAD
-      link: "/platform-services",
-=======
-       link: "/platform-services"
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
+      link: "/tax-filing",
     },
     {
       icon: <Scale className="h-10 w-10" />,
       title: "Simple Agreement",
-      description: "Create simple agreement to secure your business dealings.",
+      description: "Create business agreements to secure deals.",
       color: "from-gray-500 to-gray-600",
-<<<<<<< HEAD
-      link: "/platform-services",
-=======
-      link: "/platform-services"
-     
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
+      link: "/agreements",
     },
     {
       icon: <FileText className="h-10 w-10" />,
       title: "Create Invoice",
-      description: "Generate invoices for your clients with a few clicks",
+      description: "Generate invoices for your clients with a few clicks.",
       color: "from-orange-500 to-orange-600",
-<<<<<<< HEAD
-      link: "/tax-filing",
+      link: "/invoices",
     },
-=======
-      link: "/tax-filing"
-      
-    }
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
   ];
 
   return (
     <section data-aos="zoom-in" id="services" className="py-20 bg-gray-50">
-      <div className="container mx-auto px-4 sm:px-5 lg:px-20 ">
+      <div className="container mx-auto px-4 sm:px-5 lg:px-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             All Your Bills
@@ -120,17 +93,11 @@ const Services = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-<<<<<<< HEAD
           {services.map((service: any, index) => (
             <Card
               key={index}
-=======
-          {services.map((service:any, index) => (
-            <Card 
-              key={index} 
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
-              onClick={() => router.push(service.link)}
-              className="group hover:shadow-xl transition-all duration-300 border-0 bg-white hover:scale-105"
+              onClick={() => service.link && router.push(service.link)}
+              className="group hover:shadow-xl cursor-pointer transition-all duration-300 border-0 bg-white hover:scale-105"
             >
               <CardContent className="p-8 text-center">
                 <div
@@ -138,39 +105,17 @@ const Services = () => {
                 >
                   {service.icon}
                 </div>
-<<<<<<< HEAD
-                <Link
-                  href={service.link}
-                  className="text-xl hover:underline font-semibold text-gray-900 mb-3"
-                >
-=======
-                <Link href={service.link} className="text-xl hover:underline font-semibold text-gray-900 mb-3">
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
+
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   {service.title}
-                </Link>
+                </h3>
+
                 <p className="text-gray-600 leading-relaxed">
                   {service.description}
                 </p>
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        <div className="text-center mt-16">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-10 md:space-x-8 text-gray-500">
-            <div className="flex items-center">
-              <span className="text-3xl font-bold text-gray-900">10k</span>
-              <span className="ml-2">Transactions</span>
-            </div>
-            <div className="flex items-center">
-              <span className="text-3xl font-bold text-gray-900">5k</span>
-              <span className="ml-2">Happy users</span>
-            </div>
-            <div className="flex items-center">
-              <span className="text-3xl font-bold text-gray-900">99.9%</span>
-              <span className="ml-2">Success rate</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>
