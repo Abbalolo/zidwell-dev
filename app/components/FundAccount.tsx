@@ -159,8 +159,9 @@ useEffect(() => {
                 <span className=" font-semibold">
                   ₦{formatNumber(balance ?? 0)}
                 </span>
-                <p className="text-xs mb-4 text-center">
-                  Note: 1% transaction fee applies (capped at ₦50 to ₦150).
+                <p className="text-xs mb-4">
+                  Note: 1% transaction fee applies (capped at ₦50 to ₦150).<br />
+                  minimum ₦10
                 </p>
               </div>
             </CardTitle>
