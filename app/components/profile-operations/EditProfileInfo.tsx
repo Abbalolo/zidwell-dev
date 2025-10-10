@@ -28,7 +28,6 @@ function EditProfileInfo() {
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<any>({});
 
-  console.log("profile", profile);
 
   const handleProfileChange = (field: keyof typeof profile, value: string) => {
     setProfile((prev: any) => ({ ...prev, [field]: value }));
