@@ -137,11 +137,11 @@ export default function FundAccountMethods() {
   };
 
 
-const filterLifetimeTransactions = (transactions: any[]) => {
-  return allTransactions.filter(
-    (tx) => tx.type === "deposit" || tx.type === "card deposit"
+const filterLifetimeTransactions = (transactions: any[]) =>
+  transactions.filter(tx =>
+    ["deposit", "card deposit"].includes(tx.type?.toLowerCase()?.trim())
   );
-};
+
 
   return (
     <div className="space-y-6 relative">
