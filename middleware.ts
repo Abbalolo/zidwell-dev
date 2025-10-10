@@ -8,10 +8,14 @@ export async function middleware(req: NextRequest) {
   const verified = req.cookies.get("verified")?.value;
 
   // Protect dashboard and admin
+<<<<<<< HEAD
   if (
     req.nextUrl.pathname.startsWith("/dashboard") ||
     req.nextUrl.pathname.startsWith("/admin")
   ) {
+=======
+  if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/admin")) {
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     // No session at all → login
     if (!accessToken && !refreshToken) {
       return redirectToLogin(req);
@@ -20,6 +24,7 @@ export async function middleware(req: NextRequest) {
     // ✅ Refresh token if access token expired
     if (!accessToken && refreshToken) {
       const supabase = createClient(
+<<<<<<< HEAD
         process.env.SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
@@ -27,6 +32,13 @@ export async function middleware(req: NextRequest) {
       const { data, error } = await supabase.auth.refreshSession({
         refresh_token: refreshToken,
       });
+=======
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
 
       if (error || !data.session) {
         return redirectToLogin(req);
@@ -50,10 +62,14 @@ export async function middleware(req: NextRequest) {
     }
 
     // ✅ Block unverified users
+<<<<<<< HEAD
     if (
       verified !== "true" &&
       !req.nextUrl.pathname.startsWith("/onboarding")
     ) {
+=======
+    if (verified !== "true" && !req.nextUrl.pathname.startsWith("/onboarding")) {
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
       return NextResponse.redirect(new URL("/onboarding", req.url));
     }
 

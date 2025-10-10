@@ -228,6 +228,7 @@ function EditProfileInfo() {
             placeholder="State"
           />
         </div>
+        
 
         {isEditing && (
           <Button disabled={loading}

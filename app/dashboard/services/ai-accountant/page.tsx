@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import DashboardSidebar from "@/app/components/dashboard-sidebar";
 import DashboardHeader from "@/app/components/dashboard-hearder";
 import AIAccountant from "@/app/components/AiAccountant";
+=======
+import DashboardSidebar from "@/app/components/dashboard-sidebar" 
+import DashboardHeader from "@/app/components/dashboard-hearder" 
+import AIAccountant from "@/app/components/AiAccountant" 
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
 
 export default function AIAccountantPage() {
   return (

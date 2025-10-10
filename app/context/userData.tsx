@@ -45,8 +45,13 @@ interface UserContextType {
   loading: boolean;
   episodes: PodcastEpisode[];
   transactions: any[];
+<<<<<<< HEAD
   searchTerm: any;
   setSearchTerm: Dispatch<SetStateAction<any>>;
+=======
+  searchTerm: string;
+  setSearchTerm: Dispatch<SetStateAction<string>>;
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
   // login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   isDarkMode: boolean;
@@ -64,6 +69,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [transactions, setTransactions] = useState<any[]>([]);
+<<<<<<< HEAD
+=======
+  const router = useRouter();
+  const pathname = usePathname();
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
 
   // Logout
   const logout = async () => {

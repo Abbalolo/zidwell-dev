@@ -13,6 +13,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { link } from "fs";
 
 const Services = () => {
   const router = useRouter();
@@ -23,7 +24,11 @@ const Services = () => {
       description:
         "Pay for your cable TV subscriptions from all major providers instantly.",
       color: "from-red-500 to-red-600",
+<<<<<<< HEAD
       link: "/platform-services",
+=======
+      link: "/platform-services"
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <Smartphone className="h-10 w-10" />,
@@ -37,6 +42,11 @@ const Services = () => {
       title: "Reciepts",
       description: "Create reciepts to backup your transactions.",
       color: "from-blue-500 to-blue-600",
+<<<<<<< HEAD
+=======
+      
+     
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <Zap className="h-10 w-10" />,
@@ -51,29 +61,48 @@ const Services = () => {
       title: "Buy Data",
       description: "Get data bundles for all networks at competitive rates.",
       color: "from-purple-500 to-purple-600",
+<<<<<<< HEAD
       link: "/platform-services",
+=======
+  link: "/platform-services"
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <Calculator className="h-10 w-10" />,
       title: "Tax Filing",
       description: "File your taxes easily with our guided process.",
       color: "from-indigo-500 to-indigo-600",
+<<<<<<< HEAD
       link: "/platform-services",
+=======
+       link: "/platform-services"
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <Scale className="h-10 w-10" />,
       title: "Simple Agreement",
       description: "Create simple agreement to secure your business dealings.",
       color: "from-gray-500 to-gray-600",
+<<<<<<< HEAD
       link: "/platform-services",
+=======
+      link: "/platform-services"
+     
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
     },
     {
       icon: <FileText className="h-10 w-10" />,
       title: "Create Invoice",
       description: "Generate invoices for your clients with a few clicks",
       color: "from-orange-500 to-orange-600",
+<<<<<<< HEAD
       link: "/tax-filing",
     },
+=======
+      link: "/tax-filing"
+      
+    }
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
   ];
 
   return (
@@ -91,9 +120,15 @@ const Services = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+<<<<<<< HEAD
           {services.map((service: any, index) => (
             <Card
               key={index}
+=======
+          {services.map((service:any, index) => (
+            <Card 
+              key={index} 
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
               onClick={() => router.push(service.link)}
               className="group hover:shadow-xl transition-all duration-300 border-0 bg-white hover:scale-105"
             >
@@ -103,10 +138,14 @@ const Services = () => {
                 >
                   {service.icon}
                 </div>
+<<<<<<< HEAD
                 <Link
                   href={service.link}
                   className="text-xl hover:underline font-semibold text-gray-900 mb-3"
                 >
+=======
+                <Link href={service.link} className="text-xl hover:underline font-semibold text-gray-900 mb-3">
+>>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
                   {service.title}
                 </Link>
                 <p className="text-gray-600 leading-relaxed">
