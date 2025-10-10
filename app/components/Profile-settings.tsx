@@ -200,7 +200,7 @@ const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
               </div>
             </div>
             <div className="text-center">
-             <UserDashboardStats userId={userData?.id}/>
+             <UserDashboardStats/>
             </div>
           </div>
         </CardContent>
