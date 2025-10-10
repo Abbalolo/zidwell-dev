@@ -1,7 +1,6 @@
 import DashboardSidebar from "@/app/components/dashboard-sidebar" 
 import DashboardHeader from "@/app/components/dashboard-hearder" 
 import AIAccountant from "@/app/components/AiAccountant" 
-import ProtectedRoute from "@/app/components/ProtectedRoute"
 
 export default function AIAccountantPage() {
   return (
