@@ -60,7 +60,7 @@ export default function PinPopOver({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const code = pin.join("");
-    console.log("Submitted OTP:", code);
+    
 
     // 👇 Trigger parent's API call if provided
     if (onConfirm) {
