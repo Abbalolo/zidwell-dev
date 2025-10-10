@@ -39,23 +39,6 @@ const Page = () => {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const res = await fetch("/api/session");
-      const data = await res.json();
-     
-      if (data?.session) {
-        // Optional: redirect admin directly
-        if (data.session.role === "admin") {
-          router.push("/admin/dashboard");
-        } else {
-          router.push("/dashboard");
-        }
-      }
-    };
-    checkSession();
-  }, [router]);
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);

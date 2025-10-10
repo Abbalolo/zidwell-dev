@@ -113,6 +113,50 @@ const ReturningForm = () => {
         </p>
       </div>
 
+      <Card className="p-6 mb-8 shadow-card">
+        <h3 className="text-xl font-bold text-tax-navy mb-4">
+          Service Cost Breakdown
+        </h3>
+        <div className="space-y-3">
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>Account statement audit</span>
+            <span className="font-semibold">₦4,000 per page</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>First-time taxpayer fee</span>
+            <span className="font-semibold">₦50,000</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>Tax filing service charge (federal)</span>
+            <span className="font-semibold">₦40,000</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>VAT (federal)</span>
+            <span className="font-semibold">
+              7.5% of gross profit (monthly)
+            </span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>Company Income Tax (CIT)</span>
+            <span className="font-semibold">% based on annual net profit</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>Personal Income Tax (PIT)</span>
+            <span className="font-semibold">% is based on income</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span>Tax filing service charge (state)</span>
+            <span className="font-semibold">Depends on state</span>
+          </div>
+        </div>
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800">
+            <strong>Note:</strong> Additional charges may apply if incomplete
+            bank statements are uploaded.
+          </p>
+        </div>
+      </Card>
+
 
       {/* Upload Form */}
       <form onSubmit={handleSubmit}>
@@ -149,7 +193,7 @@ const ReturningForm = () => {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Accepted formats: PDF, JPG, JPEG, PNG (Max size: 10MB)
+              Accepted formats: PDF (Max size: 50MB)
             </p>
           </div>
 

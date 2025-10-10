@@ -4,10 +4,11 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
-import { Input } from "@/app/components/ui/input";
+import { Input } from "./ui/input";
 import { Label } from "@/app/components/ui/label";
 import { CheckCircle } from "lucide-react";
 import { useUserContextData } from "../context/userData";
+import FileUpload from "./FileUpload";
 
 interface FormData {
   firstName: string;
@@ -77,7 +78,7 @@ const FirstTimeForm = () => {
       });
       return;
     }
-    setLoading(true)
+    setLoading(true);
 
     console.log("formData", formData);
 
@@ -112,7 +113,7 @@ const FirstTimeForm = () => {
       }
 
       setIsSubmitted(true);
-          setLoading(false)
+      setLoading(false);
 
       Swal.fire({
         icon: "success",
@@ -120,7 +121,7 @@ const FirstTimeForm = () => {
         text: data.message,
       });
     } catch (err: any) {
-       setLoading(false)
+      setLoading(false);
       Swal.fire({
         icon: "error",
         title: "Submission Failed",
@@ -172,8 +173,12 @@ const FirstTimeForm = () => {
             </span>
           </div>
           <div className="flex justify-between py-2 border-b border-tax-gray-dark">
-            <span>CIT</span>
+            <span>Company Income Tax (CIT)</span>
             <span className="font-semibold">% based on annual net profit</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-tax-gray-dark">
+            <span>Personal Income Tax (PIT)</span>
+            <span className="font-semibold">% is based on income</span>
           </div>
           <div className="flex justify-between py-2">
             <span>Tax filing service charge (state)</span>
@@ -188,145 +193,133 @@ const FirstTimeForm = () => {
         </div>
       </Card>
       <div className="max-w-4xl mx-auto">
-  <form onSubmit={handleSubmit}>
-    <Card className="p-8 shadow-md grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* First Name */}
-      <div>
-        <Label>First Name *</Label>
-        <Input
-          className={errors.firstName ? "border-red-500" : ""}
-          value={formData.firstName}
-          onChange={(e) => handleInputChange("firstName", e.target.value)}
-        />
-        {errors.firstName && (
-          <p className="text-red-500 text-sm">{errors.firstName}</p>
-        )}
-      </div>
-
-      {/* Middle Name */}
-      <div>
-        <Label>Middle Name</Label>
-        <Input
-          value={formData.middleName}
-          onChange={(e) => handleInputChange("middleName", e.target.value)}
-        />
-      </div>
-
-      {/* Last Name */}
-      <div>
-        <Label>Last Name *</Label>
-        <Input
-          className={errors.lastName ? "border-red-500" : ""}
-          value={formData.lastName}
-          onChange={(e) => handleInputChange("lastName", e.target.value)}
-        />
-        {errors.lastName && (
-          <p className="text-red-500 text-sm">{errors.lastName}</p>
-        )}
-      </div>
-
-      {/* Company Name */}
-      <div>
-        <Label>Company Name *</Label>
-        <Input
-          className={errors.companyName ? "border-red-500" : ""}
-          value={formData.companyName}
-          onChange={(e) => handleInputChange("companyName", e.target.value)}
-        />
-        {errors.companyName && (
-          <p className="text-red-500 text-sm">{errors.companyName}</p>
-        )}
-      </div>
-
-      {/* Business Address */}
-      <div>
-        <Label>Business Address *</Label>
-        <Input
-          className={errors.businessAddress ? "border-red-500" : ""}
-          value={formData.businessAddress}
-          onChange={(e) => handleInputChange("businessAddress", e.target.value)}
-        />
-        {errors.businessAddress && (
-          <p className="text-red-500 text-sm">{errors.businessAddress}</p>
-        )}
-      </div>
-
-      {/* CEO NIN */}
-      <div>
-        <Label>CEO NIN *</Label>
-        <Input
-          className={errors.ceoNin ? "border-red-500" : ""}
-          value={formData.ceoNin}
-          onChange={(e) => handleInputChange("ceoNin", e.target.value)}
-        />
-        {errors.ceoNin && (
-          <p className="text-red-500 text-sm">{errors.ceoNin}</p>
-        )}
-      </div>
-
-      {/* File Uploads */}
-      <div>
-        <Label>Address Verification *</Label>
-        <Input
-          type="file"
-          accept=".pdf,.jpg,.png"
-          className={`cursor-pointer ${errors.addressVerification ? "border-red-500" : ""}`}
-          onChange={(e) =>
-            handleFileChange("addressVerification", e.target.files?.[0] || null)
-          }
-        />
-        {errors.addressVerification && (
-          <p className="text-red-500 text-sm">{errors.addressVerification}</p>
-        )}
-      </div>
-
-      <div>
-        <Label>ID Card *</Label>
-        <Input
-          type="file"
-          accept=".pdf,.jpg,.png"
-          className={`cursor-pointer ${errors.idCard ? "border-red-500" : ""}`}
-          onChange={(e) => handleFileChange("idCard", e.target.files?.[0] || null)}
-        />
-        {errors.idCard && (
-          <p className="text-red-500 text-sm">{errors.idCard}</p>
-        )}
-      </div>
-
-      <div>
-        <Label>Bank Statement *</Label>
-        <Input
-          type="file"
-          accept=".pdf,.jpg,.png"
-          className={`cursor-pointer ${errors.bankStatement ? "border-red-500" : ""}`}
-          onChange={(e) => handleFileChange("bankStatement", e.target.files?.[0] || null)}
-        />
-        {errors.bankStatement && (
-          <p className="text-red-500 text-sm">{errors.bankStatement}</p>
-        )}
-      </div>
-
-      {/* Submit Button - full width */}
-      <div className="md:col-span-2 flex md:justify-start justify-center  mt-4">
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-[#C29307] hover:bg-[#a67c05] hover:shadow-lg transition-all duration-300 md:w-[300px]"
-        >
-          {loading ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Processing...
+        <form onSubmit={handleSubmit}>
+          <Card className="p-8 shadow-md grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* First Name */}
+            <div>
+              <Label>First Name *</Label>
+              <Input
+                className={errors.firstName ? "border-red-500" : ""}
+                value={formData.firstName}
+                onChange={(e) => handleInputChange("firstName", e.target.value)}
+              />
+              {errors.firstName && (
+                <p className="text-red-500 text-sm">{errors.firstName}</p>
+              )}
             </div>
-          ) : (
-            "Submit Application"
-          )}
-        </Button>
-      </div>
-    </Card>
-  </form>
-</div>
 
+            {/* Middle Name */}
+            <div>
+              <Label>Middle Name</Label>
+              <Input
+                value={formData.middleName}
+                onChange={(e) =>
+                  handleInputChange("middleName", e.target.value)
+                }
+              />
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <Label>Last Name *</Label>
+              <Input
+                className={errors.lastName ? "border-red-500" : ""}
+                value={formData.lastName}
+                onChange={(e) => handleInputChange("lastName", e.target.value)}
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-sm">{errors.lastName}</p>
+              )}
+            </div>
+
+            {/* Company Name */}
+            <div>
+              <Label>Company Name *</Label>
+              <Input
+                className={errors.companyName ? "border-red-500" : ""}
+                value={formData.companyName}
+                onChange={(e) =>
+                  handleInputChange("companyName", e.target.value)
+                }
+              />
+              {errors.companyName && (
+                <p className="text-red-500 text-sm">{errors.companyName}</p>
+              )}
+            </div>
+
+            {/* Business Address */}
+            <div>
+              <Label>Business Address *</Label>
+              <Input
+                className={errors.businessAddress ? "border-red-500" : ""}
+                value={formData.businessAddress}
+                onChange={(e) =>
+                  handleInputChange("businessAddress", e.target.value)
+                }
+              />
+              {errors.businessAddress && (
+                <p className="text-red-500 text-sm">{errors.businessAddress}</p>
+              )}
+            </div>
+
+            {/* CEO NIN */}
+            <div>
+              <Label>CEO's NIN *</Label>
+              <Input
+                className={errors.ceoNin ? "border-red-500" : ""}
+                value={formData.ceoNin}
+                onChange={(e) => handleInputChange("ceoNin", e.target.value)}
+              />
+              {errors.ceoNin && (
+                <p className="text-red-500 text-sm">{errors.ceoNin}</p>
+              )}
+            </div>
+
+            {/* File Uploads */}
+            <FileUpload
+              label="Upload Address Verification"
+              accept=".pdf,.jpg,.png"
+              onChange={(files) =>
+                handleFileChange("addressVerification", files?.[0] || null)
+              }
+            />
+
+            <FileUpload
+              label="Upload ID Card"
+              accept=".pdf,.jpg,.png"
+              onChange={(files) =>
+                handleFileChange("idCard", files?.[0] || null)
+              }
+            />
+
+            <FileUpload
+              label="Upload Bank Statement"
+              accept=".pdf"
+              onChange={(files) =>
+                handleFileChange("bankStatement", files?.[0] || null)
+              }
+            />
+
+            {/* Submit Button - full width */}
+            <div className="md:col-span-2 flex md:justify-start justify-center  mt-4">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#C29307] hover:bg-[#a67c05] hover:shadow-lg transition-all duration-300 md:w-[300px]"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  "Submit Application"
+                )}
+              </Button>
+            </div>
+          </Card>
+        </form>
+      </div>
     </>
   );
 };

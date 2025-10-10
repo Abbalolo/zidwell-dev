@@ -21,40 +21,8 @@ const statusConfig: any = {
 
 export default function TransactionHistory() {
   const [filter, setFilter] = useState("All transactions");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { userData } = useUserContextData();
-
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!userData?.id) return;
-
-      setLoading(true);
-
-      try {
-        const params = new URLSearchParams({
-          userId: userData.id,
-          limit: "5",
-        });
-
-        if (searchTerm) {
-          params.set("search", searchTerm);
-        }
-
-        const res = await fetch(`/api/bill-transactions?${params.toString()}`);
-        const data = await res.json();
-        setTransactions(data.transactions || []);
-      } catch (error) {
-        console.error("Failed to fetch transactions:", error);
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, [userData?.id, searchTerm]);
+ 
+  const { userData,loading, transactions, searchTerm, setSearchTerm } = useUserContextData();
 
   const filteredTransactions = transactions.filter((tx) => {
     const matchesFilter =

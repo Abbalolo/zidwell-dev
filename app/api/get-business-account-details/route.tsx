@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       )
       .eq("user_id", userId)
       .single();
-console.log("data", data, error);
+
     if (error) {
       console.error("❌ Supabase error:", error);
       return NextResponse.json({ error: "User not found" }, { status: 404 });

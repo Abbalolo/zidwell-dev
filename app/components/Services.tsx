@@ -13,6 +13,7 @@ import {
   Receipt
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { link } from "fs";
 
 const Services = () => {
   const router = useRouter();
@@ -22,7 +23,7 @@ const Services = () => {
       title: "Cable TV",
       description: "Pay for your cable TV subscriptions from all major providers instantly.",
       color: "from-red-500 to-red-600",
-     
+      link: "/platform-services"
     },
     {
       icon: <Smartphone className="h-10 w-10" />,
@@ -37,6 +38,7 @@ const Services = () => {
       title: "Reciepts",
       description: "Create reciepts to backup your transactions.",
       color: "from-blue-500 to-blue-600",
+      
      
     },
     {
@@ -51,20 +53,21 @@ const Services = () => {
       title: "Buy Data",
       description: "Get data bundles for all networks at competitive rates.",
       color: "from-purple-500 to-purple-600",
- 
+  link: "/platform-services"
     },
     {
       icon: <Calculator className="h-10 w-10" />,
       title: "Tax Filing",
       description: "File your taxes easily with our guided process.",
       color: "from-indigo-500 to-indigo-600",
-      
+       link: "/platform-services"
     },
     {
       icon: <Scale className="h-10 w-10" />,
       title: "Simple Agreement",
       description: "Create simple agreement to secure your business dealings.",
       color: "from-gray-500 to-gray-600",
+      link: "/platform-services"
      
     },
     {
@@ -72,6 +75,7 @@ const Services = () => {
       title: "Create Invoice",
       description: "Generate invoices for your clients with a few clicks",
       color: "from-orange-500 to-orange-600",
+      link: "/tax-filing"
       
     }
   ];
@@ -95,14 +99,14 @@ const Services = () => {
           {services.map((service:any, index) => (
             <Card 
               key={index} 
-              onClick={() => router.push("/platform-services")}
+              onClick={() => router.push(service.link)}
               className="group hover:shadow-xl transition-all duration-300 border-0 bg-white hover:scale-105"
             >
               <CardContent className="p-8 text-center">
                 <div className={`mb-6 w-16 h-16 mx-auto rounded-2xl bg-gradient-to-r ${service.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300`}>
                   {service.icon}
                 </div>
-                <Link href="/platform-services" className="text-xl hover:underline font-semibold text-gray-900 mb-3">
+                <Link href={service.link} className="text-xl hover:underline font-semibold text-gray-900 mb-3">
                   {service.title}
                 </Link>
                 <p className="text-gray-600 leading-relaxed">

@@ -16,24 +16,26 @@ export default function FundAccountMethods() {
   const [showModal, setShowModal] = useState(false);
   const [amount, setAmount] = useState<number | string>("");
 
-  const { userData, balance } = useUserContextData();
+  const { userData, balance, transactions } = useUserContextData();
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
 
-// fetch monthlyVolume when user loads (add useEffect)
-useEffect(() => {
-  const fetchVolumes = async () => {
-    if (!userData?.id) return;
-    try {
-      const res = await fetch(`/api/get-monthly-volumes?userId=${userData.id}`);
-      const data = await res.json();
-      setMonthlyVolume(data.monthlyVolume || 0);
-    } catch (err) {
-      console.error("failed to fetch volumes", err);
-    }
-  };
-  fetchVolumes();
-}, [userData?.id]);
+  // fetch monthlyVolume when user loads (add useEffect)
+  useEffect(() => {
+    const fetchVolumes = async () => {
+      if (!userData?.id) return;
+      try {
+        const res = await fetch(
+          `/api/get-monthly-volumes?userId=${userData.id}`
+        );
+        const data = await res.json();
+        setMonthlyVolume(data.monthlyVolume || 0);
+      } catch (err) {
+        console.error("failed to fetch volumes", err);
+      }
+    };
+    fetchVolumes();
+  }, [userData?.id]);
 
   const generateVirtualAccountNumber = async () => {
     if (!userData) return null;
@@ -134,12 +136,18 @@ useEffect(() => {
     }
   };
 
-  
+const filterLifetimeTransactions = (transactions: any[]) => {
+  return transactions.filter(
+    (tx) => tx.type === "deposit" || tx.type === "card deposit"
+  );
+};
+
+  console.log("Transactions in FundAccountMethods:", filterLifetimeTransactions(transactions));
 
   return (
     <div className="space-y-6 relative">
       {/* ✅ Quick Fund Button */}
-      <div className="w-full flex justify-end items-end">
+      {/* <div className="w-full flex justify-end items-end">
         <Button
           className="bg-[#C29307]"
           onClick={() => setShowModal(true)}
@@ -147,53 +155,74 @@ useEffect(() => {
         >
           {loading ? "Processing..." : "Deposit with Card"}
         </Button>
-      </div>
+      </div> */}
 
       {/* 💳 Account Balance */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <Card className=" bg-[#C29307] text-white flex items-center justify-between">
-          <CardHeader>
-            <CardTitle className="text-base md:text-lg ">
-              <div className="flex flex-col items-start">
-                Lifetime Balance
-                <span className=" font-semibold">
-                  ₦{formatNumber(balance ?? 0)}
-                </span>
-                <p className="text-xs mb-4">
-                  Note: 1% transaction fee applies (capped at ₦50 to ₦150).<br />
-                  minimum ₦10
-                </p>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Wallet className="md:text-2xl" />
-          </CardContent>
-        </Card>
-
-        <Card className="flex items-center justify-between text-gray-600 ">
-          <CardHeader>
-            <CardTitle className="text-base md:text-lg">
-              <div className="flex flex-col items-start ">
-                Your Account Number
-                <div className="font-semibold text-black flex items-center gap-4">
-                  {details?.bank_account_number}{" "}
-                  <button
-                    className="text-sm border p-2 rounded-md cursor-pointer hover:bg-gray-200 transition"
-                    onClick={handleCopyReferral}
-                  >
-                    {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
-                  </button>
-                </div>
-                {details?.bank_name}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Landmark className="md:text-2xl" />
-          </CardContent>
-        </Card>
+      <div className="flex flex-col md:flex-row gap-4">
+  {/* Lifetime Balance */}
+  <Card className="bg-gradient-to-r from-[#C29307] to-[#E3A521] text-white flex items-center justify-between shadow-lg rounded-xl p-4">
+    <CardHeader className="p-0">
+      <CardTitle className="text-base md:text-lg font-medium">
+        Lifetime Balance
+        <span className="block font-semibold text-xl mt-1">
+          ₦
+          {formatNumber(
+            filterLifetimeTransactions(transactions).reduce(
+              (sum, tx) => sum + Number(tx.amount || 0),
+              0
+            )
+          )}
+        </span>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="bg-white/20 p-3 rounded-full">
+        <Wallet className="text-white md:text-2xl" />
       </div>
+    </CardContent>
+  </Card>
+
+  {/* Current Balance */}
+  <Card className="bg-gradient-to-r from-[#1D4ED8] to-[#2563EB] text-white flex items-center justify-between shadow-lg rounded-xl p-4">
+    <CardHeader className="p-0">
+      <CardTitle className="text-base md:text-lg font-medium">
+        Current Balance
+        <span className="block font-semibold text-xl mt-1">
+          ₦{formatNumber(balance ?? 0)}
+        </span>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="bg-white/20 p-3 rounded-full">
+        <Wallet className="text-white md:text-2xl" />
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Account Number */}
+  <Card className="flex items-center justify-between text-gray-700 bg-white border shadow-md rounded-xl p-4">
+    <CardHeader className="p-0">
+      <CardTitle className="text-base md:text-lg font-medium">
+        Your Account Number
+        <div className="font-semibold text-black flex items-center gap-4 mt-1">
+          {details?.bank_account_number}
+          <button
+            className="text-sm border px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100 transition"
+            onClick={handleCopyReferral}
+          >
+            {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
+          </button>
+        </div>
+        <p className="text-sm text-gray-500">{details?.bank_name}</p>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="bg-gray-100 p-3 rounded-full">
+        <Landmark className="md:text-2xl text-gray-700" />
+      </div>
+    </CardContent>
+  </Card>
+</div>
 
       {/* 📜 Transaction History */}
       <TransactionHistory />
