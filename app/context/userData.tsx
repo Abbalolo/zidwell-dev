@@ -45,6 +45,7 @@ interface UserContextType {
   loading: boolean;
   episodes: PodcastEpisode[];
   transactions: any[];
+  allTransactions: any[];
   searchTerm: any;
   setSearchTerm: Dispatch<SetStateAction<any>>;
   // login: (credentials: { email: string; password: string }) => Promise<void>;
@@ -64,6 +65,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
 
   // Logout
   const logout = async () => {
@@ -135,6 +137,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     fetchTransactions();
   }, [userData?.id, searchTerm]);
 
+
+  useEffect(() => {
+  const fetchAllTransactions = async () => {
+    if (!userData?.id) return;
+
+    try {
+      const res = await fetch(`/api/bill-transactions?userId=${userData.id}`);
+      const data = await res.json();
+      setAllTransactions(data.transactions || []);
+    } catch (error) {
+      console.error("Failed to fetch all transactions:", error);
+      setAllTransactions([]);
+    }
+  };
+
+  fetchAllTransactions();
+}, [userData?.id]);
+
   // Handle theme
   useEffect(() => {
     const theme = localStorage.getItem("theme");
@@ -175,6 +195,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setIsDarkMode,
         handleDarkModeToggle,
         transactions,
+        allTransactions,
         searchTerm,
         setSearchTerm,
       }}

@@ -16,7 +16,7 @@ export default function FundAccountMethods() {
   const [showModal, setShowModal] = useState(false);
   const [amount, setAmount] = useState<number | string>("");
 
-  const { userData, balance, transactions } = useUserContextData();
+  const { userData, balance, allTransactions } = useUserContextData();
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
 
@@ -136,8 +136,9 @@ export default function FundAccountMethods() {
     }
   };
 
+
 const filterLifetimeTransactions = (transactions: any[]) => {
-  return transactions.filter(
+  return allTransactions.filter(
     (tx) => tx.type === "deposit" || tx.type === "card deposit"
   );
 };
@@ -165,7 +166,7 @@ const filterLifetimeTransactions = (transactions: any[]) => {
         <span className="block font-semibold text-xl mt-1">
           ₦
           {formatNumber(
-            filterLifetimeTransactions(transactions).reduce(
+            filterLifetimeTransactions(allTransactions).reduce(
               (sum, tx) => sum + Number(tx.amount || 0),
               0
             )
