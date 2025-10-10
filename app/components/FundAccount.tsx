@@ -141,11 +141,6 @@ const filterLifetimeTransactions = (transactions: any[]) => {
     (tx) => tx.type === "deposit" || tx.type === "card deposit"
   );
 };
-<<<<<<< HEAD
-=======
-
-  console.log("Transactions in FundAccountMethods:", filterLifetimeTransactions(transactions));
->>>>>>> 75de64c701a35212d27bc012eded2a1926641f27
 
   return (
     <div className="space-y-6 relative">
