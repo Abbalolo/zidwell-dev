@@ -175,7 +175,7 @@ const Page = () => {
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
-        text: "₦1,000 will be deducted from your wallet for generating this Contract.",
+        text: "₦100 will be deducted from your wallet for generating this Contract.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -193,7 +193,7 @@ const Page = () => {
             body: JSON.stringify({
               userId: userData?.id,
               pin,
-              amount: 2000,
+              amount: 100,
               description: "Contract successfully generated",
             }),
           });
@@ -225,14 +225,14 @@ const Page = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: userData?.id,
-          amount: 1000,
+          amount: 100,
           description: "Refund for failed contract generation",
         }),
       });
       Swal.fire({
         icon: "info",
         title: "Refund Processed",
-        text: "₦1,000 has been refunded to your wallet due to failed contract sending.",
+        text: "₦100 has been refunded to your wallet due to failed contract sending.",
       });
     } catch (err) {
       console.error("Refund failed:", err);

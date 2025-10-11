@@ -325,7 +325,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: userData?.id,
-          amount: 2000,
+          amount: 100,
           description: "Refund for failed contract generation",
         }),
       });
