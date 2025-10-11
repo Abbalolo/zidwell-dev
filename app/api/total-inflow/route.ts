@@ -1,4 +1,3 @@
-// /app/api/total-inflow/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -26,7 +25,11 @@ export async function POST(req: NextRequest) {
   }
 
   if (!transactions) {
-    return NextResponse.json({ totalInflow: 0, totalOutflow: 0, successRate: 0 });
+    return NextResponse.json({
+      totalInflow: 0,
+      totalOutflow: 0,
+      totalTransactions: 0
+    });
   }
 
   // Inflow types
@@ -44,12 +47,12 @@ export async function POST(req: NextRequest) {
     .filter((tx) => outflowTypes.includes(tx.type))
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-  // Success rate = (successful transactions / total transactions) * 100
-  const successfulTransactions = transactions.filter((tx) => tx.status === "success");
-  const successRate =
-    transactions.length > 0
-      ? Math.round((successfulTransactions.length / transactions.length) * 100)
-      : 0;
+  // Total transactions count
+  const totalTransactions = transactions.length;
 
-  return NextResponse.json({ totalInflow, totalOutflow, successRate });
+  return NextResponse.json({
+    totalInflow,
+    totalOutflow,
+    totalTransactions
+  });
 }

@@ -4,8 +4,8 @@ import React from "react";
 import { calculateFees, formatNaira } from "@/lib/fee"; 
 
 type Props = {
-  monthlyVolume: number; // deposit+withdrawal+card
-  type: "withdrawal" | "deposit" | "card";
+  monthlyVolume: number; // deposit+transfer+card
+  type: "transfer" | "deposit" | "card";
   amount?: number; 
 };
 
@@ -13,7 +13,7 @@ export default function FeeDisplay({ monthlyVolume, type, amount }: Props) {
   // textual rule
   const capText = monthlyVolume > 30000 ? "₦50" : "₦150";
   const feeRule = `1% fee (min ₦10, cap ${capText})`;
-  const appFeeText = type === "withdrawal" ? " + App fee 0.75%" : "";
+  const appFeeText = type === "transfer" ? " + App fee 0.75%" : "";
 
   // numeric breakdown if amount provided
   const feeDetails = amount
@@ -32,7 +32,7 @@ export default function FeeDisplay({ monthlyVolume, type, amount }: Props) {
           {/* <p>
             Nomba fee: <span className="font-semibold">{formatNaira(feeDetails.nombaFee)}</span>
           </p>
-          {type === "withdrawal" && (
+          {type === "transfer" && (
             <p>
               App fee (0.75%): <span className="font-semibold">{formatNaira(feeDetails.appFee)}</span>
             </p>

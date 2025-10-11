@@ -125,11 +125,11 @@ useEffect(() => {
             </Button> */}
             <Button
               variant="outline"
-              onClick={() => router.push("dashboard/fund-account/withdraw-page")}
+              onClick={() => router.push("dashboard/fund-account/transfer-page")}
               className="md:px-8 md:py-3 bg-transparent"
             >
               <Receipt className="w-4 h-4 mr-2" />
-              Withdraw Cash
+             Transfer Cash
             </Button>
           </div>
 

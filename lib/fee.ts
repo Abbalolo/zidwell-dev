@@ -8,28 +8,31 @@ export type FeeResult = {
 
 /**
  * Calculate fees
- * - monthlyVolume: total deposit+withdrawal+card for user this month
- * - type: "withdrawal" | "deposit" | "card"  (withdrawals get app fee)
+ * - monthlyVolume: total deposit+transfer+card for user this month
+ * - type: "transfer" | "deposit" | "card"  (transfers get app fee)
  */
 export function calculateFees(
   amount: number,
   monthlyVolume: number,
-  type: "withdrawal" | "deposit" | "card"
+  type: "transfer" | "deposit" | "card"
 ): FeeResult {
   const am = Number(amount) || 0;
+
   // base nomba fee = 1% of amount
   let nombaFee = am * 0.01;
 
-  // min fee ₦10
+  // nomba min fee ₦10
   nombaFee = Math.max(nombaFee, 10);
 
-  // cap depends on monthlyVolume
+  // nomba cap depends on monthly volume
   const cap = monthlyVolume > 30000 ? 50 : 150;
   nombaFee = Math.min(nombaFee, cap);
 
+  // ✅ App Fee = 0.5% capped at ₦2000
   let appFee = 0;
-  if (type === "withdrawal") {
-    appFee = am * 0.0075; // 0.75%
+  if (type === "transfer") {
+    appFee = am * 0.005; // 0.50%
+    appFee = Math.min(appFee, 2000); // ✅ Cap at ₦2000
   }
 
   const totalFee = nombaFee + appFee;

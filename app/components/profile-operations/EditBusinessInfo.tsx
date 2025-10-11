@@ -248,7 +248,7 @@ const EditBusinessInfo: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="rcNumber">RC Number</Label>
+              <Label htmlFor="rcNumber">RC Number (the number on your CAC document)</Label>
               <Input
                 id="rcNumber"
                 value={form.rcNumber}

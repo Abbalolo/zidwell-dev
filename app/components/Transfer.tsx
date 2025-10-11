@@ -27,8 +27,8 @@ interface P2PDetails {
   id: string;
 }
 
-export default function Withdraw() {
-  const [withdrawType, setWithdrawType] = useState<
+export default function Transfer() {
+  const [transferType, setTransferType] = useState<
     "my-account" | "other-bank" | "p2p"
   >("my-account");
   const [amount, setAmount] = useState<string>("");
@@ -113,7 +113,7 @@ export default function Withdraw() {
 
   // Bank account lookup
   useEffect(() => {
-    if (withdrawType !== "other-bank") return;
+    if (transferType !== "other-bank") return;
     if (accountNumber.length !== 10 || !bankCode) return;
 
     const timeout = setTimeout(async () => {
@@ -150,11 +150,11 @@ export default function Withdraw() {
     }, 700);
 
     return () => clearTimeout(timeout);
-  }, [accountNumber, bankCode, withdrawType]);
+  }, [accountNumber, bankCode, transferType]);
 
   // P2P user lookup
   useEffect(() => {
-    if (withdrawType !== "p2p") return;
+    if (transferType !== "p2p") return;
     if (!recepientAcc || recepientAcc.length < 6) return;
 
     if (recepientAcc === userData?.walletAccountNumber) {
@@ -202,7 +202,7 @@ export default function Withdraw() {
     }, 400); // delay for smoother UX
 
     return () => clearTimeout(timeout);
-  }, [recepientAcc, withdrawType]);
+  }, [recepientAcc, transferType]);
 
   // Withdraw submission
   const handleWithdraw = async (e: React.FormEvent) => {
@@ -218,13 +218,13 @@ export default function Withdraw() {
     if (narration.length > 100) newErrors.narration = "Narration too long.";
 
     if (
-      withdrawType === "my-account" &&
+      transferType === "my-account" &&
       (!userDetails?.bank_account_number || !userDetails?.bank_account_name)
     ) {
       newErrors.myAccount = "Your bank details are incomplete.";
     }
 
-    if (withdrawType === "other-bank") {
+    if (transferType === "other-bank") {
       if (!bankCode || !accountNumber || !accountName) {
         newErrors.otherBank = "Please complete all bank fields.";
       }
@@ -236,7 +236,7 @@ export default function Withdraw() {
       }
     }
 
-    if (withdrawType === "p2p" && (!recepientAcc || !p2pDetails?.id)) {
+    if (transferType === "p2p" && (!recepientAcc || !p2pDetails?.id)) {
       newErrors.recepientAcc = "Recipient not found or invalid.";
     }
 
@@ -259,27 +259,27 @@ export default function Withdraw() {
         userId: userData?.id,
         amount: Number(amount),
         narration,
-        type: withdrawType,
+        type: transferType,
       };
 
-      if (withdrawType === "my-account") {
+      if (transferType === "my-account") {
         payload.bankCode = userDetails.bank_code;
         payload.accountNumber = userDetails.bank_account_number;
         payload.accountName = userDetails.bank_account_name;
       }
 
-      if (withdrawType === "other-bank") {
+      if (transferType === "other-bank") {
         payload.bankCode = bankCode;
         payload.accountNumber = accountNumber;
         payload.accountName = accountName;
       }
 
-      if (withdrawType === "p2p") {
+      if (transferType === "p2p") {
         payload.receiverAccountId = p2pDetails?.id;
       }
 
       const endpoint =
-        withdrawType === "p2p" ? "/api/p2p-transfer" : "/api/withdraw-balance";
+        transferType === "p2p" ? "/api/p2p-transfer" : "/api/withdraw-balance";
 
       // ✅ Make API call
       const res = await fetch(endpoint, {
@@ -294,7 +294,7 @@ export default function Withdraw() {
         // ✅ Success Alert
         Swal.fire({
           icon: "success",
-          title: "Withdrawal Successful",
+          title: "Transfer Successful",
           text: "Your transaction has been processed successfully.",
         });
 
@@ -309,11 +309,11 @@ export default function Withdraw() {
         // ❌ Server error
         Swal.fire({
           icon: "error",
-          title: "Withdrawal Failed",
+          title: "Transfer Failed",
           text: data?.message,
         });
 
-        setErrors({ form: data?.message || "Withdrawal failed." });
+        setErrors({ form: data?.message || "Transfer failed." });
       }
     } catch (err: any) {
       // ❌ Catch error
@@ -334,37 +334,37 @@ export default function Withdraw() {
     !amount ||
     !narration ||
     Number(amount) <= 0 ||
-    (withdrawType === "my-account" && !userDetails?.bank_account_number) ||
-    (withdrawType === "other-bank" &&
+    (transferType === "my-account" && !userDetails?.bank_account_number) ||
+    (transferType === "other-bank" &&
       (!bankCode || !accountNumber || !accountName)) ||
-    (withdrawType === "p2p" && (!recepientAcc || !p2pDetails?.id));
+    (transferType === "p2p" && (!recepientAcc || !p2pDetails?.id));
 
   return (
     <Card className="shadow-xl border rounded-2xl">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-gray-800">
-          Withdraw Funds
+          Transfer Funds
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Choose how you want to withdraw funds from your wallet.
+          Choose how you want to transfer funds from your wallet.
         </p>
       </CardHeader>
 
       <CardContent>
         <form onSubmit={handleWithdraw} className="space-y-6">
-          {/* Withdrawal Type */}
+          {/* Transfer Type */}
           <div className="space-y-2">
-            <Label>Withdrawal Type</Label>
+            <Label>Transfer Type</Label>
             <Select
-              onValueChange={(v) => setWithdrawType(v as any)}
-              value={withdrawType}
+              onValueChange={(v) => setTransferType(v as any)}
+              value={transferType}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select withdrawal type" />
+                <SelectValue placeholder="Select Transfer type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="my-account">My Bank Account</SelectItem>
-                {/* <SelectItem value="other-bank">Other Bank Account</SelectItem> */}
+                <SelectItem value="other-bank">Other Bank Account</SelectItem>
                 <SelectItem value="p2p">Zidwell User (P2P)</SelectItem>
               </SelectContent>
             </Select>
@@ -379,10 +379,10 @@ export default function Withdraw() {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="e.g. 5000"
             />
-            {withdrawType == "my-account" && (
+            {transferType == "my-account" || transferType == "other-bank" && (
               <FeeDisplay
                 monthlyVolume={monthlyVolume}
-                type="withdrawal"
+                type="transfer"
                 amount={Number(amount) || undefined}
               />
             )}
@@ -392,7 +392,7 @@ export default function Withdraw() {
           </div>
 
           {/* My Bank Account */}
-          {withdrawType === "my-account" && (
+          {transferType === "my-account" && (
             <>
               {loading2 ? (
                 // ⏳ Loading State
@@ -435,7 +435,7 @@ export default function Withdraw() {
           )}
 
           {/* Other Bank */}
-          {withdrawType === "other-bank" && (
+          {transferType === "other-bank" && (
             <>
               <div className="space-y-1">
                 <Label htmlFor="bankName">Select Bank Name</Label>
@@ -507,7 +507,7 @@ export default function Withdraw() {
           )}
 
           {/* P2P */}
-          {withdrawType === "p2p" && (
+          {transferType === "p2p" && (
             <div className="space-y-1">
               <Label>Account Number (Zidwell User)</Label>
               <Input

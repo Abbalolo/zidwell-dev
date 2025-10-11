@@ -6,7 +6,7 @@ export default function UserDashboardStats() {
   const {
     lifetimeBalance,
     totalOutflow,
-    successRate,
+    totalTransactions,
   } = useUserContextData();
 
   return (
@@ -25,9 +25,9 @@ export default function UserDashboardStats() {
       </div>
       <div>
         <p className="md:text-2xl text-lg font-bold text-gray-900">
-          {successRate}%
+          {totalTransactions}
         </p>
-        <p className="text-sm text-gray-600">Success Rate</p>
+        <p className="text-sm text-gray-600">Total Transactions</p>
       </div>
     </div>
   );

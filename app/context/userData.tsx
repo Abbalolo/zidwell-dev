@@ -47,7 +47,7 @@ interface UserContextType {
   transactions: any[];
   lifetimeBalance: number;
   totalOutflow: number;
-  successRate: number;
+  totalTransactions: number;
   searchTerm: string;
   setSearchTerm: Dispatch<SetStateAction<string>>;
   logout: () => Promise<void>;
@@ -69,7 +69,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [lifetimeBalance, setLifetimeBalance] = useState(0);
   const [totalOutflow, setTotalOutflow] = useState(0);
-  const [successRate, setSuccessRate] = useState(0);
+  const [totalTransactions, setTotalTransactions] = useState(0);
 
   // Logout
   const logout = async () => {
@@ -153,7 +153,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         const data = await res.json();
         setLifetimeBalance(data.totalInflow || 0);
         setTotalOutflow(data.totalOutflow || 0);
-        setSuccessRate(data.successRate || 0);
+        setTotalTransactions(data.totalTransactions || 0);
       } catch (error) {
         console.error("Failed to fetch transaction stats:", error);
       }
@@ -193,7 +193,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         transactions,
         lifetimeBalance,
         totalOutflow,
-        successRate,
+        totalTransactions,
         searchTerm,
         setSearchTerm,
       }}

@@ -4,7 +4,7 @@ import DashboardHeader from "@/app/components/dashboard-hearder";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { useRouter } from "next/navigation";
-import Withdraw from "@/app/components/Withdraw";
+import Transfer from "@/app/components/Transfer";
 
 export default function page() {
   const router = useRouter();
@@ -30,17 +30,17 @@ export default function page() {
 
               <div>
                 <h1 className="md:text-3xl text-2xl font-bold mb-2 text-gray-900">
-                  Withdraw Balance 
+                  Transfer From Balance 
                 </h1>
                 <p className="text-muted-foreground text-sm md:text-base">
                   Transfer money from your wallet directly into your bank
                   account in just a few steps. Fill in the details below to
-                  complete your withdrawal securely.
+                  complete your transaction securely.
                 </p>
               </div>
             </div>
 
-            <Withdraw />
+            <Transfer />
           </div>
         </main>
       </div>
