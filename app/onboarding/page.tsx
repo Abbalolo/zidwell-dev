@@ -74,8 +74,6 @@ export default function Page() {
     },
   });
 
-
-  console.log(data.accountDetails)
   const handleVerify = async (bvn: string) => {
     setLoading(true);
     try {

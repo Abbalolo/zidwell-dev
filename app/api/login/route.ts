@@ -201,6 +201,8 @@ export async function POST(req: Request) {
         verified: pendingProfile.verified ?? false,
         createdAt: pendingProfile.created_at ?? null,
       };
+
+      
     } else {
       profile = {
         id: userProfile.id,

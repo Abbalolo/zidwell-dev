@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useUserContextData } from "../context/userData";
-import { CopyIcon, Landmark, Wallet, X } from "lucide-react";
+import { CopyIcon, Eye, EyeOff, Landmark, Wallet, X } from "lucide-react";
 import TransactionHistory from "./transaction-history";
 import { Input } from "./ui/input";
 
@@ -15,7 +15,8 @@ export default function FundAccountMethods() {
   const [details, setDetails] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [amount, setAmount] = useState<number | string>("");
-
+  const [showLifetime, setShowLifetime] = useState(true);
+  const [showCurrent, setShowCurrent] = useState(true);
   const { userData, balance, lifetimeBalance } = useUserContextData();
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
@@ -136,9 +137,6 @@ export default function FundAccountMethods() {
     }
   };
 
-
-
-
   return (
     <div className="space-y-6 relative">
       {/* ✅ Quick Fund Button */}
@@ -154,67 +152,78 @@ export default function FundAccountMethods() {
 
       {/* 💳 Account Balance */}
       <div className="flex flex-col md:flex-row gap-4">
-  {/* Lifetime Balance */}
-  <Card className="bg-gradient-to-r from-[#C29307] to-[#E3A521] text-white flex items-center justify-between shadow-lg rounded-xl p-4">
-    <CardHeader className="p-0">
-      <CardTitle className="text-base md:text-lg font-medium">
-        Lifetime Balance
-        <span className="block font-semibold text-xl mt-1">
-          ₦
-          {formatNumber(
-            lifetimeBalance
-          )}
-        </span>
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="bg-white/20 p-3 rounded-full">
-        <Wallet className="text-white md:text-2xl" />
-      </div>
-    </CardContent>
-  </Card>
+        {/* Lifetime Balance */}
+        <Card className="bg-gradient-to-r from-[#C29307] to-[#E3A521] text-white flex items-center justify-between shadow-lg rounded-xl p-4">
+          <CardHeader className="p-0">
+            <CardTitle className="text-base md:text-lg font-medium">
+              Lifetime Balance
+              <span className="block font-semibold text-xl mt-1">
+                {showLifetime ? `₦${formatNumber(lifetimeBalance)}` : "*****"}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <button
+              onClick={() => setShowLifetime((prev) => !prev)}
+              className="bg-white/20 p-3 rounded-full"
+            >
+              {showLifetime ? (
+                <EyeOff className="text-white md:text-2xl" />
+              ) : (
+                <Eye className="text-white md:text-2xl" />
+              )}
+            </button>
+          </CardContent>
+        </Card>
 
-  {/* Current Balance */}
-  <Card className="bg-gradient-to-r from-[#1D4ED8] to-[#2563EB] text-white flex items-center justify-between shadow-lg rounded-xl p-4">
-    <CardHeader className="p-0">
-      <CardTitle className="text-base md:text-lg font-medium">
-        Current Balance
-        <span className="block font-semibold text-xl mt-1">
-          ₦{formatNumber(balance ?? 0)}
-        </span>
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="bg-white/20 p-3 rounded-full">
-        <Wallet className="text-white md:text-2xl" />
-      </div>
-    </CardContent>
-  </Card>
+        {/* Current Balance */}
+        <Card className="bg-gradient-to-r from-gray-600 to-gray-800 text-white flex items-center justify-between shadow-lg rounded-xl p-4">
+          <CardHeader className="p-0">
+            <CardTitle className="text-base md:text-lg font-medium">
+              Current Balance
+              <span className="block font-semibold text-xl mt-1">
+                {showCurrent ? `₦${formatNumber(balance ?? 0)}` : "*****"}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <button
+              onClick={() => setShowCurrent((prev) => !prev)}
+              className="bg-white/20 p-3 rounded-full"
+            >
+              {showCurrent ? (
+                <EyeOff className="text-white md:text-2xl" />
+              ) : (
+                <Eye className="text-white md:text-2xl" />
+              )}
+            </button>
+          </CardContent>
+        </Card>
 
-  {/* Account Number */}
-  <Card className="flex items-center justify-between text-gray-700 bg-white border shadow-md rounded-xl p-4">
-    <CardHeader className="p-0">
-      <CardTitle className="text-base md:text-lg font-medium">
-        Your Account Number
-        <div className="font-semibold text-black flex items-center gap-4 mt-1">
-          {details?.bank_account_number}
-          <button
-            className="text-sm border px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100 transition"
-            onClick={handleCopyReferral}
-          >
-            {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
-          </button>
-        </div>
-        <p className="text-sm text-gray-500">{details?.bank_name}</p>
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="bg-gray-100 p-3 rounded-full">
-        <Landmark className="md:text-2xl text-gray-700" />
+        {/* Account Number */}
+        <Card className="flex items-center justify-between text-gray-700 bg-white border shadow-md rounded-xl p-4">
+          <CardHeader className="p-0">
+            <CardTitle className="text-base md:text-lg font-medium">
+              Your Account Number
+              <div className="font-semibold text-black flex items-center gap-4 mt-1">
+                {details?.bank_account_number}
+                <button
+                  className="text-sm border px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100 transition"
+                  onClick={handleCopyReferral}
+                >
+                  {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500">{details?.bank_name}</p>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="bg-gray-100 p-3 rounded-full">
+              <Landmark className="md:text-2xl text-gray-700" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </CardContent>
-  </Card>
-</div>
 
       {/* 📜 Transaction History */}
       <TransactionHistory />
