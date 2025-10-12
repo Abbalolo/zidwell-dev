@@ -22,11 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-          
         <UserProvider>
-          <SessionWatcher>{children}</SessionWatcher>
-          {children}
-          </UserProvider>
+          <SessionWatcher>
+            {children}
+          </SessionWatcher>
+        </UserProvider>
       </body>
     </html>
   );
