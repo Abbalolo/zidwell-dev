@@ -51,9 +51,6 @@ export default function Transfer() {
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
 
-  console.log("User details:", userDetails);
-  console.log("Wallet details:", walletDetails);
-
   useEffect(() => {
     const fetchVolumes = async () => {
       if (!userData?.id) return;
@@ -78,7 +75,7 @@ export default function Transfer() {
       setLoading2(true);
       try {
         const [accountRes,banksRes ] = await Promise.all([
-          fetch("/api/get-business-account-details", {
+          fetch("/api/get-wallet-account-details", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: userData.id }),
@@ -94,7 +91,6 @@ export default function Transfer() {
         const accountData = accountRes.ok ? await accountRes.json() : {};
         // const walletData = walletRes.ok ? await walletRes.json() : {};
         const banksData = banksRes.ok ? await banksRes.json() : {};
-        console.log("accountData",accountData);
         setUserDetails(accountData || {});
         // setWalletDetails(walletData || {});
         setBanks(banksData?.data || []);
@@ -219,7 +215,7 @@ export default function Transfer() {
 
     if (
       transferType === "my-account" &&
-      (!userDetails?.bank_account_number || !userDetails?.bank_account_name)
+      (!userDetails?.p_account_number || !userDetails?.p_account_name)
     ) {
       newErrors.myAccount = "Your bank details are incomplete.";
     }
@@ -263,9 +259,9 @@ export default function Transfer() {
       };
 
       if (transferType === "my-account") {
-        payload.bankCode = userDetails.bank_code;
-        payload.accountNumber = userDetails.bank_account_number;
-        payload.accountName = userDetails.bank_account_name;
+        payload.bankCode = userDetails.p_bank_code;
+        payload.accountNumber = userDetails.p_account_number;
+        payload.accountName = userDetails.p_account_name;
       }
 
       if (transferType === "other-bank") {
@@ -334,7 +330,7 @@ export default function Transfer() {
     !amount ||
     !narration ||
     Number(amount) <= 0 ||
-    (transferType === "my-account" && !userDetails?.bank_account_number) ||
+    (transferType === "my-account" && !userDetails?.p_account_number) ||
     (transferType === "other-bank" &&
       (!bankCode || !accountNumber || !accountName)) ||
     (transferType === "p2p" && (!recepientAcc || !p2pDetails?.id));
@@ -399,20 +395,20 @@ export default function Transfer() {
                 <div className="bg-gray-50 p-3 rounded-lg border text-sm text-gray-600 animate-pulse">
                   Loading your bank details...
                 </div>
-              ) : userDetails?.bank_account_number &&
-                userDetails?.bank_account_name ? (
+              ) : userDetails?.p_account_number &&
+                userDetails?.p_account_name ? (
                 // ✅ Bank details found
                 <div className="bg-gray-50 p-3 rounded-lg border space-y-1 text-sm">
                   <p>
-                    <strong>Bank:</strong> {userDetails.bank_name}
+                    <strong>Bank:</strong> {userDetails.p_bank_name}
                   </p>
                   <p>
                     <strong>Account Number:</strong>{" "}
-                    {userDetails.bank_account_number}
+                    {userDetails.p_account_number}
                   </p>
                   <p>
                     <strong>Account Name:</strong>{" "}
-                    {userDetails.bank_account_name}
+                    {userDetails.p_account_name}
                   </p>
                 </div>
               ) : (
