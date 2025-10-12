@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     // Fetch only wallet_balance
     const { data, error } = await supabase
       .from("users")
-      .select("wallet_id, bank_name, bank_account_name, bank_account_number ")
+      .select("wallet_id, bank_name, bank_account_name, bank_account_number, p_account_name, p_account_number, p_bank_name ")
       .eq("id", userId)
       .single();
 
@@ -30,7 +30,10 @@ export async function POST(req: Request) {
         wallet_id: data.wallet_id,
         bank_name: data.bank_name,
         bank_account_name: data.bank_account_name ,
-        bank_account_number: data.bank_account_number 
+        bank_account_number: data.bank_account_number ,
+        p_bank_name: data.p_bank_name,
+        p_account_name: data.p_account_name,
+        p_account_number: data.p_account_number,
     });
   } catch (err: any) {
     console.error("❌ Unexpected error:", err.message);

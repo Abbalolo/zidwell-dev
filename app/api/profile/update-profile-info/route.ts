@@ -11,7 +11,8 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, firstName, lastName, phone, dob, address, city, state, country } = body;
+
+    const { userId, firstName, lastName, phone, dob, address, city, state, country,pBankName,pBankCode,pAccountNumber, pAccountName  } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -28,6 +29,10 @@ export async function POST(req: Request) {
         city,
         state,
         country,
+        p_bank_name: pBankName,
+        p_bank_code: pBankCode,
+        p_account_number: pAccountNumber,
+        p_account_name: pAccountName,
       })
       .eq("id", userId)
       .select()

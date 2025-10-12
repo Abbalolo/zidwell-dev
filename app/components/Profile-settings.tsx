@@ -71,69 +71,47 @@ const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files[0];
     setUploading(true);
 
-    // Generate a safe file path
-    const fileExt = file.name.split(".").pop() || "jpg";
-    const filePath = `${userData.id}-${Date.now()}.${fileExt}`;
-    const bucketName = "profile-pictures";
+    // Send to API route
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("userId", userData.id);
 
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from(bucketName)
-      .upload(filePath, file, { upsert: true });
+    const response = await fetch("/api/profile/upload-profile-picture", {
+      method: "POST",
+      body: formData,
+    });
 
-    if (uploadError) {
-      if (uploadError.message.includes("Bucket not found")) {
-        throw new Error(
-          `Bucket "${bucketName}" does not exist. Please create it in Supabase Storage.`
-        );
-      }
-      throw uploadError;
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to upload image");
     }
 
-    // Get Public URL
-    const { data: publicData } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
-
-    const publicUrl = publicData?.publicUrl;
-    if (!publicUrl) throw new Error("Failed to generate public URL");
-
-    // Update DB
-    const { error: dbError } = await supabase
-      .from("users")
-      .update({ profile_picture: publicUrl })
-      .eq("id", userData.id);
-
-    if (dbError) throw dbError;
-
-    // Update localStorage + context
-    const updatedUser = { ...userData, profile_picture: publicUrl };
-    localStorage.setItem("userData", JSON.stringify(updatedUser));
+    // ✅ Update context + local storage
+    const updatedUser = { ...userData, profile_picture: data.url };
     setUserData(updatedUser);
+    localStorage.setItem("userData", JSON.stringify(updatedUser));
 
-    console.log("✅ Profile picture updated:", publicUrl);
-
-    // ✅ SweetAlert Success
     Swal.fire({
       icon: "success",
       title: "Profile Updated!",
-      text: "Your profile picture has been uploaded successfully.",
-      confirmButtonColor: "#3085d6",
+      text: "Your profile picture has been uploaded.",
     });
-  } catch (err: any) {
-    console.error("❌ Upload failed:", err.message || err);
 
-    // ❌ SweetAlert Error
+  } catch (err: any) {
+    console.error("❌ Upload failed:", err);
     Swal.fire({
       icon: "error",
       title: "Upload Failed",
-      text: err.message || "Something went wrong. Please try again.",
-      confirmButtonColor: "#d33",
+      text: err.message || "Something went wrong.",
     });
   } finally {
     setUploading(false);
   }
 };
+
+
+
 
 
   return (
@@ -143,9 +121,9 @@ const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
-              {userData?.profile_picture ? (
+              {userData?.profilePicture ? (
                 <img
-                  src={userData.profile_picture}
+                  src={userData.profilePicture}
                   alt="Profile"
                   className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
                 />

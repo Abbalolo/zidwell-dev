@@ -25,10 +25,10 @@ interface BusinessForm {
   taxId: string;
   businessAddress: string;
   businessDescription: string;
-  bankName: string;
-  bankCode: string;
-  accountNumber: string;
-  accountName: string;
+  // bankName: string;
+  // bankCode: string;
+  // accountNumber: string;
+  // accountName: string;
 }
 
 const businessCategories = [
@@ -71,26 +71,26 @@ const EditBusinessInfo: React.FC = () => {
     taxId: "",
     businessAddress: "",
     businessDescription: "",
-    bankName: "",
-    bankCode: "",
-    accountNumber: "",
-    accountName: "",
+    // bankName: "",
+    // bankCode: "",
+    // accountNumber: "",
+    // accountName: "",
   });
-  const [banks, setBanks] = useState<any[]>([]);
+  // const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchBanks = async () => {
-      try {
-        const res = await fetch("/api/banks");
-        const data = await res.json();
-        setBanks(data?.data || []);
-      } catch (err) {
-        console.error("Error fetching banks:", err);
-      }
-    };
-    fetchBanks();
-  }, []);
+  // useEffect(() => {
+  //   const fetchBanks = async () => {
+  //     try {
+  //       const res = await fetch("/api/banks");
+  //       const data = await res.json();
+  //       setBanks(data?.data || []);
+  //     } catch (err) {
+  //       console.error("Error fetching banks:", err);
+  //     }
+  //   };
+  //   fetchBanks();
+  // }, []);
 
   // ✅ Fetch business info on mount
   useEffect(() => {
@@ -124,10 +124,10 @@ const EditBusinessInfo: React.FC = () => {
           taxId: data.tax_id || "",
           businessAddress: data.business_address || "",
           businessDescription: data.business_description || "",
-          bankName: data.bank_name || "",
-          bankCode: data.bank_code || "",
-          accountNumber: data.bank_account_number || "",
-          accountName: data.bank_account_name || "",
+          // bankName: data.bank_name || "",
+          // bankCode: data.bank_code || "",
+          // accountNumber: data.bank_account_number || "",
+          // accountName: data.bank_account_name || "",
         });
         setLoading(false)
       }
@@ -166,10 +166,10 @@ const EditBusinessInfo: React.FC = () => {
         taxId: form.taxId,
         businessAddress: form.businessAddress,
         businessDescription: form.businessDescription,
-        bankName: form.bankName,
-        bankCode: form.bankCode,
-        accountNumber: form.accountNumber,
-        accountName: form.accountName,
+        // bankName: form.bankName,
+        // bankCode: form.bankCode,
+        // accountNumber: form.accountNumber,
+        // accountName: form.accountName,
       }),
     });
 
@@ -295,7 +295,7 @@ const EditBusinessInfo: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
@@ -368,7 +368,7 @@ const EditBusinessInfo: React.FC = () => {
             />
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       <div className="mt-4">
         <Button

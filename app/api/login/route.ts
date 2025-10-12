@@ -155,7 +155,7 @@ export async function POST(req: Request) {
     const { data: userProfile } = await supabase
       .from("users")
       .select(
-        "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification, role, city, state, address, date_of_birth"
+        "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification, role, city, state, address, date_of_birth, profile_picture"
       )
       .eq("id", userId)
       .maybeSingle();
@@ -219,6 +219,7 @@ export async function POST(req: Request) {
         city: userProfile.city,
         address: userProfile.address,
         dateOfBirth: userProfile.date_of_birth,
+        profilePicture: userProfile.profile_picture,
       };
     }
 

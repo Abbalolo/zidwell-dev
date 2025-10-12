@@ -19,6 +19,7 @@ const handleLogout = async () => {
 
 
     localStorage.removeItem("userData");
+    localStorage.clear();
     setUserData(null);
 
     Swal.fire({
