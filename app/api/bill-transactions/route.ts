@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
     const search = searchParams.get("search") || "";
-    const limit = parseInt(searchParams.get("limit") || "8", 10);
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -22,19 +21,14 @@ export async function GET(req: NextRequest) {
       .from("transactions")
       .select("*")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(5);
 
     if (search) {
       query = query.ilike("type", `%${search}%`);
     }
 
-    if (!search) {
-      query = query.limit(limit);
-    }
-
     const { data, error } = await query;
-
-    // console.log("Fetched transactions from DB:", data, error);
 
     if (error) throw error;
 
