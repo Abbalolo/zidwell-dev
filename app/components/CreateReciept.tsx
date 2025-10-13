@@ -133,7 +133,7 @@ function CreateReceipt() {
       newErrors.customer_note = "Customer note is required";
     if (!form.payment_for.trim())
       newErrors.payment_for = "Payment description is required.";
-    
+
     if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
     if (!pin) newErrors.pin = "Please enter transaction pin";
 
@@ -205,36 +205,30 @@ function CreateReceipt() {
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
-
-    console.log("form data", form);
-
-    const paid = await handleDeduct();
-
-    if (!paid) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+    // ✅ Save receipt after successful payment
     await handleSaveReceipt();
-     setPin(Array(inputCount).fill(""));
+
+    // ✅ Reset states after success
+    setPin(Array(inputCount).fill(""));
     setForm({
       name: "",
       email: "",
-      receiptId: "",
+      receiptId: generateReceiptId(),
       bill_to: "",
       from: "",
-      issue_date: "",
+      issue_date: today,
       customer_note: "",
       payment_for: "",
       receipt_items: [],
     });
-     window.location.reload();
+
     setLoading(false);
+    setIsOpen(false);
+    window.location.reload();
   };
 
   const handleDeduct = async (): Promise<boolean> => {
-    setLoading(true);
+       setLoading(true);
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
@@ -244,45 +238,49 @@ function CreateReceipt() {
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
         confirmButtonText: "Yes, proceed",
-      }).then(async (result) => {
+      }).then((result) => {
         if (!result.isConfirmed) {
+          setLoading(false);
           return resolve(false);
         }
 
-        try {
-          const res = await fetch("/api/pay-app-service", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: userData?.id,
-              pin,
-              amount: 100,
-              description: "Receipt successfully generated",
-            }),
-          });
+        // ✅ Wait until PIN is entered
+        const checkPinInterval = setInterval(() => {
+          if (pin.join("").length === 4) {
+            clearInterval(checkPinInterval);
 
-          const data = await res.json();
-
-          if (!res.ok) {
-            await Swal.fire(
-              "Error",
-              data.error || "Something went wrong",
-              "error"
-            );
-            setLoading(false);
-
-            return resolve(false);
+            fetch("/api/pay-app-service", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: userData?.id,
+                pin,
+                amount: 100,
+                description: "Receipt successfully generated",
+              }),
+            })
+              .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok) {
+                  Swal.fire(
+                    "Error",
+                    data.error || "Something went wrong",
+                    "error"
+                  );
+                  setLoading(false);
+                  resolve(false);
+                } else {
+                  
+                  resolve(true);
+                }
+              })
+              .catch((err) => {
+                setLoading(false);
+                Swal.fire("Error", err.message, "error");
+                resolve(false);
+              });
           }
-
-          setLoading(false);
-
-          resolve(true);
-        } catch (err: any) {
-          setLoading(false);
-          await Swal.fire("Error", err.message, "error");
-
-          resolve(false);
-        }
+        }, 300);
       });
     });
   };
@@ -315,183 +313,187 @@ function CreateReceipt() {
 
   return (
     <>
-       <PinPopOver
-            setIsOpen={setIsOpen}
-            isOpen={isOpen}
-            pin={pin}
-            setPin={setPin}
-            inputCount={inputCount}
-            onConfirm={() => {
-              handleSubmit();
-            }}
-          />
-           <TabsContent value="create" className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Receipt</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Customer Name */}
-            <div>
-              <Label>Customer Name</Label>
-              <Input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Customer name"
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm">{errors.name}</p>
-              )}
+      <PinPopOver
+        setIsOpen={setIsOpen}
+        isOpen={isOpen}
+        pin={pin}
+        setPin={setPin}
+        inputCount={inputCount}
+        onConfirm={async () => {
+          const paid = await handleDeduct(); 
+          if (paid) {
+            await handleSubmit();
+          }
+        }}
+      />
+
+      <TabsContent value="create" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Receipt</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Customer Name */}
+              <div>
+                <Label>Customer Name</Label>
+                <Input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Customer name"
+                />
+                {errors.name && (
+                  <p className="text-red-500 text-sm">{errors.name}</p>
+                )}
+              </div>
+
+              {/* Customer Email */}
+              <div>
+                <Label>Customer Email</Label>
+                <Input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="Customer email address"
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-sm">{errors.email}</p>
+                )}
+              </div>
+
+              {/* Receipt Number */}
+              <div>
+                <Label>Receipt Number</Label>
+                <Input
+                  name="receiptId"
+                  value={form.receiptId}
+                  onChange={handleChange}
+                />
+                {errors.receiptId && (
+                  <p className="text-red-500 text-sm">{errors.receiptId}</p>
+                )}
+              </div>
+
+              {/* From */}
+              <div>
+                <Label>From</Label>
+                <Input name="from" value={form.from} onChange={handleChange} />
+                {errors.from && (
+                  <p className="text-red-500 text-sm">{errors.from}</p>
+                )}
+              </div>
+
+              {/* Bill To */}
+              <div>
+                <Label>Bill To</Label>
+                <Input
+                  name="bill_to"
+                  value={form.bill_to}
+                  onChange={handleChange}
+                  placeholder="Customer business or email"
+                />
+                {errors.bill_to && (
+                  <p className="text-red-500 text-sm">{errors.bill_to}</p>
+                )}
+              </div>
+
+              {/* Receipt Date */}
+              <div>
+                <Label>Receipt Date</Label>
+                <Input
+                  type="date"
+                  name="issue_date"
+                  value={form.issue_date}
+                  onChange={handleChange}
+                />
+                {errors.issue_date && (
+                  <p className="text-red-500 text-sm">{errors.issue_date}</p>
+                )}
+              </div>
             </div>
 
-            {/* Customer Email */}
             <div>
-              <Label>Customer Email</Label>
-              <Input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="Customer email address"
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Receipt Number */}
-            <div>
-              <Label>Receipt Number</Label>
-              <Input
-                name="receiptId"
-                value={form.receiptId}
-                onChange={handleChange}
-              />
-              {errors.receiptId && (
-                <p className="text-red-500 text-sm">{errors.receiptId}</p>
-              )}
-            </div>
-
-            {/* From */}
-            <div>
-              <Label>From</Label>
-              <Input name="from" value={form.from} onChange={handleChange} />
-              {errors.from && (
-                <p className="text-red-500 text-sm">{errors.from}</p>
-              )}
-            </div>
-
-            {/* Bill To */}
-            <div>
-              <Label>Bill To</Label>
-              <Input
-                name="bill_to"
-                value={form.bill_to}
-                onChange={handleChange}
-                placeholder="Customer business or email"
-              />
-              {errors.bill_to && (
-                <p className="text-red-500 text-sm">{errors.bill_to}</p>
-              )}
-            </div>
-
-            {/* Receipt Date */}
-            <div>
-              <Label>Receipt Date</Label>
-              <Input
-                type="date"
-                name="issue_date"
-                value={form.issue_date}
-                onChange={handleChange}
-              />
-              {errors.issue_date && (
-                <p className="text-red-500 text-sm">{errors.issue_date}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label className="block text-sm font-medium mb-2">
-              Receipt Items
-            </Label>
-            <div className="space-y-3">
-              {form.receipt_items.map((item, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-12 gap-2 items-center"
+              <Label className="block text-sm font-medium mb-2">
+                Receipt Items
+              </Label>
+              <div className="space-y-3">
+                {form.receipt_items.map((item, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-12 gap-2 items-center"
+                  >
+                    <div className="col-span-12 sm:col-span-5">
+                      <Input
+                        placeholder="Description"
+                        value={item.item}
+                        onChange={(e) =>
+                          updateReceiptItem(index, "item", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateReceiptItem(
+                            index,
+                            "quantity",
+                            Number(e.target.value)
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Rate"
+                        value={item.price}
+                        onChange={(e) =>
+                          updateReceiptItem(
+                            index,
+                            "price",
+                            Number(e.target.value)
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Input
+                        placeholder="Amount"
+                        value={Number(item.quantity) * Number(item.price)}
+                        disabled
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeReceiptItem(index)}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addReceiptItem}
                 >
-                  <div className="col-span-12 sm:col-span-5">
-                    <Input
-                      placeholder="Description"
-                      value={item.item}
-                      onChange={(e) =>
-                        updateReceiptItem(index, "item", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateReceiptItem(
-                          index,
-                          "quantity",
-                          Number(e.target.value)
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <Input
-                      type="number"
-                      placeholder="Rate"
-                      value={item.price}
-                      onChange={(e) =>
-                        updateReceiptItem(
-                          index,
-                          "price",
-                          Number(e.target.value)
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <Input
-                      placeholder="Amount"
-                      value={Number(item.quantity) * Number(item.price)}
-                      disabled
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeReceiptItem(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addReceiptItem}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Item
-              </Button>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Item
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {/* Amount Paid */}
-          {/* <div>
+            {/* Amount Paid */}
+            {/* <div>
               <Label>Amount Paid</Label>
               <Input
                 name="amount_paid"
@@ -504,40 +506,40 @@ function CreateReceipt() {
               )}
             </div> */}
 
-          {/* Payment For */}
-          <div>
-            <Label>Payment For</Label>
-            <Input
-              name="payment_for"
-              value={form.payment_for}
-              onChange={handleChange}
-              placeholder="payment description"
-            />
-            {errors.payment_for && (
-              <p className="text-red-500 text-sm">{errors.payment_for}</p>
-            )}
-          </div>
+            {/* Payment For */}
+            <div>
+              <Label>Payment For</Label>
+              <Input
+                name="payment_for"
+                value={form.payment_for}
+                onChange={handleChange}
+                placeholder="payment description"
+              />
+              {errors.payment_for && (
+                <p className="text-red-500 text-sm">{errors.payment_for}</p>
+              )}
+            </div>
 
-          <div>
-            <Label className="block text-sm font-medium mb-2">
-              Customer Note
-            </Label>
-            <textarea
-              name="customer_note"
-              value={form.customer_note}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md h-24"
-              placeholder="Additional notes..."
-            />
+            <div>
+              <Label className="block text-sm font-medium mb-2">
+                Customer Note
+              </Label>
+              <textarea
+                name="customer_note"
+                value={form.customer_note}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md h-24"
+                placeholder="Additional notes..."
+              />
 
-            {errors.customer_note && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.customer_note}
-              </p>
-            )}
-          </div>
+              {errors.customer_note && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.customer_note}
+                </p>
+              )}
+            </div>
 
-          {/* <div className="border-t pt-4">
+            {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -560,43 +562,42 @@ function CreateReceipt() {
             </div>
           )} */}
 
-          <div className="flex gap-3">
-            <Button
-               onClick={() => {
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
                   if (validateForm()) {
                     setIsOpen(true);
                   }
                 }}
-              disabled={loading}
-              className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processing...
-                </div>
-              ) : (
-                "Generate Receipt"
-              )}
-            </Button>
+                disabled={loading}
+                className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  "Generate Receipt"
+                )}
+              </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowPreview(true)}
-            >
-              Preview
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPreview(true)}
+              >
+                Preview
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-      {showPreview && (
-        <ReceiptPreview form={form} onClose={() => setShowPreview(false)} />
-      )}
-    </TabsContent>
+        {showPreview && (
+          <ReceiptPreview form={form} onClose={() => setShowPreview(false)} />
+        )}
+      </TabsContent>
     </>
-   
   );
 }
 

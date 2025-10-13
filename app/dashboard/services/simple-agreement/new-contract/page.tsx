@@ -84,27 +84,20 @@ const Page = () => {
     });
   };
 
-  const handleDownload = () => {
-    console.log({
-      title: contractTitle,
-      message: "Downloading contract as PDF...",
-    });
-  };
+  // const handleDownload = () => {
+  //   console.log({
+  //     title: contractTitle,
+  //     message: "Downloading contract as PDF...",
+  //   });
+  // };
 
-  const handleSend = async () => {
+  const handleSubmit = async () => {
     if (!validateInputs()) {
       Swal.fire({
         icon: "error",
         title: "Validation Failed",
         text: "Please correct the errors before sending the contract.",
       });
-      return;
-    }
-
-    const paid = await handleDeduct();
-
-    if (!paid) {
-      setLoading(false);
       return;
     }
 
@@ -118,7 +111,6 @@ const Page = () => {
     });
 
     try {
-      setLoading(true);
       const res = await fetch("/api/send-contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -172,6 +164,7 @@ const Page = () => {
   };
 
   const handleDeduct = async (): Promise<boolean> => {
+    setLoading(true);
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
@@ -181,39 +174,48 @@ const Page = () => {
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
         confirmButtonText: "Yes, proceed",
-      }).then(async (result) => {
+      }).then((result) => {
         if (!result.isConfirmed) {
+          setLoading(false);
           return resolve(false);
         }
 
-        try {
-          const res = await fetch("/api/pay-app-service", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: userData?.id,
-              pin,
-              amount: 100,
-              description: "Contract successfully generated",
-            }),
-          });
+        // ✅ Wait until PIN is entered
+        const checkPinInterval = setInterval(() => {
+          if (pin.join("").length === 4) {
+            clearInterval(checkPinInterval);
 
-          const data = await res.json();
-
-          if (!res.ok) {
-            await Swal.fire(
-              "Error",
-              data.error || "Something went wrong",
-              "error"
-            );
-            return resolve(false);
+            fetch("/api/pay-app-service", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: userData?.id,
+                pin,
+                amount: 100,
+                description: "Contract successfully generated",
+              }),
+            })
+              .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok) {
+                  Swal.fire(
+                    "Error",
+                    data.error || "Something went wrong",
+                    "error"
+                  );
+                  setLoading(false);
+                  resolve(false);
+                } else {
+                  resolve(true);
+                }
+              })
+              .catch((err) => {
+                setLoading(false);
+                Swal.fire("Error", err.message, "error");
+                resolve(false);
+              });
           }
-
-          resolve(true);
-        } catch (err: any) {
-          await Swal.fire("Error", err.message, "error");
-          resolve(false);
-        }
+        }, 300);
       });
     });
   };
@@ -258,8 +260,11 @@ const Page = () => {
             pin={pin}
             setPin={setPin}
             inputCount={inputCount}
-            onConfirm={() => {
-              handleSend();
+            onConfirm={async () => {
+              const paid = await handleDeduct();
+              if (paid) {
+                await handleSubmit();
+              }
             }}
           />
           <div className="border-b bg-card">
@@ -301,7 +306,11 @@ const Page = () => {
                         ? "bg-gray-500 cursor-not-allowed"
                         : "bg-[#C29307] hover:bg-[#b28a06]"
                     }`}
-                    onClick={handleSend}
+                    onClick={() => {
+                      if (validateInputs()) {
+                        setIsOpen(true);
+                      }
+                    }}
                   >
                     {loading ? (
                       <>

@@ -37,19 +37,23 @@ export default function SessionWatcher({ children }: { children: React.ReactNode
   }, []);
 
   // 🔹 Auto logout after inactivity
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (Date.now() - lastActivityTime > INACTIVITY_LIMIT) {
-        await supabase.auth.signOut(); // Logout Supabase
-        localStorage.clear(); // Clear localStorage
-        sessionStorage.clear(); // Clear sessionStorage
-        clearCookies(); // Clear cookies
-        router.push("/auth/login"); // Redirect
-      }
-    }, 60000); // Every 1 minute check
+useEffect(() => {
+  let alreadyLoggedOut = false; 
 
-    return () => clearInterval(interval);
-  }, [lastActivityTime]);
+  const interval = setInterval(async () => {
+    if (!alreadyLoggedOut && Date.now() - lastActivityTime > INACTIVITY_LIMIT) {
+      alreadyLoggedOut = true; // Prevent multiple calls
+      await supabase.auth.signOut(); // Logout Supabase
+      localStorage.clear();
+      sessionStorage.clear();
+      clearCookies();
+      router.push("/auth/login");
+    }
+  }, 60000);
+
+  return () => clearInterval(interval);
+}, [lastActivityTime]);
+
 
   return <>{children}</>;
 }

@@ -56,9 +56,9 @@ const generateInvoiceId = () => {
 };
 
 function CreateInvoice() {
-    const inputCount = 4;
+  const inputCount = 4;
   const [errors, setErrors] = useState<Record<string, string>>({});
-   const [pin, setPin] = useState(Array(inputCount).fill(""));
+  const [pin, setPin] = useState(Array(inputCount).fill(""));
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -249,11 +249,9 @@ function CreateInvoice() {
     if (form.payment_type === "multiple" && (!form.unit || form.unit <= 0)) {
       newErrors.unit = "Unit must be greater than 0 for multiple payment.";
     }
-  if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
     if (!pin) newErrors.pin = "Please enter transaction pin";
-
-    
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -267,24 +265,13 @@ function CreateInvoice() {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-   
   const handleSubmit = async (e?: React.FormEvent) => {
-
     if (e) e.preventDefault();
 
     if (!validateInvoiceForm()) return;
 
-
-
-    setLoading(true);
-
     try {
-      const paid = await handleDeduct();
 
-      if (!paid) {
-        setLoading(false);
-        return;
-      }
 
       await handleSaveInvoice();
       await Swal.fire("Success", "Invoice created successfully!", "success");
@@ -303,52 +290,62 @@ function CreateInvoice() {
     }
   };
 
-  const handleDeduct = async (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      Swal.fire({
-        title: "Confirm Deduction",
-        text: "₦200 will be deducted from your wallet for generating this invoice.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Yes, proceed",
-      }).then(async (result) => {
-        if (!result.isConfirmed) {
-          return resolve(false);
-        }
-
-        try {
-          const res = await fetch("/api/pay-app-service", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: userData?.id,
-              pin,
-              amount: 200,
-              description: "Invoice successfully generated",
-            }),
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            await Swal.fire(
-              "Error",
-              data.error || "Something went wrong",
-              "error"
-            );
-            return resolve(false);
-          }
-
-          resolve(true);
-        } catch (err: any) {
-          await Swal.fire("Error", err.message, "error");
-          resolve(false);
-        }
-      });
-    });
-  };
+   const handleDeduct = async (): Promise<boolean> => {
+     setLoading(true);
+     return new Promise((resolve) => {
+       Swal.fire({
+         title: "Confirm Deduction",
+         text: "₦200 will be deducted from your wallet for generating this Invoice.",
+         icon: "warning",
+         showCancelButton: true,
+         confirmButtonColor: "#3085d6",
+         cancelButtonColor: "#d33",
+         confirmButtonText: "Yes, proceed",
+       }).then((result) => {
+         if (!result.isConfirmed) {
+           setLoading(false);
+           return resolve(false);
+         }
+ 
+         // ✅ Wait until PIN is entered
+         const checkPinInterval = setInterval(() => {
+           if (pin.join("").length === 4) {
+             clearInterval(checkPinInterval);
+ 
+             fetch("/api/pay-app-service", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({
+                 userId: userData?.id,
+                 pin,
+                 amount: 200,
+                 description: "Invoice successfully generated",
+               }),
+             })
+               .then(async (res) => {
+                 const data = await res.json();
+                 if (!res.ok) {
+                   Swal.fire(
+                     "Error",
+                     data.error || "Something went wrong",
+                     "error"
+                   );
+                   setLoading(false);
+                   resolve(false);
+                 } else {
+                   resolve(true);
+                 }
+               })
+               .catch((err) => {
+                 setLoading(false);
+                 Swal.fire("Error", err.message, "error");
+                 resolve(false);
+               });
+           }
+         }, 300);
+       });
+     });
+   };
 
   const handleRefund = async () => {
     try {
@@ -387,367 +384,384 @@ function CreateInvoice() {
   return (
     <>
       <PinPopOver
-            setIsOpen={setIsOpen}
-            isOpen={isOpen}
-            pin={pin}
-            setPin={setPin}
-            inputCount={inputCount}
-            onConfirm={() => {
-              handleSubmit();
-            }}
-          />
-    <TabsContent value="create" className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Invoice</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Client Name */}
-            <div>
-              <Label htmlFor="name" className="block text-sm font-medium mb-2">
-                Client Name
-              </Label>
-              <Input
-                id="name"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Enter client name"
-                required
-              />
-              {errors.name && (
-                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Client Email */}
-            <div>
-              <Label htmlFor="email" className="block text-sm font-medium mb-2">
-                Client Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="client@example.com"
-                required
-              />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Invoice Number */}
-            <div>
-              <Label
-                htmlFor="invoice_id"
-                className="block text-sm font-medium mb-2"
-              >
-                Invoice Number
-              </Label>
-              <Input
-                id="invoice_id"
-                name="invoice_id"
-                value={form.invoice_id}
-                onChange={handleChange}
-                placeholder="INV-2024-001"
-                disabled
-              />
-            </div>
-
-            {/* From */}
-            <div>
-              <Label htmlFor="from" className="block text-sm font-medium mb-2">
-                From
-              </Label>
-              <Input
-                id="from"
-                name="from"
-                value={form.from}
-                onChange={handleChange}
-                placeholder="Your business name or email"
-                required
-              />
-              {errors.from && (
-                <p className="text-red-500 text-xs mt-1">{errors.from}</p>
-              )}
-            </div>
-
-            {/* Bill To */}
-            <div>
-              <Label
-                htmlFor="bill_to"
-                className="block text-sm font-medium mb-2"
-              >
-                Bill To
-              </Label>
-              <Input
-                id="bill_to"
-                name="bill_to"
-                value={form.bill_to}
-                onChange={handleChange}
-                placeholder="Customer business or email"
-                required
-              />
-              {errors.bill_to && (
-                <p className="text-red-500 text-xs mt-1">{errors.bill_to}</p>
-              )}
-            </div>
-
-            {/* Invoice Date */}
-            <div>
-              <Label
-                htmlFor="issue_date"
-                className="block text-sm font-medium mb-2"
-              >
-                Invoice Date
-              </Label>
-              <Input
-                id="issue_date"
-                type="date"
-                name="issue_date"
-                value={form.issue_date}
-                onChange={handleChange}
-                required
-              />
-              {errors.issue_date && (
-                <p className="text-red-500 text-xs mt-1">{errors.issue_date}</p>
-              )}
-            </div>
-
-            {/* Due Date */}
-            <div>
-              <Label
-                htmlFor="due_date"
-                className="block text-sm font-medium mb-2"
-              >
-                Due Date
-              </Label>
-              <Input
-                id="due_date"
-                type="date"
-                name="due_date"
-                value={form.due_date}
-                onChange={handleChange}
-                required
-              />
-              {errors.due_date && (
-                <p className="text-red-500 text-xs mt-1">{errors.due_date}</p>
-              )}
-            </div>
-
-            {/* Payment Type */}
-            <div>
-              <Label
-                htmlFor="payment_type"
-                className="block text-sm font-medium mb-2"
-              >
-                Payment Type
-              </Label>
-              <Select
-                value={form.payment_type}
-                onValueChange={(val: "single" | "multiple") =>
-                  setForm((prev) => ({ ...prev, payment_type: val }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose payment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="single">Single Buyer Invoice</SelectItem>
-                  <SelectItem value="multiple">
-                    Multiple Buyers Invoice
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Fee Option */}
-            <div>
-              <Label
-                htmlFor="fee_option"
-                className="block text-sm font-medium mb-2"
-              >
-                Fee Option
-              </Label>
-              <Select
-                value={form.fee_option}
-                onValueChange={(val: "absorbed" | "customer") =>
-                  setForm((prev) => ({ ...prev, fee_option: val }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose fee option" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="absorbed">
-                    Deduct 3.5% from my payout
-                  </SelectItem>
-                  <SelectItem value="customer">
-                    Add 3.5% for the customer
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Unit (only for multiple) */}
-            {form.payment_type === "multiple" && (
+        setIsOpen={setIsOpen}
+        isOpen={isOpen}
+        pin={pin}
+        setPin={setPin}
+        inputCount={inputCount}
+        onConfirm={async () => {
+          const paid = await handleDeduct();
+          if (paid) {
+            await handleSubmit();
+          }
+        }}
+      />
+      <TabsContent value="create" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Invoice</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Client Name */}
               <div>
                 <Label
-                  htmlFor="unit"
+                  htmlFor="name"
                   className="block text-sm font-medium mb-2"
                 >
-                  Unit (total unit)
+                  Client Name
                 </Label>
                 <Input
-                  id="unit"
-                  type="number"
-                  name="unit"
-                  value={form.unit}
+                  id="name"
+                  name="name"
+                  value={form.name}
                   onChange={handleChange}
-                  placeholder="Total customer units"
+                  placeholder="Enter client name"
+                  required
                 />
-                {errors.unit && (
-                  <p className="text-red-500 text-xs mt-1">{errors.unit}</p>
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Invoice Items */}
-          <div>
-            <Label className="block text-sm font-medium mb-2">
-              Invoice Items
-            </Label>
-            <div className="space-y-3">
-              {form.invoice_items.map((item, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-12 gap-2 items-center"
+              {/* Client Email */}
+              <div>
+                <Label
+                  htmlFor="email"
+                  className="block text-sm font-medium mb-2"
                 >
-                  {/* Description */}
-                  <div className="col-span-12 sm:col-span-5">
-                    <Input
-                      placeholder="Description"
-                      value={item.item}
-                      onChange={(e) =>
-                        updateInvoiceItem(index, "item", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
+                  Client Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="client@example.com"
+                  required
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                )}
+              </div>
 
-                  {/* Qty */}
-                  <div className="col-span-6 sm:col-span-2">
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateInvoiceItem(
-                          index,
-                          "quantity",
-                          Number(e.target.value)
-                        )
-                      }
-                      required
-                    />
-                  </div>
+              {/* Invoice Number */}
+              <div>
+                <Label
+                  htmlFor="invoice_id"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Invoice Number
+                </Label>
+                <Input
+                  id="invoice_id"
+                  name="invoice_id"
+                  value={form.invoice_id}
+                  onChange={handleChange}
+                  placeholder="INV-2024-001"
+                  disabled
+                />
+              </div>
 
-                  {/* Rate */}
-                  <div className="col-span-6 sm:col-span-2">
-                    <Input
-                      type="number"
-                      placeholder="Rate"
-                      value={item.price}
-                      onChange={(e) =>
-                        updateInvoiceItem(
-                          index,
-                          "price",
-                          Number(e.target.value)
-                        )
-                      }
-                      required
-                    />
-                  </div>
+              {/* From */}
+              <div>
+                <Label
+                  htmlFor="from"
+                  className="block text-sm font-medium mb-2"
+                >
+                  From
+                </Label>
+                <Input
+                  id="from"
+                  name="from"
+                  value={form.from}
+                  onChange={handleChange}
+                  placeholder="Your business name or email"
+                  required
+                />
+                {errors.from && (
+                  <p className="text-red-500 text-xs mt-1">{errors.from}</p>
+                )}
+              </div>
 
-                  {/* Amount */}
-                  <div className="col-span-6 sm:col-span-2">
-                    <Input
-                      value={Number(item.quantity) * Number(item.price)}
-                      disabled
-                    />
-                  </div>
+              {/* Bill To */}
+              <div>
+                <Label
+                  htmlFor="bill_to"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Bill To
+                </Label>
+                <Input
+                  id="bill_to"
+                  name="bill_to"
+                  value={form.bill_to}
+                  onChange={handleChange}
+                  placeholder="Customer business or email"
+                  required
+                />
+                {errors.bill_to && (
+                  <p className="text-red-500 text-xs mt-1">{errors.bill_to}</p>
+                )}
+              </div>
 
-                  {/* Remove */}
-                  <div className="col-span-6 sm:col-span-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeInvoiceItem(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
+              {/* Invoice Date */}
+              <div>
+                <Label
+                  htmlFor="issue_date"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Invoice Date
+                </Label>
+                <Input
+                  id="issue_date"
+                  type="date"
+                  name="issue_date"
+                  value={form.issue_date}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.issue_date && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.issue_date}
+                  </p>
+                )}
+              </div>
+
+              {/* Due Date */}
+              <div>
+                <Label
+                  htmlFor="due_date"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Due Date
+                </Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  name="due_date"
+                  value={form.due_date}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.due_date && (
+                  <p className="text-red-500 text-xs mt-1">{errors.due_date}</p>
+                )}
+              </div>
+
+              {/* Payment Type */}
+              <div>
+                <Label
+                  htmlFor="payment_type"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Payment Type
+                </Label>
+                <Select
+                  value={form.payment_type}
+                  onValueChange={(val: "single" | "multiple") =>
+                    setForm((prev) => ({ ...prev, payment_type: val }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose payment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Buyer Invoice</SelectItem>
+                    <SelectItem value="multiple">
+                      Multiple Buyers Invoice
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Fee Option */}
+              <div>
+                <Label
+                  htmlFor="fee_option"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Fee Option
+                </Label>
+                <Select
+                  value={form.fee_option}
+                  onValueChange={(val: "absorbed" | "customer") =>
+                    setForm((prev) => ({ ...prev, fee_option: val }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose fee option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="absorbed">
+                      Deduct 3.5% from my payout
+                    </SelectItem>
+                    <SelectItem value="customer">
+                      Add 3.5% for the customer
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Unit (only for multiple) */}
+              {form.payment_type === "multiple" && (
+                <div>
+                  <Label
+                    htmlFor="unit"
+                    className="block text-sm font-medium mb-2"
+                  >
+                    Unit (total unit)
+                  </Label>
+                  <Input
+                    id="unit"
+                    type="number"
+                    name="unit"
+                    value={form.unit}
+                    onChange={handleChange}
+                    placeholder="Total customer units"
+                  />
+                  {errors.unit && (
+                    <p className="text-red-500 text-xs mt-1">{errors.unit}</p>
+                  )}
                 </div>
-              ))}
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addInvoiceItem}
-              >
-                <Plus className="w-4 h-4 mr-1" /> Add Item
-              </Button>
+              )}
             </div>
-          </div>
 
-          {/* Message */}
-          <div>
-            <Label htmlFor="message" className="block text-sm font-medium mb-2">
-              Message
-            </Label>
-            <Input
-              id="message"
-              name="message"
-              value={form.message}
-              onChange={handleChange}
-              placeholder="Short message or greeting..."
-            />
-            {errors.message && (
-              <p className="text-red-500 text-xs mt-1">{errors.message}</p>
-            )}
-          </div>
+            {/* Invoice Items */}
+            <div>
+              <Label className="block text-sm font-medium mb-2">
+                Invoice Items
+              </Label>
+              <div className="space-y-3">
+                {form.invoice_items.map((item, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-12 gap-2 items-center"
+                  >
+                    {/* Description */}
+                    <div className="col-span-12 sm:col-span-5">
+                      <Input
+                        placeholder="Description"
+                        value={item.item}
+                        onChange={(e) =>
+                          updateInvoiceItem(index, "item", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
 
-          {/* Customer Note */}
-          <div>
-            <Label
-              htmlFor="customer_note"
-              className="block text-sm font-medium mb-2"
-            >
-              Customer Note
-            </Label>
-            <Textarea
-              id="customer_note"
-              name="customer_note"
-              value={form.customer_note}
-              onChange={handleChange}
-              className="w-full p-3 border rounded-md h-24"
-              placeholder="Additional notes..."
-            />
-            {errors.customer_note && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.customer_note}
-              </p>
-            )}
-          </div>
+                    {/* Qty */}
+                    <div className="col-span-6 sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateInvoiceItem(
+                            index,
+                            "quantity",
+                            Number(e.target.value)
+                          )
+                        }
+                        required
+                      />
+                    </div>
 
-          {/* <div className="border-t pt-4">
+                    {/* Rate */}
+                    <div className="col-span-6 sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Rate"
+                        value={item.price}
+                        onChange={(e) =>
+                          updateInvoiceItem(
+                            index,
+                            "price",
+                            Number(e.target.value)
+                          )
+                        }
+                        required
+                      />
+                    </div>
+
+                    {/* Amount */}
+                    <div className="col-span-6 sm:col-span-2">
+                      <Input
+                        value={Number(item.quantity) * Number(item.price)}
+                        disabled
+                      />
+                    </div>
+
+                    {/* Remove */}
+                    <div className="col-span-6 sm:col-span-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeInvoiceItem(index)}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addInvoiceItem}
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Add Item
+                </Button>
+              </div>
+            </div>
+
+            {/* Message */}
+            <div>
+              <Label
+                htmlFor="message"
+                className="block text-sm font-medium mb-2"
+              >
+                Message
+              </Label>
+              <Input
+                id="message"
+                name="message"
+                value={form.message}
+                onChange={handleChange}
+                placeholder="Short message or greeting..."
+              />
+              {errors.message && (
+                <p className="text-red-500 text-xs mt-1">{errors.message}</p>
+              )}
+            </div>
+
+            {/* Customer Note */}
+            <div>
+              <Label
+                htmlFor="customer_note"
+                className="block text-sm font-medium mb-2"
+              >
+                Customer Note
+              </Label>
+              <Textarea
+                id="customer_note"
+                name="customer_note"
+                value={form.customer_note}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md h-24"
+                placeholder="Additional notes..."
+              />
+              {errors.customer_note && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.customer_note}
+                </p>
+              )}
+            </div>
+
+            {/* <div className="border-t pt-4">
             <Label htmlFor="pin">Transaction Pin</Label>
 
             <Input
@@ -770,52 +784,52 @@ function CreateInvoice() {
             </div>
           )} */}
 
-          {/* Buttons */}
-          <div className="flex flex-col md:flex-row gap-3">
-            <Button
-               onClick={() => {
+            {/* Buttons */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <Button
+                onClick={() => {
                   if (validateInvoiceForm()) {
                     setIsOpen(true);
                   }
                 }}
-              disabled={loading}
-              className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processing...
-                </div>
-              ) : (
-                "Generate Invoice"
-              )}
-            </Button>
+                disabled={loading}
+                className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  "Generate Invoice"
+                )}
+              </Button>
 
-            <Button
-              type="button"
-              className="hover:bg-[#C29307] hover:text-white border hover:shadow-xl transition-all duration-300"
-              variant="outline"
-              // onClick={saveDraftToLocalStorage}
-            >
-              Save as Draft
-            </Button>
+              <Button
+                type="button"
+                className="hover:bg-[#C29307] hover:text-white border hover:shadow-xl transition-all duration-300"
+                variant="outline"
+                // onClick={saveDraftToLocalStorage}
+              >
+                Save as Draft
+              </Button>
 
-            <Button
-              type="button"
-              className="hover:bg-[#C29307] hover:text-white border hover:shadow-xl transition-all duration-300"
-              variant="outline"
-              onClick={() => setShowPreview(true)}
-            >
-              Preview
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                type="button"
+                className="hover:bg-[#C29307] hover:text-white border hover:shadow-xl transition-all duration-300"
+                variant="outline"
+                onClick={() => setShowPreview(true)}
+              >
+                Preview
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-      {showPreview && (
-        <InvoicePreview form={form} onClose={() => setShowPreview(false)} />
-      )}
-    </TabsContent>
+        {showPreview && (
+          <InvoicePreview form={form} onClose={() => setShowPreview(false)} />
+        )}
+      </TabsContent>
     </>
   );
 }

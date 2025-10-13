@@ -19,8 +19,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-  
-
     const body = await req.json();
     const {
       bvn,
@@ -38,7 +36,6 @@ export async function POST(req: NextRequest) {
       bankCode,
       bankAccountNumber,
       bankAccountName,
-
     } = body;
 
     // ✅ 1. Validate required fields early
@@ -98,6 +95,10 @@ export async function POST(req: NextRequest) {
           referral_code: generatedReferral,
           referred_by: referred_by || "",
           bvn_verification: "verified",
+          p_bank_name: bankName || "",
+          p_bank_code: bankCode || "",
+          p_account_number: bankAccountNumber || "",
+          p_account_name: bankAccountName || "",
           created_at: new Date().toISOString(),
         },
         { onConflict: "id" }
@@ -124,10 +125,6 @@ export async function POST(req: NextRequest) {
         business_description: businessDescription || "",
         tax_id: taxId || "",
         registration_number: registrationNumber || "",
-        bank_name: bankName || "",
-        bank_code: bankCode || "",
-        bank_account_number: bankAccountNumber || "",
-        bank_account_name: bankAccountName || "",
         created_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
@@ -210,7 +207,6 @@ export async function POST(req: NextRequest) {
     // ✅ 9. Delete pending record
     await supabase.from("pending_users").delete().eq("id", userId);
 
-
     // ✅ 10. Send welcome email (non-blocking)
     (async () => {
       try {
@@ -224,12 +220,12 @@ export async function POST(req: NextRequest) {
           to: email,
           subject: "🎉 Congratulations & Welcome to Zidwell!",
           html: `
-            <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 40px;">
+            <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px;">
               <div style="max-width: 700px; margin: auto; background: white; border-radius: 10px;">
-                <div style="background: #C29307; padding: 20px; text-align: center;">
+                <div style="background: #C29307; padding: 10px; text-align: center;">
                   <h2 style="color: white;">Welcome to Zidwell 🎉</h2>
                 </div>
-                <div style="padding: 30px; color: #333;">
+                <div style="padding: 10px; color: #333;">
                   <h2>Hi ${first_name},</h2>
                   <p>🎉 <b>Congratulations!</b> Your <b>Zidwell</b> account is ready.</p>
                   <p>We’ve rewarded you with <b>₦20 Zidcoin</b> 🎁.</p>
