@@ -5,24 +5,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { useUserContextData } from "../../context/userData";
 
- function PaymentSuccessContent() {
+function PaymentSuccessContent() {
   const params = useSearchParams();
   const reference = params.get("orderReference");
-  const userId = params.get("userId");
+  const userId = params.get("ref");
   const { userData } = useUserContextData();
-const router = useRouter();
-  const [status, setStatus] = useState<"pending" | "success" | "failed">("pending");
+  const router = useRouter();
+  const [status, setStatus] = useState<"pending" | "success" | "failed">(
+    "pending"
+  );
 
-const [verified, setVerified] = useState(false);
+  const [verified, setVerified] = useState(false);
 
-useEffect(() => {
-  if (reference && !verified) {
-    setVerified(true);
-    verifyPayment(reference);
-  }
-}, [reference, verified]);
-
-  console.log("Payment reference from URL:", reference);
+  useEffect(() => {
+    if (reference && !verified) {
+      setVerified(true);
+      verifyPayment(reference);
+    }
+  }, [reference, verified]);
 
   const verifyPayment = async (ref: string) => {
     try {
@@ -38,9 +38,10 @@ useEffect(() => {
       });
 
       const data = await res.json();
-      console.log("Payment verification response:", data);
 
-      const paymentStatus = data.message === "Payment verification completed" || data.data.results[0].status === "SUCCESS"
+      const paymentStatus =
+        data.message === "Payment verification completed" ||
+        data.data.results[0].status === "SUCCESS";
 
       if (paymentStatus) {
         setStatus("success");
@@ -81,12 +82,13 @@ useEffect(() => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center">
       {status === "pending" && (
-        <h2 className="text-xl font-semibold animate-pulse">🔄 Verifying your payment...</h2>
+        <h2 className="text-xl font-semibold animate-pulse">
+          🔄 Verifying your payment...
+        </h2>
       )}
     </div>
   );
 }
-
 
 export default function PaymentCallback() {
   return (

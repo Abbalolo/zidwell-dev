@@ -140,7 +140,7 @@ export default function FundAccountMethods() {
   return (
     <div className="space-y-6 relative">
       {/* ✅ Quick Fund Button */}
-      {/* <div className="w-full flex justify-end items-end">
+      <div className="w-full flex justify-end items-end">
         <Button
           className="bg-[#C29307]"
           onClick={() => setShowModal(true)}
@@ -148,7 +148,7 @@ export default function FundAccountMethods() {
         >
           {loading ? "Processing..." : "Deposit with Card"}
         </Button>
-      </div> */}
+      </div>
 
       {/* 💳 Account Balance */}
       <div className="flex flex-col md:flex-row gap-4">

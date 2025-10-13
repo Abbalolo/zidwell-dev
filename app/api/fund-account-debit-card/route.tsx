@@ -1,3 +1,4 @@
+// app/api/fund-with-card/route.ts
 import { getNombaToken } from "@/lib/nomba";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Mode is required" }, { status: 400 });
     }
 
-    // ✅ Get Nomba access token
+    // Get Nomba token
     const token = await getNombaToken();
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -28,9 +29,7 @@ export async function POST(req: Request) {
         ? process.env.NEXT_PUBLIC_DEV_URL
         : process.env.NEXT_PUBLIC_BASE_URL;
 
-    // ==========================================
-    // 🟡 1️⃣ INITIALIZE PAYMENT
-    // ==========================================
+    // 1) INITIALIZE
     if (mode === "initialize") {
       if (!amount || !email || !userId) {
         return NextResponse.json(
@@ -39,32 +38,50 @@ export async function POST(req: Request) {
         );
       }
 
+      // generate an order reference that will be saved to transactions BEFORE contacting Nomba
       const orderReference = uuidv4();
-      const callbackUrl = `${baseUrl}/payment/success?userId=${userId}`;
+      const callbackUrl = `${baseUrl}/payment/callback?ref=${orderReference}`;
+
+      // Insert pending transaction so the webhook can find user -> always insert BEFORE calling Nomba
+      const { error: pendingError } = await supabase.from("transactions").insert([
+        {
+          user_id: userId,
+          type: "card deposit",
+          amount,
+          status: "pending",
+          reference: orderReference,
+          description: "Card deposit initialization",
+        },
+      ]);
+
+      if (pendingError) {
+        console.error("Failed to create pending transaction:", pendingError);
+        return NextResponse.json(
+          { error: "Failed to initialize transaction" },
+          { status: 500 }
+        );
+      }
 
       const nombaPayload = {
         order: {
           orderReference,
           callbackUrl,
           customerEmail: email,
-          amount: amount, // ✅ Naira directly
+          amount: amount,
           currency: "NGN",
           accountId: process.env.NOMBA_ACCOUNT_ID,
         },
       };
 
-      const nombaRes = await fetch(
-        `${process.env.NOMBA_URL}/v1/checkout/order`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accountId: process.env.NOMBA_ACCOUNT_ID!,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(nombaPayload),
-        }
-      );
+      const nombaRes = await fetch(`${process.env.NOMBA_URL}/v1/checkout/order`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accountId: process.env.NOMBA_ACCOUNT_ID!,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nombaPayload),
+      });
 
       const initData = await nombaRes.json();
       if (!nombaRes.ok) {
@@ -82,9 +99,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // ==========================================
-    // 🟢 2️⃣ VERIFY PAYMENT
-    // ==========================================
+    // 2) VERIFY mode (optional fallback if you want to verify from frontend)
     if (mode === "verify") {
       if (!reference) {
         return NextResponse.json(
@@ -93,7 +108,6 @@ export async function POST(req: Request) {
         );
       }
 
-      // ✅ If userId missing, resolve it from email
       let resolvedUserId = userId;
       if (!resolvedUserId && email) {
         const { data: userLookup } = await supabase
@@ -111,7 +125,7 @@ export async function POST(req: Request) {
         );
       }
 
-      // ✅ Verify with Nomba API
+      // Verify with Nomba
       const verifyRes = await fetch(
         `${process.env.NOMBA_URL}/v1/transactions/accounts/single?orderReference=${reference}`,
         {
@@ -134,51 +148,68 @@ export async function POST(req: Request) {
 
       const paymentStatus =
         verifyData?.data?.results?.[0]?.status || verifyData?.data?.status;
-
-      // ✅ Get amount in naira directly
       const rawAmount = Number(verifyData?.data?.results?.[0]?.amount) || 0;
 
-      console.log("rawAmount", rawAmount);
-      // ==========================================
-      // 💸 3️⃣ CREDIT WALLET VIA RPC
-      // ==========================================
       if (paymentStatus === "SUCCESS" || paymentStatus === "SUCCESSFUL") {
-        
-        const { error: rpcError } = await supabase.rpc("increment_wallet_balance", {
-          user_id: resolvedUserId,
-          amt: rawAmount,
-        });
+        // Prevent double credit here by checking existing transaction status
+        const { data: tx, error: txErr } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("reference", reference)
+          .maybeSingle();
 
-        if (rpcError) {
-          console.error("RPC wallet update error:", rpcError);
-          return NextResponse.json(
-            { error: "Failed to credit wallet", details: rpcError.message },
-            { status: 500 }
+        if (!tx) {
+          // no pending transaction: attempt to insert one and then credit safely
+          const { error: insertErr } = await supabase.from("transactions").insert([
+            {
+              user_id: resolvedUserId,
+              type: "card deposit",
+              amount: rawAmount,
+              status: "success",
+              reference,
+              description: `Wallet funded with ₦${rawAmount}`,
+              merchant_tx_ref: verifyData?.data?.orderReference || reference,
+            },
+          ]);
+
+          if (insertErr && insertErr.code === "23505") {
+            // duplicate insert - already processed
+          } else if (insertErr) {
+            console.error("Transaction insert error:", insertErr);
+            return NextResponse.json(
+              { error: "Wallet funded, but failed to log transaction" },
+              { status: 500 }
+            );
+          } else {
+            // credit wallet
+            const { error: rpcError } = await supabase.rpc("increment_wallet_balance", {
+              user_id: resolvedUserId,
+              amt: rawAmount,
+            });
+            if (rpcError) {
+              console.error("RPC wallet update error:", rpcError);
+              return NextResponse.json(
+                { error: "Failed to credit wallet", details: rpcError.message },
+                { status: 500 }
+              );
+            }
+          }
+        } else if (tx.status !== "success") {
+          // pending transaction exists — use atomic RPC to mark success and credit
+          const { data: rpcResp, error: rpcErr } = await supabase.rpc(
+            "credit_deposit_if_pending",
+            { ref: reference, amt: rawAmount }
           );
-        }
-
-        // ✅ Log transaction
-        const { error: txnError } = await supabase.from("transactions").insert([
-          {
-            user_id: resolvedUserId,
-            type: "card deposit",
-            amount: rawAmount,
-            status: "success",
-            reference,
-            description: `Wallet funded with ₦${rawAmount}`,
-            merchant_tx_ref: verifyData?.data?.orderReference || reference,
-          },
-        ]);
-
-        if (txnError) {
-          console.error("Transaction insert error:", txnError);
-          return NextResponse.json(
-            { error: "Wallet funded, but failed to log transaction" },
-            { status: 500 }
-          );
+          if (rpcErr) {
+            console.error("RPC error:", rpcErr);
+            return NextResponse.json({ error: "RPC error" }, { status: 500 });
+          }
+          // rpcResp will be 'OK' or 'ALREADY_PROCESSED' etc.
+        } else {
+          // already success - no-op
         }
       } else {
-        // ❌ Log failed attempt
+        // failed payment - record failed attempt if needed
         await supabase.from("transactions").insert([
           {
             user_id: resolvedUserId,
@@ -198,16 +229,13 @@ export async function POST(req: Request) {
       });
     }
 
-    // ❌ Invalid mode
-    return NextResponse.json(
-      { error: "Invalid mode. Use 'initialize' or 'verify'." },
-      { status: 400 }
-    );
+    // invalid mode
+    return NextResponse.json({ error: "Invalid mode. Use 'initialize' or 'verify'." }, { status: 400 });
   } catch (error: any) {
     console.error("Fund account API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error", details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 });
   }
 }
+
+
+        
