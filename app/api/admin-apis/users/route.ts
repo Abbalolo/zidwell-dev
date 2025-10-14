@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       perPage: limit,
     });
   } catch (err: any) {
-    console.error('❌ GET /api/admin/users error:', err.message);
+    console.error('❌ GET /api/admin-apis/users error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -29,14 +29,16 @@ type AdminTableProps<T> = {
   rows: T[];
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  onBlockToggle?: (row: T) => void;
   emptyMessage?: string;
 };
 
-export default function AdminTable<T extends { id: string }>({
+export default function AdminTable<T extends { id: string; status?: string }>({
   columns,
   rows,
   onEdit,
   onDelete,
+  onBlockToggle,
   emptyMessage = "No records found",
 }: AdminTableProps<T>) {
   return (
@@ -78,12 +80,25 @@ export default function AdminTable<T extends { id: string }>({
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent align="end">
                       {onEdit && (
                         <DropdownMenuItem onClick={() => onEdit(row)}>
                           Edit
                         </DropdownMenuItem>
                       )}
+
+                      {onBlockToggle && (
+                        <DropdownMenuItem
+                          onClick={() => onBlockToggle(row)}
+                          className="font-medium"
+                        >
+                          {(row as any).status === "blocked"
+                            ? "Unblock"
+                            : "Block"}
+                        </DropdownMenuItem>
+                      )}
+
                       {onDelete && (
                         <DropdownMenuItem
                           onClick={() => onDelete(row)}

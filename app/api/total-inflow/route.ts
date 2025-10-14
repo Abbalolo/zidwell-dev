@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   // Fetch all transactions for this user
   const { data: transactions, error } = await supabase
     .from("transactions")
-    .select("amount,type,status")
+    .select("amount, type ,status")
     .eq("user_id", userId);
 
   if (error) {

@@ -17,11 +17,11 @@ import Image from "next/image";
 
 const navLinks = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Users", href: "/admin/users", icon: Users },
   { name: "Receipts", href: "/admin/receipts", icon: Receipt },
   { name: "Invoices", href: "/admin/invoices", icon: FileSpreadsheet },
   { name: "Contracts", href: "/admin/contracts", icon: FileText },
   { name: "Tax Filings", href: "/admin/tax-filings", icon: ClipboardList },
-  { name: "Users", href: "/admin/users", icon: Users },
 ];
 
 export default function AdminSidebar() {
