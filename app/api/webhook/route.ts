@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
 
     const timestamp = req.headers.get("nomba-timestamp");
     const signature = req.headers.get("nomba-sig-value") || req.headers.get("nomba-signature");
-
+console.log("signature", signature)
+console.log("timestamp", timestamp)
     if (!timestamp || !signature) return NextResponse.json({ error: "Missing signature headers" }, { status: 401 });
 
     // Verify signature
