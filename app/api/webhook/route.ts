@@ -11,8 +11,13 @@ const NOMBA_SIGNATURE_KEY = process.env.NOMBA_SIGNATURE_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("✅ Nomba Webhook triggered");
+
     const rawBody = await req.text();
+    console.log("🟡 Raw Body:", rawBody);
+
     const payload = JSON.parse(rawBody);
+    console.log("🟡 Parsed Payload:", JSON.stringify(payload, null, 2));
 
     // ✅ Signature Verification
     const timestamp = req.headers.get("nomba-timestamp");
@@ -20,7 +25,10 @@ export async function POST(req: NextRequest) {
       req.headers.get("nomba-sig-value") ||
       req.headers.get("nomba-signature");
 
+    console.log("🟡 Headers:", { timestamp, signature });
+
     if (!timestamp || !signature) {
+      console.warn("❌ Missing signature headers");
       return NextResponse.json(
         { error: "Missing Nomba signature headers" },
         { status: 401 }
@@ -30,9 +38,14 @@ export async function POST(req: NextRequest) {
     const hashingPayload = `${payload.event_type}:${payload.requestId}:${payload.data?.merchant?.userId || ""}:${payload.data?.merchant?.walletId || ""}:${payload.data?.transaction?.transactionId || ""}:${payload.data?.transaction?.type || ""}:${payload.data?.transaction?.time || ""}:${payload.data?.transaction?.responseCode || ""}`;
     const message = `${hashingPayload}:${timestamp}`;
 
+    console.log("🟡 HMAC Message Before Signing:", message);
+
     const hmac = createHmac("sha256", NOMBA_SIGNATURE_KEY);
     hmac.update(message);
     const expectedSignature = hmac.digest("base64");
+
+    console.log("🟡 Expected Signature:", expectedSignature);
+    console.log("🟡 Received Signature:", signature);
 
     const receivedBuffer = Buffer.from(signature, "base64");
     const expectedBuffer = Buffer.from(expectedSignature, "base64");
@@ -41,8 +54,11 @@ export async function POST(req: NextRequest) {
       receivedBuffer.length !== expectedBuffer.length ||
       !timingSafeEqual(receivedBuffer, expectedBuffer)
     ) {
+      console.error("❌ Signature mismatch!");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
+
+    console.log("✅ Signature verified");
 
     // ✅ Extract data
     const eventType = payload.event_type;
@@ -58,7 +74,13 @@ export async function POST(req: NextRequest) {
       payload.data?.transaction?.id ||
       null;
 
+    console.log("🟡 Event Type:", eventType);
+    console.log("🟡 Transaction Type:", txType);
+    console.log("🟡 Merchant Reference:", merchantRef);
+    console.log("🟡 Nomba Transaction ID:", nombaTransactionId);
+
     if (!merchantRef) {
+      console.warn("⚠️ No merchant reference found. Ignoring webhook.");
       return NextResponse.json(
         { message: "Ignored: No merchant reference" },
         { status: 200 }
@@ -66,13 +88,18 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Find pending transaction
-    const { data: pendingTx } = await supabase
+    console.log(`🔍 Searching transaction: ${merchantRef}`);
+    const { data: pendingTx, error: findError } = await supabase
       .from("transactions")
       .select("*")
       .or(`merchant_tx_ref.eq.${merchantRef},reference.eq.${merchantRef}`)
       .single();
 
+    if (findError) console.error("❌ Supabase Error:", findError);
+    console.log("🟡 Found Pending Transaction:", pendingTx);
+
     if (!pendingTx) {
+      console.warn("⚠️ Transaction not found in database");
       return NextResponse.json(
         { message: "Transaction not found" },
         { status: 200 }
@@ -80,6 +107,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (["success", "failed"].includes(pendingTx.status)) {
+      console.log("⚠️ Transaction already processed. Skipping.");
       return NextResponse.json(
         { message: "Transaction already processed" },
         { status: 200 }
@@ -92,12 +120,14 @@ export async function POST(req: NextRequest) {
       (txType === "transfer" &&
         payload.data?.transaction?.status?.toLowerCase() === "success")
     ) {
+      console.log("✅ Processing SUCCESS webhook");
+
       const fee = Number(pendingTx.fee || 0);
       const totalDeduction = Number(
         pendingTx.total_deduction || pendingTx.amount + fee
       );
+      console.log("🟡 Fee:", fee, "Total Deduction:", totalDeduction);
 
-      // ✅ Mark transaction success
       await supabase
         .from("transactions")
         .update({
@@ -107,31 +137,24 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", pendingTx.id);
 
-      // ✅ Deduct from wallet
       await supabase.rpc("decrement_wallet_balance", {
         user_id: pendingTx.user_id,
         amt: totalDeduction,
       });
 
-      // ✅ Record fee
-      await supabase.from("transactions").insert({
-        user_id: pendingTx.user_id,
-        type: "fee",
-        amount: fee,
-        status: "success",
-        description: `Withdrawal fee`,
-        merchant_tx_ref: `FEE_${pendingTx.merchant_tx_ref}`,
-      });
+      console.log("✅ Wallet debited & transaction updated");
 
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // ✅ Handle Withdrawal Failure
+    // ✅ Handle Failure
     if (
       eventType === "payout_failed" ||
       (txType === "transfer" &&
         payload.data?.transaction?.status?.toLowerCase() === "failed")
     ) {
+      console.log("❌ Processing FAILED webhook");
+
       await supabase
         .from("transactions")
         .update({
@@ -140,18 +163,20 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", pendingTx.id);
 
-      // ✅ Refund if needed
       await supabase.rpc("increment_wallet_balance", {
         user_id: pendingTx.user_id,
-        amt: pendingTx.total_deduction || pendingTx.amount,
+        amt: pendingTx.amount,
       });
+
+      console.log("✅ Wallet refunded and transaction marked FAILED");
 
       return NextResponse.json({ refunded: true }, { status: 200 });
     }
 
+    console.log("ℹ️ Event ignored.");
     return NextResponse.json({ message: "Event ignored" }, { status: 200 });
   } catch (err: any) {
-    console.error("Webhook error:", err);
+    console.error("🔥 Webhook error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
