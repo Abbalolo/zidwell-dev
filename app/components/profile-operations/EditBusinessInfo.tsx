@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Building, CreditCard } from "lucide-react";
+import { Building } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
@@ -15,8 +15,8 @@ import {
 } from "../ui/select";
 import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2";
-import supabase from "@/app/supabase/supabase";
 import Loader from "../Loader";
+import FileUpload from "../FileUpload";
 
 interface BusinessForm {
   businessName: string;
@@ -63,6 +63,7 @@ const businessCategories = [
 
 const EditBusinessInfo: React.FC = () => {
   const { userData } = useUserContextData();
+  const [cacFile, setCacFile] = useState<File | null>(null);
 
   const [form, setForm] = useState<BusinessForm>({
     businessName: "",
@@ -76,134 +77,136 @@ const EditBusinessInfo: React.FC = () => {
     // accountNumber: "",
     // accountName: "",
   });
-  // const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loading2, setLoading2] = useState(false);
 
-  // useEffect(() => {
-  //   const fetchBanks = async () => {
-  //     try {
-  //       const res = await fetch("/api/banks");
-  //       const data = await res.json();
-  //       setBanks(data?.data || []);
-  //     } catch (err) {
-  //       console.error("Error fetching banks:", err);
-  //     }
-  //   };
-  //   fetchBanks();
-  // }, []);
-
-  // ✅ Fetch business info on mount
+  // Fetch business info on mount
   useEffect(() => {
-  const fetchBusinessInfo = async () => {
+    const fetchBusinessInfo = async () => {
+      setLoading(true);
+      if (!userData?.id) return;
 
-    setLoading(true)
-
-    if (!userData?.id) return;
-
-    try {
-      const res = await fetch("/api/get-business-account-details", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: userData.id }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        console.error("Error fetching business info:", result.error);
-        Swal.fire("Error", "Failed to load business info.", "error");
-        return;
-      }
-
-      if (result.data) {
-        const data = result.data;
-        setForm({
-          businessName: data.business_name || "",
-          businessType: data.business_category || "",
-          rcNumber: data.registration_number || "",
-          taxId: data.tax_id || "",
-          businessAddress: data.business_address || "",
-          businessDescription: data.business_description || "",
-          // bankName: data.bank_name || "",
-          // bankCode: data.bank_code || "",
-          // accountNumber: data.bank_account_number || "",
-          // accountName: data.bank_account_name || "",
+      try {
+        const res = await fetch("/api/get-business-account-details", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: userData.id }),
         });
-        setLoading(false)
-      }
-    } catch (err: any) {
-      console.error("Fetch error:", err);
-      Swal.fire("Error", "Something went wrong while fetching business info.", "error");
-    } finally {
-       setLoading(false)
-    }
-  };
 
-  fetchBusinessInfo();
-}, [userData?.id]);
+        const result = await res.json();
+
+        if (!res.ok) {
+          console.error("Error fetching business info:", result.error);
+          Swal.fire("Error", "Failed to load business info.", "error");
+          return;
+        }
+
+        if (result.data) {
+          const data = result.data;
+          setForm({
+            businessName: data.business_name || "",
+            businessType: data.business_category || "",
+            rcNumber: data.registration_number || "",
+            taxId: data.tax_id || "",
+            businessAddress: data.business_address || "",
+            businessDescription: data.business_description || "",
+            // bankName: data.bank_name || "",
+            // bankCode: data.bank_code || "",
+            // accountNumber: data.bank_account_number || "",
+            // accountName: data.bank_account_name || "",
+          });
+        }
+      } catch (err: any) {
+        console.error("Fetch error:", err);
+        Swal.fire(
+          "Error",
+          "Something went wrong while fetching business info.",
+          "error"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBusinessInfo();
+  }, [userData?.id]);
 
   const handleChange = (field: keyof BusinessForm, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
-  if (!userData?.id) return;
+    if (!userData?.id) return;
+    setLoading2(true);
 
-  setLoading(true);
+    try {
+      // 1️⃣ Upload CAC if file exists
+      let cacUrl = null;
+      if (cacFile) {
+        const formData = new FormData();
+        formData.append("userId", userData.id);
+        formData.append("cacFile", cacFile);
 
-  try {
-    const response = await fetch("/api/profile/update-business-info", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: userData.id,
-        businessName: form.businessName,
-        businessType: form.businessType,
-        rcNumber: form.rcNumber,
-        taxId: form.taxId,
-        businessAddress: form.businessAddress,
-        businessDescription: form.businessDescription,
-        // bankName: form.bankName,
-        // bankCode: form.bankCode,
-        // accountNumber: form.accountNumber,
-        // accountName: form.accountName,
-      }),
-    });
+        const uploadRes = await fetch("/api/profile/upload-cac", {
+          method: "POST",
+          body: formData,
+        });
 
-    const result = await response.json();
+        const uploadData = await uploadRes.json();
 
-    if (!response.ok) {
-      throw new Error(result.error);
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || "CAC upload failed");
+        }
+
+        cacUrl = uploadData.cacUrl;
+      }
+
+      // 2️⃣ Save business info
+      const response = await fetch("/api/profile/update-business-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData.id,
+          businessName: form.businessName,
+          businessType: form.businessType,
+          rcNumber: form.rcNumber,
+          taxId: form.taxId,
+          businessAddress: form.businessAddress,
+          businessDescription: form.businessDescription,
+          // bankName: form.bankName,
+          // bankCode: form.bankCode,
+          // accountNumber: form.accountNumber,
+          // accountName: form.accountName,
+          cacUrl, // optional: store CAC URL in database
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "Business info updated successfully ✅",
+      });
+    } catch (err: any) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Could not save business info. Please try again.",
+      });
+    } finally {
+      setLoading2(false);
     }
-
-    Swal.fire({
-      icon: "success",
-      title: "Success",
-      text: "Business info updated successfully ✅",
-    });
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "Could not save business info. Please try again.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+  };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <Loader/>
+        <Loader />
       </div>
-    )
+    );
   }
 
   return (
@@ -248,7 +251,9 @@ const EditBusinessInfo: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="rcNumber">RC Number (the number on your CAC document)</Label>
+              <Label htmlFor="rcNumber">
+                RC Number (the number on your CAC document)
+              </Label>
               <Input
                 id="rcNumber"
                 value={form.rcNumber}
@@ -257,6 +262,23 @@ const EditBusinessInfo: React.FC = () => {
                 placeholder="Enter RC number"
               />
             </div>
+
+            <div className="mb-4">
+              <Label>CAC Document Upload (PDF or Image)</Label>
+              <FileUpload
+                label="Upload CAC Certificate"
+                accept="application/pdf,image/*"
+                onChange={(files) => {
+                  const file = files?.[0];
+                  if (file && file.size > 5 * 1024 * 1024) {
+                    alert("Max file size is 5MB");
+                    return;
+                  }
+                  setCacFile(file || null);
+                }}
+              />
+            </div>
+
             <div>
               <Label htmlFor="taxId">Tax ID</Label>
               <Input
@@ -295,92 +317,17 @@ const EditBusinessInfo: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5" />
-            Bank Account Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="bankName">Bank Name</Label>
-              <Select
-                value={
-                  form.bankName && form.bankCode
-                    ? JSON.stringify({ name: form.bankName, code: form.bankCode })
-                    : ""
-                }
-                onValueChange={(value) => {
-                  try {
-                    const selected = JSON.parse(value);
-                    handleChange("bankName", selected.name || "");
-                    handleChange("bankCode", selected.code || "");
-                  } catch {
-                    console.error("Invalid bank data");
-                  }
-                }}
-              >
-                <SelectTrigger id="bankName">
-                  <SelectValue placeholder="Select a bank name" />
-                </SelectTrigger>
-                <SelectContent>
-                  {banks?.length > 0 ? (
-                    banks.map((bank) => (
-                      <SelectItem
-                        key={bank.code}
-                        value={JSON.stringify({
-                          name: bank.name,
-                          code: bank.code,
-                        })}
-                      >
-                        {bank.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem disabled value="no-banks">
-                      No banks available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="accountNumber">Account Number</Label>
-              <Input
-                id="accountNumber"
-                value={form.accountNumber}
-                onChange={(e) => handleChange("accountNumber", e.target.value)}
-                placeholder="Enter account number"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="accountName">Account Name</Label>
-            <Input
-              id="accountName"
-              value={form.accountName}
-              onChange={(e) => handleChange("accountName", e.target.value)}
-              placeholder="Enter account name"
-            />
-          </div>
-        </CardContent>
-      </Card> */}
-
       <div className="mt-4">
         <Button
           className="bg-[#C29307] hover:opacity-100 transition-smooth"
           onClick={handleSave}
           disabled={loading}
         >
-          {loading ? "Saving..." : "Save Business Info"}
+          {loading2 ? "Saving..." : "Save Business Info"}
         </Button>
       </div>
     </>
   );
-}
+};
 
 export default EditBusinessInfo;

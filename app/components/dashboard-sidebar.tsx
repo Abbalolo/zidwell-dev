@@ -18,9 +18,11 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 import Image from "next/image";
 import { useUserContextData } from "../context/userData";
+import { Button } from "./ui/button";
 
 const formatNumber = (value: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -157,9 +159,14 @@ export default function DashboardSidebar() {
           {/* Navigation */}
           <div className="flex-1 px-2 py-6 space-y-2">
             <NavItem
-              item={{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard }}
+              item={{
+                name: "Dashboard",
+                href: "/dashboard",
+                icon: LayoutDashboard,
+              }}
               isActive={pathname === "/dashboard"}
             />
+
             <NavItem
               item={{
                 name: "Fund Account",
@@ -167,6 +174,42 @@ export default function DashboardSidebar() {
                 icon: Wallet,
               }}
               isActive={pathname === "/dashboard/fund-account"}
+            />
+            <NavItem
+              item={{
+                name: "My Transaction",
+                href: "/dashboard/transactions",
+                icon: Receipt,
+              }}
+              isActive={pathname === "/dashboard/transactions"}
+            />
+
+            <NavItem
+              item={{
+                name: "Tax Filing",
+                href: "/dashboard/services/tax-filing",
+                icon: FileSpreadsheet,
+              }}
+              isActive={pathname === "/dashboard/services/tax-filing"}
+            />
+
+            {/* Other services */}
+            <NavItem
+              item={{
+                name: "Simple Agreement",
+                href: "/dashboard/services/simple-agreement",
+                icon: FileText,
+              }}
+              isActive={pathname === "/dashboard/services/simple-agreement"}
+            />
+
+            <NavItem
+              item={{
+                name: "Create Receipt",
+                href: "/dashboard/services/create-receipt",
+                icon: Receipt,
+              }}
+              isActive={pathname === "/dashboard/services/create-receipt"}
             />
 
             {/* Top Up dropdown */}
@@ -219,46 +262,13 @@ export default function DashboardSidebar() {
               />
             </Dropdown>
 
-            {/* Other services */}
             <NavItem
               item={{
-                name: "My Transaction",
-                href: "/dashboard/transactions",
-                icon: Receipt,
-              }}
-              isActive={pathname === "/dashboard/transactions"}
-            />
-            <NavItem
-              item={{
-                name: "Simple Agreement",
-                href: "/dashboard/services/simple-agreement",
-                icon: FileText,
-              }}
-              isActive={pathname === "/dashboard/services/simple-agreement"}
-            />
-            <NavItem
-              item={{
-                name: "Create Invoice",
+                name: <div>Create Invoice <span className="text-[10px] text-red-400">(Coming soon)</span></div>,
                 href: "/dashboard/services/create-invoice",
                 icon: FileSpreadsheet,
               }}
               isActive={pathname === "/dashboard/services/create-invoice"}
-            />
-            <NavItem
-              item={{
-                name: "Create Receipt",
-                href: "/dashboard/services/create-receipt",
-                icon: Receipt,
-              }}
-              isActive={pathname === "/dashboard/services/create-receipt"}
-            />
-            <NavItem
-              item={{
-                name: "Tax Filing",
-                href: "/dashboard/services/tax-filing",
-                icon: FileSpreadsheet,
-              }}
-              isActive={pathname === "/dashboard/services/tax-filing"}
             />
           </div>
 
@@ -275,6 +285,21 @@ export default function DashboardSidebar() {
                   isActive={pathname === item.href}
                 />
               ))}
+
+              {userData && userData.role?.toLowerCase() === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                    pathname === "/admin"
+                      ? "bg-yellow-500/20 text-yellow-400 border-r-2 border-yellow-400"
+                      : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="font-medium">Admin</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>

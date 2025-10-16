@@ -1,8 +1,13 @@
-
 import { notFound } from "next/navigation";
 
 import SignContractForm from "@/app/components/SignContractForm";
-import supabase from "@/app/supabase/supabase";
+import { createClient } from "@supabase/supabase-js";
+import { Textarea } from "@/app/components/ui/textarea";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export default async function page({
   params,
@@ -17,7 +22,7 @@ export default async function page({
     .select("*")
     .eq("token", token)
     .single();
-console.log(contractData)
+  // console.log(contractData, error)
   if (error || !contractData) return notFound();
 
   return (
@@ -31,9 +36,11 @@ console.log(contractData)
         </div>
       )}
 
-      <p className=" border p-4 rounded bg-white shadow mb-6">
-        {contractData.contract_text}
-      </p>
+      <Textarea
+        value={contractData.contract_text}
+        className="min-h-[600px] font-mono text-sm"
+        readOnly
+      />
 
       {/* Optionally disable or hide SignForm if signed */}
       {contractData.status !== "signed" && (

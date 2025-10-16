@@ -210,7 +210,7 @@ export async function POST(req: Request) {
         lastName: userProfile.last_name,
         email: userProfile.email,
         phone: userProfile.phone,
-        walletBalance: userProfile.wallet_balance,
+        // walletBalance: userProfile.wallet_balance,
         zidcoinBalance: userProfile.zidcoin_balance,
         bvnVerification: userProfile.bvn_verification,
         role: userProfile.role,

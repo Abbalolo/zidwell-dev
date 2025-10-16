@@ -1,16 +1,14 @@
-"use client"
-import DashboardSidebar from "@/app/components/dashboard-sidebar" 
-import DashboardHeader from "@/app/components/dashboard-hearder" 
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/app/components/ui/button"
-import { useRouter } from "next/navigation"
-import InvoiceGen from "@/app/components/InvoiceGen"
+"use client";
+import DashboardSidebar from "@/app/components/dashboard-sidebar";
+import DashboardHeader from "@/app/components/dashboard-hearder";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { useRouter } from "next/navigation";
+import InvoiceGen from "@/app/components/InvoiceGen";
 
 export default function page() {
-   const router = useRouter();
+  const router = useRouter();
   return (
-
-
     <div className="min-h-screen bg-gray-50 fade-in">
       <DashboardSidebar />
 
@@ -27,26 +25,29 @@ export default function page() {
                 className="text-[#C29307] hover:bg-white/10 text-sm md:text-base"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-               <span className="hidden md:block">Back</span>
+                <span className="hidden md:block">Back</span>
               </Button>
 
               <div className="">
-                <h1 className="md:text-3xl text-xl font-bold mb-2">
-                Invoice Management
+                <h1 className="md:text-3xl text-xl font-bold mb-2 flex items-center gap-3">
+                  Invoice Management{" "}
+                  <button
+                    disabled
+                    className="pointer-events-none text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md"
+                  >
+                    ₦100
+                  </button>
                 </h1>
                 <p className=" text-muted-foreground">
-                 Create, manage, and track your invoices
+                  Create, manage, and track your invoices
                 </p>
               </div>
             </div>
-            
 
             <InvoiceGen />
           </div>
         </main>
       </div>
     </div>
-
-   
-  )
+  );
 }

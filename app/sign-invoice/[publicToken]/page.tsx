@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 
-import supabase from "@/app/supabase/supabase";
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function SignPage({
   params,
@@ -12,7 +16,7 @@ export default async function SignPage({
 }) {
   const publicToken = (await params).publicToken;
 
-  console.log(publicToken);
+  // console.log(publicToken);
 
   // Fetch invoice using the invoiceId
   const { data: invoice, error } = await supabase
@@ -21,7 +25,7 @@ export default async function SignPage({
     .eq("public_token", publicToken)
     .single();
 
-  console.log(error);
+  // console.log(error);
 
   if (error || !invoice) return notFound();
 

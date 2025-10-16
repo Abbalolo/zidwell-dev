@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { User, Mail, Phone, CreditCard } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import Loader from "../Loader";
+import FileUpload from "../FileUpload";
 
 type Bank = { code: string; name: string };
 
@@ -31,6 +32,9 @@ export default function EditProfileInfo() {
     city: userData?.city || "",
     state: userData?.state || "",
     country: userData?.country || "",
+    nin: userData?.nin || "",
+    idCardFile: null,
+    utilityBillFile: null,
     bankName: "",
     bankCode: "",
     accountNumber: "",
@@ -47,7 +51,7 @@ export default function EditProfileInfo() {
   const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
 
   // Unified setter for profile fields
-  const handleProfileChange = (field: string, value: string) => {
+  const handleProfileChange = (field: string, value: any) => {
     setProfile((prev: any) => ({ ...prev, [field]: value }));
   };
 
@@ -134,7 +138,6 @@ export default function EditProfileInfo() {
   }, [userData]);
 
   const handleSave = async () => {
-    // basic validation
     const newErrors: any = {};
     setErrors({});
 
@@ -144,7 +147,6 @@ export default function EditProfileInfo() {
       newErrors.dob = "You must be at least 18 years old";
     }
 
-    // optional: validate account number if provided
     if (profile.accountNumber && profile.accountNumber.length !== 10) {
       newErrors.accountNumber = "Account number must be 10 digits";
     }
@@ -160,7 +162,9 @@ export default function EditProfileInfo() {
     }
 
     setLoading(true);
+
     try {
+      // ✅ 1. First save profile info
       const response = await fetch("/api/profile/update-profile-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -182,11 +186,30 @@ export default function EditProfileInfo() {
       });
 
       const result = await response.json();
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(result.error || "Failed to update profile");
+
+      // ✅ 2. Upload KYC files if present
+      if (profile.nin || profile.idCardFile || profile.utilityBillFile) {
+        const formData = new FormData();
+        formData.append("userId", userData?.id || "");
+
+        if (profile.nin) formData.append("nin", profile.nin);
+        if (profile.idCardFile) formData.append("idCard", profile.idCardFile);
+        if (profile.utilityBillFile)
+          formData.append("utilityBill", profile.utilityBillFile);
+
+        const uploadRes = await fetch("/api/profile/upload-kyc", {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadResult = await uploadRes.json();
+        if (!uploadRes.ok)
+          throw new Error(uploadResult.error || "KYC upload failed");
       }
 
-      // Update context + localStorage
+      // ✅ 3. Save local state
       const updatedUserData = {
         ...userData,
         firstName: profile.firstName,
@@ -197,6 +220,7 @@ export default function EditProfileInfo() {
         city: profile.city,
         state: profile.state,
         country: profile.country,
+        kycStatus: "pending",
       };
 
       setUserData?.(updatedUserData);
@@ -207,7 +231,7 @@ export default function EditProfileInfo() {
       Swal.fire({
         icon: "success",
         title: "Profile Updated",
-        text: "Your profile was updated successfully ✅",
+        text: "Your profile and KYC were submitted successfully ✅",
         timer: 1800,
         showConfirmButton: false,
       });
@@ -339,6 +363,60 @@ export default function EditProfileInfo() {
             onChange={(e) => handleProfileChange("country", e.target.value)}
             placeholder="Country"
           />
+        </div>
+
+        {/* ✅ KYC Section */}
+        <div
+          className={`mt-6 p-4 rounded-md border ${
+            !isEditing ? "pointer-events-none opacity-50 bg-gray-100" : ""
+          }`}
+        >
+          <h3 className="text-lg font-semibold mb-2">KYC Verification</h3>
+
+          {/* NIN Number */}
+          <div className="mb-4">
+            <Label htmlFor="nin">NIN Number</Label>
+            <Input
+              id="nin"
+              name="nin"
+              value={profile.nin || ""}
+              maxLength={11}
+              placeholder="Enter your 11-digit NIN"
+              onChange={(e) => handleProfileChange("nin", e.target.value)}
+            />
+          </div>
+
+          {/* ID Card Upload */}
+          <div className="mb-4">
+            <FileUpload
+              label="Upload ID Card (National ID, Voter's Card, Driver's License, Passport)"
+              accept="image/*,application/pdf"
+              onChange={(files) => {
+                const file = files?.[0];
+                if (file && file.size > 5 * 1024 * 1024) {
+                  alert("Max file size is 5MB");
+                  return;
+                }
+                handleProfileChange("idCardFile", file || null);
+              }}
+            />
+          </div>
+
+          {/* Utility Bill Upload */}
+          <div className="mb-4">
+            <FileUpload
+              label="Upload Utility Bill (NEPA Bill, Water Bill, or Bank Statement)"
+              accept="image/*,application/pdf"
+              onChange={(files) => {
+                const file = files?.[0];
+                if (file && file.size > 5 * 1024 * 1024) {
+                  alert("Max file size is 5MB");
+                  return;
+                }
+                handleProfileChange("utilityBillFile", file || null);
+              }}
+            />
+          </div>
         </div>
 
         {/* Bank Card */}

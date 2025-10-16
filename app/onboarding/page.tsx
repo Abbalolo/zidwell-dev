@@ -42,7 +42,7 @@ interface OnboardingData {
 const steps = [
   { id: 1, title: "Profile", description: "Personal information" },
   { id: 2, title: "Business", description: "Company details (optional)" },
-  { id: 3, title: "Account", description: "Bank account details" },
+  { id: 3, title: "Account", description: "Account Withdrawal Details" },
   { id: 4, title: "Verification", description: "Identity verification" },
 ];
 
@@ -134,7 +134,7 @@ export default function Page() {
           email: user.email,
           phone: user.phone,
           dob: user.date_of_birth,
-          walletBalance: user.wallet_balance,
+          // walletBalance: user.wallet_balance,
           zidcoinBalance: user.zidcoin_balance,
           bvnVerification: user.bvn_verification,
           referralCode: user.referral_code,

@@ -370,8 +370,14 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                     Back
                   </Button>
                   <div>
-                    <h1 className="text-2xl font-bold text-foreground">
-                      Contract Editor
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-3" >
+                      Contract Editor{" "}
+                      <button
+                        disabled
+                        className="pointer-events-none text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md"
+                      >
+                        ₦1,000 
+                      </button>
                     </h1>
                     <p className="text-muted-foreground">
                       Based on: <strong>{template?.title}</strong>
@@ -384,7 +390,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                     <Save className="h-4 w-4 mr-2" />
                     Save Draft
                   </Button> */}
- 
+
                   <Button
                     disabled={loading}
                     className={`md:flex items-center text-white transition hidden  ${

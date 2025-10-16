@@ -131,13 +131,13 @@ const Page = () => {
           text: "Contract sent for signature successfully!",
         });
 
-        if (result.newWalletBalance !== undefined) {
-          setUserData((prev: any) => {
-            const updated = { ...prev, walletBalance: result.result };
-            localStorage.setItem("userData", JSON.stringify(updated));
-            return updated;
-          });
-        }
+        // if (result.newWalletBalance !== undefined) {
+        //   setUserData((prev: any) => {
+        //     const updated = { ...prev, walletBalance: result.result };
+        //     localStorage.setItem("userData", JSON.stringify(updated));
+        //     return updated;
+        //   });
+        // }
 
         setLoading(false);
         window.location.reload();
@@ -280,8 +280,14 @@ const Page = () => {
                     Back
                   </Button>
                   <div>
-                    <h1 className="text-2xl font-bold text-foreground">
-                      New Contract
+                    <h1 className="text-2xl font-bold text-foreground flex gap-3 items-center">
+                      New Contract{" "}
+                      <button
+                        disabled
+                        className="pointer-events-none text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md"
+                      >
+                        ₦1,000
+                      </button>
                     </h1>
                     <p className="text-muted-foreground">
                       Create a contract from scratch

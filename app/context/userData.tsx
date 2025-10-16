@@ -31,7 +31,7 @@ export interface UserData {
   lastName: string;
   email: string;
   phone?: string;
-  walletBalance: number;
+  // walletBalance: number;
   zidcoinBalance: number;
   bvnVerification: string;
   referralCode: string;
@@ -70,13 +70,23 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [lifetimeBalance, setLifetimeBalance] = useState(0);
   const [totalOutflow, setTotalOutflow] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
-
+ 
   // Logout
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setUserData(null);
   };
+
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("userData");
+
+      if (storedUser) setUser(JSON.parse(storedUser));
+    } catch (error) {
+      console.error("Failed to parse localStorage user:", error);
+    }
+  }, []);
 
   // Fetch podcast episodes
   const fetchEpisodes = async () => {

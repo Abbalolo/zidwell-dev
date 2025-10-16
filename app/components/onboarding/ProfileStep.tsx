@@ -20,7 +20,6 @@ interface ProfileStepProps {
 }
 
 export const ProfileStep = ({ data, onUpdate, onNext }: ProfileStepProps) => {
-   console.log("from profile", data)
   const [errors, setErrors] = useState<Partial<ProfileData>>({});
 const {userData, setUserData} = useUserContextData()
   const handleInputChange = (field: keyof ProfileData, value: string) => {

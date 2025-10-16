@@ -41,6 +41,7 @@
     "@react-pdf-viewer/print": "^3.12.0",
     "@react-pdf/renderer": "^4.3.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.54.0",
     "aos": "^2.3.4",

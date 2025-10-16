@@ -1,23 +1,39 @@
-import { Coins, GraduationCap, Bot, Smartphone, Shield, Zap } from "lucide-react";
+import {
+  Coins,
+  GraduationCap,
+  Bot,
+  Smartphone,
+  Shield,
+  Zap,
+} from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 
 const WhyWeDiff = () => {
   return (
-    <section data-aos="fade-up" className="py-20 bg-gradient-to-br from-background via-muted/20 to-background">
+    <section
+      data-aos="fade-up"
+      className="py-20 bg-gradient-to-br from-background via-muted/20 to-background"
+    >
       <div className="container mx-auto px-4 lg:px-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-foreground mb-4">
             Why We Are Different
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Yes, we know there are many other bill payment platforms out there. 
-            But Zidwell isn't just another payment app - we're revolutionizing how you manage your finances.
+            Yes, we know there are many payment apps out there — but Zidwell is
+            more than that. We’re changing how business owners manage their
+            money, structure their operations so they can grow with confidence.
+            From paying bills and sending invoices to creating contracts, filing
+            taxes, and earning cashback rewards, Zidwell brings everything you
+            need to run a smarter, more organized business into one simple
+            platform. It’s not just fintech — it’s financial structure for the
+            modern entrepreneur.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 mb-16">
-          {/* Earn While You Spend */}
+        {/* <div className="grid lg:grid-cols-3 gap-8 mb-16">
+       
           <Card className="group hover:scale-105 transition-all duration-300 hover:shadow-2xl border-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent backdrop-blur-sm">
             <CardContent className="p-8 text-center">
               <div className="mb-6 relative">
@@ -52,7 +68,7 @@ const WhyWeDiff = () => {
             </CardContent>
           </Card>
 
-          {/* Financial Literacy */}
+         
           <Card className="group hover:scale-105 transition-all duration-300 hover:shadow-2xl border-0 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent backdrop-blur-sm">
             <CardContent className="p-8 text-center">
               <div className="mb-6 relative">
@@ -87,7 +103,6 @@ const WhyWeDiff = () => {
             </CardContent>
           </Card>
 
-          {/* AI Assistant */}
           <Card className="group hover:scale-105 transition-all duration-300 hover:shadow-2xl border-0 bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent backdrop-blur-sm">
             <CardContent className="p-8 text-center">
               <div className="mb-6 relative">
@@ -122,42 +137,58 @@ const WhyWeDiff = () => {
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* How It Works Steps */}
         <div className="bg-gradient-to-r from-muted/50 to-muted/30 rounded-3xl p-8 md:p-12">
           <h3 className="text-3xl font-bold text-center text-foreground mb-12">
             How Zidwell Works
           </h3>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center group">
               <div className="w-16 h-16 mx-auto bg-[#C29307] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Smartphone className="w-8 h-8 text-primary-foreground" />
               </div>
-              <h4 className="text-xl font-semibold text-foreground mb-2">1. Choose Your Bills</h4>
-              <p className="text-muted-foreground">Select from electricity, water, internet, cable TV, and more</p>
+              <h4 className="text-xl font-semibold text-foreground mb-2">
+                1. Choose Your Bills
+              </h4>
+              <p className="text-muted-foreground">
+                Handle All Your Business Payments: Settle your bills, send
+                invoices, and manage business expenses — all from one secure
+                Zidwell wallet.
+              </p>
             </div>
-            
+
             <div className="text-center group">
               <div className="w-16 h-16 mx-auto bg-[#C29307] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Shield className="w-8 h-8 text-primary-foreground" />
               </div>
-              <h4 className="text-xl font-semibold text-foreground mb-2">2. Pay Securely</h4>
-              <p className="text-muted-foreground">Load your zidcoin wallet with simple bank transfer 
-</p>
+              <h4 className="text-xl font-semibold text-foreground mb-2">
+                2. Pay Securely
+              </h4>
+              <p className="text-muted-foreground">
+                Earn as You Grow Get rewarded with Zidcoins for every
+                transaction and referral. The more you use Zidwell, the more you
+                earn.
+              </p>
             </div>
-            
+
             <div className="text-center group">
               <div className="w-16 h-16 mx-auto bg-[#C29307] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Zap className="w-8 h-8 text-primary-foreground" />
               </div>
-              <h4 className="text-xl font-semibold text-foreground mb-2">3. Earn & Learn</h4>
-              <p className="text-muted-foreground">Earn bonuses  as you pay bills - easy pizzy</p>
+              <h4 className="text-xl font-semibold text-foreground mb-2">
+                3. Earn & Learn
+              </h4>
+              <p className="text-muted-foreground">
+                Build Structure & Confidence Create contracts, file taxes, and
+                keep your business finances organized — so you can focus on what
+                truly matters: growth.
+              </p>
             </div>
           </div>
         </div>
-
       </div>
     </section>
   );

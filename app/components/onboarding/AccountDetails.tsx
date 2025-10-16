@@ -66,10 +66,11 @@ export const AccountDetailsStep = ({
   return (
     <div className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-sm p-6 border">
       <h2 className="text-2xl font-semibold mb-2 text-center">
-        Account Details
+       Account Withdrawal Details
+
       </h2>
       <p className="text-sm text-muted-foreground text-center mb-6">
-        Provide your business account information to continue.
+        Provide a bank account details that match your name, where you can withdraw your funds to whenever you want to withdraw from your Zidwell wallet.
       </p>
 
       {loading ? (

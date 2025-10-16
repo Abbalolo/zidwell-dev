@@ -7,8 +7,37 @@ import { Smartphone, Wifi, Lightbulb, Tv, CreditCard, Scale, Bot, Receipt, FileS
 import { link } from "fs"
 
 const services:any = [
-  {
+   {
     id: 1,
+    title: "Tax Filing",
+    description: "File your tax",
+    icon: FileSpreadsheet ,
+    color: "bg-gray-50 text-gray-600",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/services/tax-filing"
+  },
+   {
+    id: 2,
+    title: "Simple Agreement",
+    description: "Generate Agreement",
+    icon: Scale,
+    color: "bg-indigo-50 text-indigo-600",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/services/simple-agreement"
+  },
+    {
+    id: 3,
+    title: "Create Receipt",
+    description: "Generate Receipt",
+    icon: Receipt,
+    color: "bg-red-50 text-red-600",
+    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
+    link: "/dashboard/services/create-receipt"
+  },
+ 
+ 
+  {
+    id: 4,
     title: "Airtime Top up",
     description: "Buy Airtime",
     icon: Smartphone,
@@ -17,7 +46,7 @@ const services:any = [
     link: "/dashboard/services/buy-airtime"
   },
   {
-    id: 2,
+    id: 5,
     title: "Internet Top up",
     description: "Buy Data",
     icon: Wifi,
@@ -26,7 +55,7 @@ const services:any = [
     link: "/dashboard/services/buy-data"
   },
   {
-    id: 3,
+    id: 6,
     title: "Electricity Payment",
     description: "Pay Electricity",
     icon: Lightbulb,
@@ -35,7 +64,7 @@ const services:any = [
     link: "/dashboard/services/buy-power"
   },
   {
-    id: 4,
+    id: 7,
     title: "Pay Cable/TV",
     description: "Pay TV Subscription",
     icon: Tv,
@@ -44,41 +73,15 @@ const services:any = [
     link: "/dashboard/services/buy-cable-tv"
   },
   {
-    id: 5,
+    id: 8,
     title: "Create Invoice",
     description: "Generate invoice",
     icon: CreditCard,
-    color: "bg-red-50 text-red-600",
+    color: "bg-red-50 text-red-600  ",
     buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
     link: "/dashboard/services/create-invoice"
   },
-  {
-    id: 6,
-    title: "Create Receipt",
-    description: "Generate Receipt",
-    icon: Receipt,
-    color: "bg-red-50 text-red-600",
-    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    link: "/dashboard/services/create-receipt"
-  },
-  {
-    id: 7,
-    title: "Simple Agreement",
-    description: "Generate Agreement",
-    icon: Scale,
-    color: "bg-indigo-50 text-indigo-600",
-    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    link: "/dashboard/services/simple-agreement"
-  },
-  {
-    id: 8,
-    title: "Tax Filing",
-    description: "File your tax",
-    icon: FileSpreadsheet ,
-    color: "bg-gray-50 text-gray-600",
-    buttonColor: "bg-[#C29307] hover:bg-[#C29307]",
-    link: "/dashboard/services/tax-filing"
-  },
+
   
 
 ]

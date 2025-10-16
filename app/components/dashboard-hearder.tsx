@@ -1,51 +1,52 @@
 "use client";
+
 import Swal from "sweetalert2";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { useUserContextData } from "../context/userData";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-
 export default function DashboardHeader() {
   const router = useRouter();
   const { userData, setUserData } = useUserContextData();
+  // ✅ Logout handler
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
 
-  // ✅ Only run logout when user clicks the button
-const handleLogout = async () => {
-  try {
-  
-    await fetch("/api/logout", { method: "POST" });
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("userData");
+        localStorage.clear();
+      }
 
+      setUserData(null);
 
-    localStorage.removeItem("userData");
-    localStorage.clear();
-    setUserData(null);
+      Swal.fire({
+        icon: "success",
+        title: "Logged Out",
+        text: "You have been signed out successfully.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
-    Swal.fire({
-      icon: "success",
-      title: "Logged Out",
-      text: "You have been signed out successfully.",
-      timer: 1500,
-      showConfirmButton: false,
-    });
+      router.push("/auth/login");
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Logout Failed",
+        text: error?.message || "An error occurred during logout.",
+      });
+    }
+  };
 
-    router.push("/auth/login");
-  } catch (error: any) {
-    Swal.fire({
-      icon: "error",
-      title: "Logout Failed",
-      text: error.message || "An error occurred during logout.",
-    });
-  }
-};
-
-  // ✅ Restore user from localStorage (optional)
+  // ✅ Restore user from localStorage (only runs on client)
   useEffect(() => {
-    const stored = localStorage.getItem("userData");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setUserData(parsed);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("userData");
+      if (stored) {
+        setUserData(JSON.parse(stored));
+      }
     }
   }, [setUserData]);
 
@@ -59,6 +60,8 @@ const handleLogout = async () => {
         )}
 
         <div className="flex items-center space-x-2">
+         
+
           <Button
             onClick={handleLogout}
             variant="outline"

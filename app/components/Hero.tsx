@@ -29,11 +29,8 @@ const Hero = () => {
 
           <p className="md:text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
             {/* We created Zidwell to make sure small businesses have all the financial tools they need to run smoothly. Everything here works as it should, we had you in mind when creating this platform */}
-            Zidwell helps you pay your everyday bills quickly. Our platform
-            works for all bills like airtime, data, DSTV, and electricity and we
-            reward you with Zid Coins{" "}
-            <span className="text-[#C29307]">cashback</span> for every N1000
-            spent on our platform.
+           Business is all about making Smart Moves. With Zidwell, you can take control of your business finances — pay bills, send invoices, manage business contracts, do your taxes, and even earn rewards per transaction. Now that's a smart move.
+            
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -42,7 +39,7 @@ const Hero = () => {
               size="lg"
               className="bg-[#C29307] text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer"
             >
-              Start Paying Bills
+              Make Smart Moves
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>

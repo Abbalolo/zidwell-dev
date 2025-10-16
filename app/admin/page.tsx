@@ -13,9 +13,18 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
+
 import AdminLayout from "../components/admin-components/layout";
 import KPICard from "../components/admin-components/KPICard";
 import Loader from "../components/Loader";
+import { Skeleton } from "../components/ui/skeleton";
 
 const fetcher = (url: string) =>
   fetch(url).then(async (r) => {
@@ -35,7 +44,9 @@ export default function AdminDashboard() {
   // persist range selection in localStorage
   const [range, setRange] = useState<RangeOption>(() => {
     if (typeof window === "undefined") return "total";
-    return (localStorage.getItem("admin_dashboard_range") as RangeOption) || "total";
+    return (
+      (localStorage.getItem("admin_dashboard_range") as RangeOption) || "total"
+    );
   });
 
   useEffect(() => {
@@ -54,9 +65,11 @@ export default function AdminDashboard() {
     `/api/admin-apis/transactions/summary?range=${range}`,
     fetcher
   );
+  const rawNombaBalance = Number(summaryData?.nombaBalance) || 0;
 
   useEffect(() => {
-    if (paginatedError) console.error("Paginated transactions error:", paginatedError);
+    if (paginatedError)
+      console.error("Paginated transactions error:", paginatedError);
     if (summaryError) console.error("Summary error:", summaryError);
   }, [paginatedError, summaryError]);
 
@@ -67,7 +80,12 @@ export default function AdminDashboard() {
   const totalOutflow = summaryData?.totalOutflow ?? 0;
   const totalUsers = summaryData?.totalUsers ?? 0;
   const totalWalletBalance = summaryData?.walletBalance ?? 0;
-  const adminNombaBalance = summaryData?.nombaBalance ?? 0;
+  const adminNombaBalance = rawNombaBalance / 100;
+
+  const naira = adminNombaBalance.toLocaleString("en-NG", {
+    style: "currency",
+    currency: "NGN",
+  });
   const monthlyTransactions = summaryData?.monthlyTransactions ?? [];
   const monthlyUsers = summaryData?.monthlyUsers ?? [];
 
@@ -96,13 +114,46 @@ export default function AdminDashboard() {
   const loading = !paginatedData || !summaryData;
 
   const fmtCurrency = (n: number) =>
-    `₦${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    `₦${Number(n || 0).toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    })}`;
 
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <Loader />
+        <div className="px-4 py-6 space-y-8">
+          {/* Header Skeleton */}
+          <div className="flex justify-between">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+
+          {/* KPI Cards Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array(4)
+              .fill(null)
+              .map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+          </div>
+
+          {/* Charts Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+
+          {/* Recent Transactions Skeleton */}
+          <div className="bg-white p-6 rounded-2xl shadow-md">
+            <Skeleton className="h-6 w-56 mb-4" />
+            <div className="space-y-3">
+              {Array(5)
+                .fill(null)
+                .map((_, i) => (
+                  <Skeleton key={i} className="h-6 w-full" />
+                ))}
+            </div>
+          </div>
         </div>
       </AdminLayout>
     );
@@ -113,26 +164,30 @@ export default function AdminDashboard() {
       <div className="px-4 py-6">
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
-            <h2 className="text-3xl font-bold">📊 Admin Dashboard</h2>
-            <div className="mt-1 text-sm text-gray-500">Range: {range === "total" ? "All time" : range}</div>
+            <h2 className="text-3xl font-bold">Admin Dashboard</h2>
+            <div className="mt-1 text-sm text-gray-500">
+              Range: {range === "total" ? "All time" : range}
+            </div>
           </div>
 
           {/* Top-right controls: filter dropdown + refresh + page indicator */}
           <div className="flex items-center gap-3">
-            <label className="sr-only" htmlFor="range-select">Filter range</label>
-            <select
-              id="range-select"
+            <label className="text-xs text-gray-500 mb-1">Filter Range</label>
+            <Select
               value={range}
-              onChange={(e) => setRange(e.target.value as RangeOption)}
-              className="px-3 py-2 border rounded-md text-sm"
+              onValueChange={(val: RangeOption) => setRange(val)}
             >
-              <option value="total">Total</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-            </select>
-
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="total">Total</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="year">This Year</SelectItem>
+              </SelectContent>
+            </Select>
             <button
               onClick={refresh}
               className="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200 text-sm"
@@ -148,8 +203,11 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <KPICard title="Total Users" value={totalUsers} />
           <KPICard title="Total Transactions" value={totalTransactions} />
-          <KPICard title="Total Wallet Balance" value={fmtCurrency(totalWalletBalance)} />
-          <KPICard title="Admin Wallet (Nomba)" value={fmtCurrency(adminNombaBalance)} />
+          <KPICard
+            title="Total Wallet Balance"
+            value={fmtCurrency(totalWalletBalance)}
+          />
+          <KPICard title="Admin Wallet (Nomba)" value={naira} />
         </div>
 
         {/* Inflow/Outflow Row */}
@@ -161,7 +219,9 @@ export default function AdminDashboard() {
 
           <div className="bg-white p-4 rounded-2xl shadow-sm">
             <h3 className="font-semibold mb-1">Total Outflow</h3>
-            <div className="text-2xl font-bold">{fmtCurrency(totalOutflow)}</div>
+            <div className="text-2xl font-bold">
+              {fmtCurrency(totalOutflow)}
+            </div>
           </div>
         </div>
 
@@ -179,7 +239,12 @@ export default function AdminDashboard() {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="transactions" stroke="#3b82f6" strokeWidth={2} />
+                <Line
+                  type="monotone"
+                  dataKey="transactions"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -205,19 +270,29 @@ export default function AdminDashboard() {
         {/* Recent Transactions (paginated) */}
         <div className="bg-white p-6 rounded-2xl shadow-md mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold">🕒 Recent Transactions (paginated)</h3>
+            <h3 className="text-xl font-semibold">
+              🕒 Recent Transactions (paginated)
+            </h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={goPrev}
                 disabled={!hasPrevPage}
-                className={`px-3 py-1 rounded-md text-sm ${!hasPrevPage ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-50 hover:bg-gray-100"}`}
+                className={`px-3 py-1 rounded-md text-sm ${
+                  !hasPrevPage
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-50 hover:bg-gray-100"
+                }`}
               >
                 Prev
               </button>
               <button
                 onClick={goNext}
                 disabled={!hasNextPage}
-                className={`px-3 py-1 rounded-md text-sm ${!hasNextPage ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-50 hover:bg-gray-100"}`}
+                className={`px-3 py-1 rounded-md text-sm ${
+                  !hasNextPage
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-50 hover:bg-gray-100"
+                }`}
               >
                 Next
               </button>
@@ -229,14 +304,22 @@ export default function AdminDashboard() {
               recentActivity.map((tx: any) => (
                 <li key={tx.id} className="py-3 flex justify-between text-sm">
                   <div>
-                    <div className="font-medium text-gray-800">₦{Number(tx.amount).toLocaleString()}</div>
-                    <div className="text-gray-500 text-xs">{tx.type ?? "—"}</div>
+                    <div className="font-medium text-gray-800">
+                      ₦{Number(tx.amount).toLocaleString()}
+                    </div>
+                    <div className="text-gray-500 text-xs">
+                      {tx.type ?? "—"}
+                    </div>
                   </div>
-                  <div className="text-gray-500 text-xs">{new Date(tx.created_at).toLocaleString()}</div>
+                  <div className="text-gray-500 text-xs">
+                    {new Date(tx.created_at).toLocaleString()}
+                  </div>
                 </li>
               ))
             ) : (
-              <li className="py-4 text-center text-gray-500">No transactions on this page</li>
+              <li className="py-4 text-center text-gray-500">
+                No transactions on this page
+              </li>
             )}
           </ul>
         </div>

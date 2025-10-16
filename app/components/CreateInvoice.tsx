@@ -195,13 +195,13 @@ function CreateInvoice() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
 
-      if (result.newWalletBalance !== undefined) {
-        setUserData((prev: any) => {
-          const updated = { ...prev, walletBalance: result.result };
-          localStorage.setItem("userData", JSON.stringify(updated));
-          return updated;
-        });
-      }
+      // if (result.newWalletBalance !== undefined) {
+      //   setUserData((prev: any) => {
+      //     const updated = { ...prev, walletBalance: result.result };
+      //     localStorage.setItem("userData", JSON.stringify(updated));
+      //     return updated;
+      //   });
+      // }
 
       Swal.fire({
         icon: "success",

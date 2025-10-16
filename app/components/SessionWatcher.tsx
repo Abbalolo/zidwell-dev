@@ -10,9 +10,9 @@ export default function SessionWatcher({ children }: { children: React.ReactNode
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes
 
-  // 🔹 Function to clear all cookies
+  // Clear cookies helper
   const clearCookies = () => {
-    const cookies = document.cookie.split(";"); // Get all cookies
+    const cookies = document.cookie.split(";");
     for (const cookie of cookies) {
       const eqPos = cookie.indexOf("=");
       const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
@@ -20,7 +20,7 @@ export default function SessionWatcher({ children }: { children: React.ReactNode
     }
   };
 
-  // 🔹 Track user activity
+  // Track user activity
   useEffect(() => {
     const updateActivity = () => setLastActivityTime(Date.now());
     window.addEventListener("mousemove", updateActivity);
@@ -36,24 +36,35 @@ export default function SessionWatcher({ children }: { children: React.ReactNode
     };
   }, []);
 
-  // 🔹 Auto logout after inactivity
-useEffect(() => {
-  let alreadyLoggedOut = false; 
+  // Auto logout after inactivity
+  useEffect(() => {
+    let alreadyLoggedOut = false;
 
-  const interval = setInterval(async () => {
-    if (!alreadyLoggedOut && Date.now() - lastActivityTime > INACTIVITY_LIMIT) {
-      alreadyLoggedOut = true; // Prevent multiple calls
-      await supabase.auth.signOut(); // Logout Supabase
-      localStorage.clear();
-      sessionStorage.clear();
-      clearCookies();
-      router.push("/auth/login");
-    }
-  }, 60000);
+    const interval = setInterval(async () => {
+      if (!alreadyLoggedOut && Date.now() - lastActivityTime > INACTIVITY_LIMIT) {
+        alreadyLoggedOut = true;
+        await supabase.auth.signOut();
+        localStorage.clear();
+        sessionStorage.clear();
+        clearCookies();
 
-  return () => clearInterval(interval);
-}, [lastActivityTime]);
+        // Replace current history entry with login page
+        router.replace("/auth/login");
+      }
+    }, 60000);
 
+    return () => clearInterval(interval);
+  }, [lastActivityTime, router, supabase]);
+
+  // Prevent browser back button from showing cached page
+  useEffect(() => {
+    const handlePopState = () => {
+      router.replace("/auth/login"); 
+    };
+    window.addEventListener("popstate", handlePopState);
+
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [router]);
 
   return <>{children}</>;
 }

@@ -1,11 +1,14 @@
 // app/api/admin-apis/transactions/summary/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getNombaToken } from "@/lib/nomba";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const token = await getNombaToken();
 
 const INFLOW_TYPES = ["deposit", "card deposit"];
 const OUTFLOW_TYPES = ["withdrawal", "airtime", "electricity", "cable", "data"];
@@ -56,27 +59,32 @@ function getRangeDates(range: string | null) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+   
+  
+
 async function fetchNombaBalance() {
+  if (!token) return 0;
+
   try {
     const res = await fetch(`${process.env.NOMBA_URL}/v1/accounts/balance`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${process.env.NOMBA_SECRET_KEY}`,
+        Authorization: `Bearer ${token}`,
         accountId: process.env.NOMBA_ACCOUNT_ID ?? "",
       },
     });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      console.warn("Nomba non-ok:", res.status, txt);
-      return 0;
-    }
+
+    if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
-    return Number(data?.balance ?? data?.data?.balance ?? 0);
+
+    return data.data?.amount ?? 0; 
+
   } catch (err) {
     console.error("Failed to fetch Nomba balance:", err);
     return 0;
   }
 }
+
 
 export async function GET(req: Request) {
   try {

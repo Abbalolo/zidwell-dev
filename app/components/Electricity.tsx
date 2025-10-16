@@ -193,13 +193,13 @@ export default function ElectricityBills() {
 
       if (!response.ok) throw data;
 
-      if (data.newWalletBalance !== undefined) {
-        setUserData((prev: any) => {
-          const updated = { ...prev, walletBalance: data.newWalletBalance };
-          localStorage.setItem("userData", JSON.stringify(updated));
-          return updated;
-        });
-      }
+      // if (data.newWalletBalance !== undefined) {
+      //   setUserData((prev: any) => {
+      //     const updated = { ...prev, walletBalance: data.newWalletBalance };
+      //     localStorage.setItem("userData", JSON.stringify(updated));
+      //     return updated;
+      //   });
+      // }
 
       Swal.fire({
         icon: "success",

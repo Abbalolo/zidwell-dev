@@ -21,22 +21,54 @@ export async function POST(req: NextRequest) {
       // bankCode,
       // accountNumber,
       // accountName,
+      cacFileBase64, // ✅ Added CAC file upload
     } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
+    let cacFileUrl: string | null = null;
+
+    // ✅ Upload CAC file to Supabase Storage if provided
+    if (cacFileBase64) {
+      const fileBuffer = Buffer.from(cacFileBase64.split(",")[1], "base64");
+      const fileExt = cacFileBase64.startsWith("data:image") ? "png" : "pdf";
+      const filePath = `cac/${userId}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("kyc")
+        .upload(filePath, fileBuffer, {
+          contentType: fileExt === "pdf" ? "application/pdf" : "image/png",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error(uploadError);
+        return NextResponse.json(
+          { error: "Failed to upload CAC document" },
+          { status: 500 }
+        );
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("kyc")
+        .getPublicUrl(filePath);
+
+      cacFileUrl = publicUrlData?.publicUrl ?? null;
+    }
+
     // Check if business already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: fetchError } = await supabase
       .from("businesses")
       .select("id")
       .eq("user_id", userId)
       .maybeSingle();
 
+    if (fetchError) throw fetchError;
+
     let result;
     if (existing) {
-  
       result = await supabase
         .from("businesses")
         .update({
@@ -50,6 +82,7 @@ export async function POST(req: NextRequest) {
           // bank_code: bankCode,
           // bank_account_number: accountNumber,
           // bank_account_name: accountName,
+          cac_file_url: cacFileUrl ?? undefined, // ✅ Save CAC URL
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId);
@@ -68,6 +101,7 @@ export async function POST(req: NextRequest) {
           // bank_code: bankCode,
           // bank_account_number: accountNumber,
           // bank_account_name: accountName,
+          cac_file_url: cacFileUrl ?? null, // ✅ Save CAC URL
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -76,7 +110,7 @@ export async function POST(req: NextRequest) {
 
     if (result.error) throw result.error;
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, cacFileUrl });
   } catch (error: any) {
     console.error(error);
     return NextResponse.json(

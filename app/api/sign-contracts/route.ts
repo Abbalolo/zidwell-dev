@@ -62,8 +62,8 @@ function generateContractHTML(
       </head>
       <body>
         <img class="logo" src="${logo}" alt="Logo" />
-        <h1>${contract.contractTitle || "Contract Agreement"}</h1>
-        <div>${(contract.contractText || "").replace(/\n/g, "<br>")}</div>
+        <h1>${contract.contract_title || "Contract Agreement"}</h1>
+        <div>${(contract.contract_text || "").replace(/\n/g, "<br>")}</div>
         <div class="signatures">
           <p>Signee: ${signeeName}</p>
           <p>Date: ${new Date().toLocaleDateString()}</p>
@@ -104,13 +104,15 @@ export async function POST(request: Request) {
       .eq("token", token)
       .single();
 
+      // console.log("contracts", contract)
+
     if (error || !contract) {
       return NextResponse.json(
         { message: "Contract not found" },
         { status: 404 }
       );
     }
-console.log()
+
     if (contract.signee_email !== signeeEmail) {
       return NextResponse.json(
         { message: "Email does not match" },
