@@ -25,12 +25,15 @@ export async function POST(req: NextRequest) {
     let payload: any;
     try {
       payload = JSON.parse(rawBody);
-      console.log("payload", payload)
+      console.log("payload", payload);
     } catch (err) {
       console.error("❌ Failed to parse JSON body", err);
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
-    console.log("🟢 Parsed payload.event_type:", payload?.event_type || payload?.eventType);
+    console.log(
+      "🟢 Parsed payload.event_type:",
+      payload?.event_type || payload?.eventType
+    );
 
     // 2) Signature verification (HMAC SHA256 -> Base64)
     const timestamp = req.headers.get("nomba-timestamp");
@@ -42,11 +45,20 @@ export async function POST(req: NextRequest) {
         "nomba-timestamp": timestamp,
         "nomba-sig-value": signature,
       });
-      return NextResponse.json({ error: "Missing signature headers" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Missing signature headers" },
+        { status: 401 }
+      );
     }
 
     // Build hash payload according to Nomba docs (use safe optional chaining)
-    const hashingPayload = `${payload.event_type}:${payload.requestId}:${payload.data?.merchant?.userId || ""}:${payload.data?.merchant?.walletId || ""}:${payload.data?.transaction?.transactionId || ""}:${payload.data?.transaction?.type || ""}:${payload.data?.transaction?.time || ""}:${payload.data?.transaction?.responseCode || ""}`;
+    const hashingPayload = `${payload.event_type}:${payload.requestId}:${
+      payload.data?.merchant?.userId || ""
+    }:${payload.data?.merchant?.walletId || ""}:${
+      payload.data?.transaction?.transactionId || ""
+    }:${payload.data?.transaction?.type || ""}:${
+      payload.data?.transaction?.time || ""
+    }:${payload.data?.transaction?.responseCode || ""}`;
     const message = `${hashingPayload}:${timestamp}`;
 
     const hmac = createHmac("sha256", NOMBA_SIGNATURE_KEY);
@@ -59,7 +71,10 @@ export async function POST(req: NextRequest) {
 
     console.log("🔐 Signature verification: received:", signature);
     console.log("🔐 Signature verification: expected:", expectedSignature);
-    console.log("🔐 Same length?:", receivedBuffer.length === expectedBuffer.length);
+    console.log(
+      "🔐 Same length?:",
+      receivedBuffer.length === expectedBuffer.length
+    );
 
     if (
       receivedBuffer.length !== expectedBuffer.length ||
@@ -80,10 +95,20 @@ export async function POST(req: NextRequest) {
     const nombaTransactionId =
       tx.transactionId || tx.transaction_id || tx.id || tx.reference || null;
     const merchantTxRef =
-      tx.merchantTxRef || tx.merchant_tx_ref || payload.data?.meta?.merchantTxRef || null;
-    const orderReference = order?.orderReference || order?.order_reference || null;
-    const aliasAccountReference = tx.aliasAccountReference || tx.alias_account_reference || tx.aliasAccount || null;
-    const transactionAmount = safeNum(tx.transactionAmount ?? tx.amount ?? order?.amount ?? 0);
+      tx.merchantTxRef ||
+      tx.merchant_tx_ref ||
+      payload.data?.meta?.merchantTxRef ||
+      null;
+    const orderReference =
+      order?.orderReference || order?.order_reference || null;
+    const aliasAccountReference =
+      tx.aliasAccountReference ||
+      tx.alias_account_reference ||
+      tx.aliasAccount ||
+      null;
+    const transactionAmount = safeNum(
+      tx.transactionAmount ?? tx.amount ?? order?.amount ?? 0
+    );
     const feeFromNomba = safeNum(tx.fee ?? payload.data?.transaction?.fee ?? 0);
     const txStatusRaw = (tx.status || payload.data?.status || "").toString();
     const txStatus = txStatusRaw.toLowerCase();
@@ -94,7 +119,14 @@ export async function POST(req: NextRequest) {
     console.log("🔎 merchantTxRef:", merchantTxRef);
     console.log("🔎 orderReference:", orderReference);
     console.log("🔎 aliasAccountReference:", aliasAccountReference);
-    console.log("🔎 transactionAmount:", transactionAmount, "fee:", feeFromNomba, "txStatus:", txStatus);
+    console.log(
+      "🔎 transactionAmount:",
+      transactionAmount,
+      "fee:",
+      feeFromNomba,
+      "txStatus:",
+      txStatus
+    );
 
     // 4) Decide which flow this is:
     // - Card payment -> payment_success with order.orderReference (card_deposit)
@@ -102,23 +134,38 @@ export async function POST(req: NextRequest) {
     // - Outgoing transfer (withdrawal) -> payout_success/payout_failed or transfer with merchantTxRef/transactionId
     const isCardPayment = Boolean(orderReference);
     const isVirtualAccountDeposit = Boolean(aliasAccountReference);
-    const isPayoutOrTransfer = Boolean(merchantTxRef) || (tx.type && tx.type.toLowerCase().includes("transfer")) || eventType?.toLowerCase()?.includes("payout");
+    const isPayoutOrTransfer =
+      Boolean(merchantTxRef) ||
+      (tx.type && tx.type.toLowerCase().includes("transfer")) ||
+      eventType?.toLowerCase()?.includes("payout");
 
     // ---------- DEPOSIT: CARD (orderReference) OR VA ----------
-    if (eventType === "payment_success" || eventType === "payment.succeeded" || isCardPayment || isVirtualAccountDeposit) {
+    if (
+      eventType === "payment_success" ||
+      eventType === "payment.succeeded" ||
+      isCardPayment ||
+      isVirtualAccountDeposit
+    ) {
       // DETERMINE userId & reference for transaction
       let userId: string | null = null;
-      let referenceToUse: string | null = orderReference || nombaTransactionId || tx.sessionId || null;
+      let referenceToUse: string | null =
+        orderReference || nombaTransactionId || tx.sessionId || null;
       let txType = isCardPayment ? "card_deposit" : "deposit";
       let channel = isCardPayment ? "card" : "bank";
 
-      console.log("➡️ Handling deposit/card flow. txType:", txType, "channel:", channel);
+      console.log(
+        "➡️ Handling deposit/card flow. txType:",
+        txType,
+        "channel:",
+        channel
+      );
 
       // For VA: aliasAccountReference === userId (you confirmed)
       if (isVirtualAccountDeposit) {
         userId = aliasAccountReference;
         // for VA there may not be an orderReference; use transactionId as merchant_tx_ref
-        referenceToUse = nombaTransactionId || tx.sessionId || `nomba-${Date.now()}`;
+        referenceToUse =
+          nombaTransactionId || tx.sessionId || `nomba-${Date.now()}`;
       } else if (isCardPayment) {
         // Card: find the pending transaction inserted at initialize step using orderReference
         referenceToUse = orderReference;
@@ -138,7 +185,10 @@ export async function POST(req: NextRequest) {
           userId = pendingByRef.user_id;
         } else {
           // fallback: try to find user by customerEmail if present
-          const customerEmail = order?.customerEmail || payload.data?.customer?.customerEmail || null;
+          const customerEmail =
+            order?.customerEmail ||
+            payload.data?.customer?.customerEmail ||
+            null;
           if (customerEmail) {
             const { data: userByEmail } = await supabase
               .from("users")
@@ -151,17 +201,28 @@ export async function POST(req: NextRequest) {
       }
 
       if (!userId) {
-        console.warn("⚠️ Could not determine userId for deposit. referenceToUse:", referenceToUse);
+        console.warn(
+          "⚠️ Could not determine userId for deposit. referenceToUse:",
+          referenceToUse
+        );
         // Best effort: if aliasAccountReference exists but not stored in users table, create transaction referencing alias as userId (you said alias === userId)
         if (aliasAccountReference) {
           userId = aliasAccountReference;
         } else {
           // Nothing we can do reliably
-          return NextResponse.json({ message: "No user to credit" }, { status: 200 });
+          return NextResponse.json(
+            { message: "No user to credit" },
+            { status: 200 }
+          );
         }
       }
 
-      console.log("👤 Deposit userId resolved:", userId, "referenceToUse:", referenceToUse);
+      console.log(
+        "👤 Deposit userId resolved:",
+        userId,
+        "referenceToUse:",
+        referenceToUse
+      );
 
       // Compute amounts
       const amount = transactionAmount;
@@ -170,10 +231,13 @@ export async function POST(req: NextRequest) {
       const total_deduction = Number((amount - fee).toFixed(2)); // for deposit, store net as total_deduction for consistency
 
       // Idempotency: check existing transaction by reference or merchant_tx_ref
+      // Idempotency: check existing transaction by reference or merchant_tx_ref
       const { data: existingTx, error: existingErr } = await supabase
         .from("transactions")
         .select("*")
-        .or(`reference.eq.${referenceToUse},merchant_tx_ref.eq.${nombaTransactionId}`)
+        .or(
+          `reference.eq.${referenceToUse},merchant_tx_ref.eq.${nombaTransactionId}`
+        )
         .maybeSingle();
 
       if (existingErr) {
@@ -181,14 +245,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
 
+      // ✅ Already successfully processed
       if (existingTx && existingTx.status === "success") {
-        console.log("⚠️ Deposit already processed (idempotent). Skipping credit.");
-        return NextResponse.json({ message: "Already processed" }, { status: 200 });
+        console.log(
+          "⚠️ Deposit already processed (idempotent). Skipping credit."
+        );
+        return NextResponse.json(
+          { message: "Already processed" },
+          { status: 200 }
+        );
       }
 
+      // 🔁 Existing pending tx: mark success and credit
       if (existingTx) {
-        // Update existing pending tx -> mark success & credit
-        console.log("🔁 Found existing transaction. Updating to success and crediting user.");
+        console.log(
+          "🔁 Found existing transaction. Updating to success and crediting user."
+        );
         const { error: updErr } = await supabase
           .from("transactions")
           .update({
@@ -204,18 +276,24 @@ export async function POST(req: NextRequest) {
 
         if (updErr) {
           console.error("❌ Failed to update existing transaction:", updErr);
-          return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
+          return NextResponse.json(
+            { error: "Failed to update transaction" },
+            { status: 500 }
+          );
         }
 
         // Credit wallet atomically using RPC
-        const { error: rpcErr } = await supabase.rpc("increment_wallet_balance", {
-          user_id: existingTx.user_id,
-          amt: netCredit,
-        });
+        const { error: rpcErr } = await supabase.rpc(
+          "increment_wallet_balance",
+          {
+            user_id: existingTx.user_id,
+            amt: netCredit,
+          }
+        );
 
         if (rpcErr) {
           console.error("❌ RPC increment_wallet_balance failed:", rpcErr);
-          // try manual credit as fallback (idempotent guard: only credit if tx was not success before)
+          // fallback manual credit
           const { data: before } = await supabase
             .from("users")
             .select("wallet_balance")
@@ -224,7 +302,10 @@ export async function POST(req: NextRequest) {
 
           if (!before) {
             console.error("❌ User not found for manual credit fallback");
-            return NextResponse.json({ error: "User not found" }, { status: 500 });
+            return NextResponse.json(
+              { error: "User not found" },
+              { status: 500 }
+            );
           }
 
           const newBal = Number(before.wallet_balance) + netCredit;
@@ -235,16 +316,22 @@ export async function POST(req: NextRequest) {
 
           if (updUserErr) {
             console.error("❌ Manual wallet update failed:", updUserErr);
-            return NextResponse.json({ error: "Failed to credit wallet" }, { status: 500 });
+            return NextResponse.json(
+              { error: "Failed to credit wallet" },
+              { status: 500 }
+            );
           }
         }
 
-        console.log(`✅ Credited user ${existingTx.user_id} with ₦${netCredit} (existing tx updated)`);
+        console.log(
+          `✅ Credited user ${existingTx.user_id} with ₦${netCredit} (existing tx updated)`
+        );
         return NextResponse.json({ success: true }, { status: 200 });
       }
-
       // No existing tx: create and credit (auto-create best-effort)
-      console.log("➕ No existing tx — creating transaction and crediting user now (auto-create).");
+      console.log(
+        "➕ No existing tx — creating transaction and crediting user now (auto-create)."
+      );
       const { error: insertErr } = await supabase.from("transactions").insert([
         {
           user_id: userId,
@@ -255,7 +342,8 @@ export async function POST(req: NextRequest) {
           status: "success",
           reference: referenceToUse,
           merchant_tx_ref: nombaTransactionId,
-          description: txType === "card_deposit" ? "Card deposit" : "Bank deposit",
+          description:
+            txType === "card_deposit" ? "Card deposit" : "Bank deposit",
           external_response: payload,
           channel: txType === "card_deposit" ? "card" : "bank",
         },
@@ -264,18 +352,29 @@ export async function POST(req: NextRequest) {
       if (insertErr) {
         // if duplicate (unique constraint) — treat as processed
         if (insertErr.code === "23505") {
-          console.warn("⚠️ Duplicate insert prevented. Treating as already processed.");
-          return NextResponse.json({ message: "Duplicate ignored" }, { status: 200 });
+          console.warn(
+            "⚠️ Duplicate insert prevented. Treating as already processed."
+          );
+          return NextResponse.json(
+            { message: "Duplicate ignored" },
+            { status: 200 }
+          );
         }
         console.error("❌ Failed to insert new transaction:", insertErr);
-        return NextResponse.json({ error: "Failed to record transaction" }, { status: 500 });
+        return NextResponse.json(
+          { error: "Failed to record transaction" },
+          { status: 500 }
+        );
       }
 
       // credit via RPC
-      const { error: rpcErr2 } = await supabase.rpc("increment_wallet_balance", {
-        user_id: userId,
-        amt: netCredit,
-      });
+      const { error: rpcErr2 } = await supabase.rpc(
+        "increment_wallet_balance",
+        {
+          user_id: userId,
+          amt: netCredit,
+        }
+      );
       if (rpcErr2) {
         console.error("❌ RPC increment failed (after insert):", rpcErr2);
         // fallback manual
@@ -286,7 +385,10 @@ export async function POST(req: NextRequest) {
           .single();
         if (!before) {
           console.error("❌ User not found for manual credit fallback");
-          return NextResponse.json({ error: "User not found" }, { status: 500 });
+          return NextResponse.json(
+            { error: "User not found" },
+            { status: 500 }
+          );
         }
         const newBal = Number(before.wallet_balance) + netCredit;
         const { error: uiErr } = await supabase
@@ -295,11 +397,16 @@ export async function POST(req: NextRequest) {
           .eq("id", userId);
         if (uiErr) {
           console.error("❌ Manual wallet update failed:", uiErr);
-          return NextResponse.json({ error: "Failed to credit wallet" }, { status: 500 });
+          return NextResponse.json(
+            { error: "Failed to credit wallet" },
+            { status: 500 }
+          );
         }
       }
 
-      console.log(`✅ Auto-created transaction and credited user ${userId} with ₦${netCredit}`);
+      console.log(
+        `✅ Auto-created transaction and credited user ${userId} with ₦${netCredit}`
+      );
       return NextResponse.json({ success: true }, { status: 200 });
     } // end deposit handling
 
@@ -311,7 +418,9 @@ export async function POST(req: NextRequest) {
       const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
       console.log("🔎 Searching transaction by candidates:", refCandidates);
 
-      const orExprParts = refCandidates.map((r) => `merchant_tx_ref.eq.${r}`).concat(refCandidates.map((r) => `reference.eq.${r}`));
+      const orExprParts = refCandidates
+        .map((r) => `merchant_tx_ref.eq.${r}`)
+        .concat(refCandidates.map((r) => `reference.eq.${r}`));
       const orExpr = orExprParts.join(",");
 
       const { data: pendingTx, error: pendingErr } = await supabase
@@ -321,26 +430,46 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (pendingErr) {
-        console.error("❌ DB error while finding pending transaction:", pendingErr);
+        console.error(
+          "❌ DB error while finding pending transaction:",
+          pendingErr
+        );
         return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
 
       if (!pendingTx) {
-        console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
+        console.warn(
+          "⚠️ No matching pending withdrawal found for refs:",
+          refCandidates
+        );
         // We can decide to create a record, but safer is to log and ignore to avoid debiting wrong user.
-        return NextResponse.json({ message: "No matching withdrawal transaction" }, { status: 200 });
+        return NextResponse.json(
+          { message: "No matching withdrawal transaction" },
+          { status: 200 }
+        );
       }
 
-      console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
+      console.log(
+        "📦 Found pending withdrawal:",
+        pendingTx.id,
+        "status:",
+        pendingTx.status
+      );
 
       // Idempotency
       if (pendingTx.status === "success") {
         console.log("⚠️ Withdrawal already marked success. Skipping.");
-        return NextResponse.json({ message: "Already processed" }, { status: 200 });
+        return NextResponse.json(
+          { message: "Already processed" },
+          { status: 200 }
+        );
       }
       if (pendingTx.status === "failed") {
         console.log("⚠️ Withdrawal already marked failed. Skipping.");
-        return NextResponse.json({ message: "Already failed" }, { status: 200 });
+        return NextResponse.json(
+          { message: "Already failed" },
+          { status: 200 }
+        );
       }
 
       // Compute amounts: user pays amount + fee
@@ -350,7 +479,9 @@ export async function POST(req: NextRequest) {
 
       // Success case
       if (eventType === "payout_success" || txStatus === "success") {
-        console.log("✅ Payout success. Attempting to mark transaction and deduct wallet.");
+        console.log(
+          "✅ Payout success. Attempting to mark transaction and deduct wallet."
+        );
 
         // Update transaction status & reference
         const { error: txUpdErr } = await supabase
@@ -363,25 +494,40 @@ export async function POST(req: NextRequest) {
           .eq("id", pendingTx.id);
 
         if (txUpdErr) {
-          console.error("❌ Failed to update pending transaction to success:", txUpdErr);
-          return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
+          console.error(
+            "❌ Failed to update pending transaction to success:",
+            txUpdErr
+          );
+          return NextResponse.json(
+            { error: "Failed to update transaction" },
+            { status: 500 }
+          );
         }
 
         // Try RPC decrement_wallet_balance if you have it
         let decremented = false;
         try {
-          const { error: rpcErr } = await supabase.rpc("decrement_wallet_balance", {
-            user_id: pendingTx.user_id,
-            amt: totalDeduction,
-          });
+          const { error: rpcErr } = await supabase.rpc(
+            "decrement_wallet_balance",
+            {
+              user_id: pendingTx.user_id,
+              amt: totalDeduction,
+            }
+          );
           if (!rpcErr) {
             decremented = true;
             console.log("✅ Wallet decremented via RPC");
           } else {
-            console.warn("⚠️ decrement_wallet_balance rpc returned error, falling back:", rpcErr);
+            console.warn(
+              "⚠️ decrement_wallet_balance rpc returned error, falling back:",
+              rpcErr
+            );
           }
         } catch (rpcEx) {
-          console.warn("⚠️ decrement_wallet_balance rpc threw, falling back:", rpcEx);
+          console.warn(
+            "⚠️ decrement_wallet_balance rpc threw, falling back:",
+            rpcEx
+          );
         }
 
         if (!decremented) {
@@ -399,20 +545,33 @@ export async function POST(req: NextRequest) {
               .from("transactions")
               .update({ status: "failed", external_response: payload })
               .eq("id", pendingTx.id);
-            return NextResponse.json({ error: "User not found" }, { status: 500 });
+            return NextResponse.json(
+              { error: "User not found" },
+              { status: 500 }
+            );
           }
 
           const currentBal = Number(userRow.wallet_balance ?? 0);
-          console.log("🔎 User current balance:", currentBal, "needed:", totalDeduction);
+          console.log(
+            "🔎 User current balance:",
+            currentBal,
+            "needed:",
+            totalDeduction
+          );
 
           if (currentBal < totalDeduction) {
-            console.error("❌ Insufficient balance at payout confirmation time. Marking failed and NOT debiting.");
+            console.error(
+              "❌ Insufficient balance at payout confirmation time. Marking failed and NOT debiting."
+            );
             // mark tx failed
             await supabase
               .from("transactions")
               .update({ status: "failed", external_response: payload })
               .eq("id", pendingTx.id);
-            return NextResponse.json({ error: "Insufficient balance", status: 400 }, { status: 200 });
+            return NextResponse.json(
+              { error: "Insufficient balance", status: 400 },
+              { status: 200 }
+            );
           }
 
           const { error: userUpdErr } = await supabase
@@ -421,13 +580,19 @@ export async function POST(req: NextRequest) {
             .eq("id", pendingTx.user_id);
 
           if (userUpdErr) {
-            console.error("❌ Failed to update user balance in fallback:", userUpdErr);
+            console.error(
+              "❌ Failed to update user balance in fallback:",
+              userUpdErr
+            );
             // try to mark transaction failed
             await supabase
               .from("transactions")
               .update({ status: "failed", external_response: payload })
               .eq("id", pendingTx.id);
-            return NextResponse.json({ error: "Failed to debit wallet" }, { status: 500 });
+            return NextResponse.json(
+              { error: "Failed to debit wallet" },
+              { status: 500 }
+            );
           }
 
           console.log("✅ Wallet decremented via manual fallback");
@@ -440,20 +605,26 @@ export async function POST(req: NextRequest) {
           amount: fee,
           status: "success",
           description: `Withdrawal fee for ₦${amount}`,
-          merchant_tx_ref: `FEE_${pendingTx.merchant_tx_ref || pendingTx.reference}`,
+          merchant_tx_ref: `FEE_${
+            pendingTx.merchant_tx_ref || pendingTx.reference
+          }`,
         });
 
         if (feeTxErr) {
           console.warn("⚠️ Failed to record fee transaction:", feeTxErr);
         }
 
-        console.log(`✅ Withdrawal processed and debited ₦${totalDeduction} for user ${pendingTx.user_id}`);
+        console.log(
+          `✅ Withdrawal processed and debited ₦${totalDeduction} for user ${pendingTx.user_id}`
+        );
         return NextResponse.json({ success: true }, { status: 200 });
       }
 
       // Failure case: payout_failed
       if (eventType === "payout_failed" || txStatus === "failed") {
-        console.log("❌ Payout failed. Marking failed and refunding if necessary.");
+        console.log(
+          "❌ Payout failed. Marking failed and refunding if necessary."
+        );
 
         // mark transaction failed and save payload
         await supabase
@@ -470,10 +641,13 @@ export async function POST(req: NextRequest) {
         // Best approach: if you deducted earlier, you should have inserted a fee tx or changed status->success.
         // We'll attempt a safe refund via RPC (idempotent if rpc handles it).
         try {
-          const { error: rpcErr } = await supabase.rpc("increment_wallet_balance", {
-            user_id: pendingTx.user_id,
-            amt: Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0),
-          });
+          const { error: rpcErr } = await supabase.rpc(
+            "increment_wallet_balance",
+            {
+              user_id: pendingTx.user_id,
+              amt: Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0),
+            }
+          );
           if (rpcErr) {
             console.warn("⚠️ RPC refund failed:", rpcErr);
             // fallback manual refund
@@ -484,23 +658,36 @@ export async function POST(req: NextRequest) {
               .single();
 
             if (u) {
-              const newBal = Number(u.wallet_balance ?? 0) + Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0);
-              await supabase.from("users").update({ wallet_balance: newBal }).eq("id", pendingTx.user_id);
+              const newBal =
+                Number(u.wallet_balance ?? 0) +
+                Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0);
+              await supabase
+                .from("users")
+                .update({ wallet_balance: newBal })
+                .eq("id", pendingTx.user_id);
             }
           } else {
             console.log("✅ Refund processed via RPC");
           }
         } catch (rEx) {
-          console.warn("⚠️ Refund RPC threw error, attempted manual refund", rEx);
+          console.warn(
+            "⚠️ Refund RPC threw error, attempted manual refund",
+            rEx
+          );
         }
 
-        console.log("✅ Payout failed processed and refund attempted if needed");
+        console.log(
+          "✅ Payout failed processed and refund attempted if needed"
+        );
         return NextResponse.json({ refunded: true }, { status: 200 });
       }
 
       // Unhandled statuses for transfer
       console.log("ℹ️ Unhandled transfer event/status. Ignoring.");
-      return NextResponse.json({ message: "Ignored transfer event" }, { status: 200 });
+      return NextResponse.json(
+        { message: "Ignored transfer event" },
+        { status: 200 }
+      );
     } // end payout handling
 
     // If we reach here, event type not handled specifically
@@ -508,6 +695,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Ignored event" }, { status: 200 });
   } catch (err: any) {
     console.error("🔥 Webhook processing error:", err);
-    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
