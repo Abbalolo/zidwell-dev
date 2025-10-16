@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     let payload: any;
     try {
       payload = JSON.parse(rawBody);
+      console.log("payload", payload)
     } catch (err) {
       console.error("❌ Failed to parse JSON body", err);
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
