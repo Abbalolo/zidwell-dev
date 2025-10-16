@@ -484,20 +484,21 @@ export async function POST(req: NextRequest) {
         );
 
         // Update transaction status & reference
-        const { error: txUpdErr } = await supabase
+        const totalDeduction = Number((amount + fee).toFixed(2));
+
+        await supabase
           .from("transactions")
           .update({
             status: "success",
+            amount,
+            fee,
+            total_deduction: totalDeduction,
             reference: nombaTransactionId,
             external_response: payload,
           })
           .eq("id", pendingTx.id);
 
-        if (txUpdErr) {
-          console.error(
-            "❌ Failed to update pending transaction to success:",
-            txUpdErr
-          );
+     
           return NextResponse.json(
             { error: "Failed to update transaction" },
             { status: 500 }
