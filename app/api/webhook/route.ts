@@ -599,20 +599,20 @@ export async function POST(req: NextRequest) {
         }
 
         // Record fee tx (non-blocking)
-        const { error: feeTxErr } = await supabase.from("transactions").insert({
-          user_id: pendingTx.user_id,
-          type: "fee",
-          amount: fee,
-          status: "success",
-          description: `Withdrawal fee for ₦${amount}`,
-          merchant_tx_ref: `FEE_${
-            pendingTx.merchant_tx_ref || pendingTx.reference
-          }`,
-        });
+        // const { error: feeTxErr } = await supabase.from("transactions").insert({
+        //   user_id: pendingTx.user_id,
+        //   type: "fee",
+        //   amount: fee,
+        //   status: "success",
+        //   description: `Withdrawal fee for ₦${amount}`,
+        //   merchant_tx_ref: `FEE_${
+        //     pendingTx.merchant_tx_ref || pendingTx.reference
+        //   }`,
+        // });
 
-        if (feeTxErr) {
-          console.warn("⚠️ Failed to record fee transaction:", feeTxErr);
-        }
+        // if (feeTxErr) {
+        //   console.warn("⚠️ Failed to record fee transaction:", feeTxErr);
+        // }
 
         console.log(
           `✅ Withdrawal processed and debited ₦${totalDeduction} for user ${pendingTx.user_id}`
