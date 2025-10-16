@@ -417,7 +417,7 @@ export async function POST(req: NextRequest) {
     console.log("✅ Webhook Verified");
 
     // Only process successful payments
-    if (payload.event_type !== "payment_success") {
+    if (payload.event_type !== "payment_success" || payload.data?.transaction?.type === "transfer") {
       return NextResponse.json({ message: "Ignored event" }, { status: 200 });
     }
 

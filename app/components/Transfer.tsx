@@ -46,7 +46,6 @@ export default function Transfer() {
   const [p2pDetails, setP2pDetails] = useState<P2PDetails | null>(null);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
   const { userData } = useUserContextData();
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
