@@ -46,6 +46,7 @@ export default function Transfer() {
   const [p2pDetails, setP2pDetails] = useState<P2PDetails | null>(null);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+// console.log(userDetails)
   const { userData } = useUserContextData();
 
   const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
@@ -374,7 +375,7 @@ export default function Transfer() {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="e.g. 5000"
             />
-            {transferType == "my-account" || transferType == "other-bank" && (
+            {transferType !== "p2p" && (
               <FeeDisplay
                 monthlyVolume={monthlyVolume}
                 type="transfer"
