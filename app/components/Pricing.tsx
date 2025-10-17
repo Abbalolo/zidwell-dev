@@ -13,7 +13,8 @@ const Pricing = () => {
       name: "Pay Per Use",
       price: "Free",
       interval: "Join anytime",
-      bestFor: "solo hustlers and side businesses who want to pay as they grow.",
+      bestFor:
+        "solo hustlers and side businesses who want to pay as they grow.",
       features: [
         "Bill Payments: Airtime, Data, Electricity, Cable (Govt. standard fees apply)",
         "Invoices/payment links: ₦100 each + 3% per paid invoice (transferable to payee)",
@@ -38,12 +39,12 @@ const Pricing = () => {
       features: [
         "Unlimited Invoices & Receipts (no ₦100 fee)",
         "Invoice payment fees: 1.5% (reduced from 3%)",
-        "Contracts: 10 per month",
-        "Lawyer-Signed Contracts: ₦9,500 each (discounted)",
+        "Contracts:  10 contracts per month",
+        "Lawyer-Signed Contracts: Still ₦11,000 each (discounted at ₦9,500 for subscribers)",
+        "Cashback & rewards: same as Free plan",
         "Tax Filing Support: 2% of monthly revenue capped at ₦100k",
-        "Cashback & rewards same as Free plan",
-        "Wallet charges same as Free plan",
-        "Discounted access to all BOH events",
+        "Wallet charges: same as Free plan",
+        " Discounted Access to Financial Wellness Workshop Events - 30% off.",
       ],
       buttonText: "Subscribe",
       highlighted: true,
@@ -57,11 +58,25 @@ const Pricing = () => {
       features: [
         "Unlimited Invoices, Receipts & Contracts (no per-use fees)",
         "Unlimited Lawyer-Signed Contracts (worth ₦11k each – free!)",
-        "Zero transaction fees on invoice payments",
+        "Zero Transaction Fees on invoice payments (your customers save up to ₦1,500 per invoice)",
         "Tax Filing Support: 1% of monthly revenue capped at ₦200k",
-        "Wallet: Zero fees on deposits & withdrawals",
+        "Wallet: Zero fees on deposits and withdrawals (Zidwell absorbs backend costs).",
+        "Discounted Access to Financial Wellness Workshop Events - 50% off.",
         "Free access to all BOH events",
-        "Priority Support Line",
+        "Priority Support Line (get answers faster).",
+      ],
+      buttonText: "Subscribe",
+    },
+    {
+      name: "Diamond CFO",
+      price: "₦20,000",
+      interval: "per month",
+      bestFor:
+        "Best for busy entrepreneurs who want a one-on-one approach to their account needs; someone to talk to, not app interaction.",
+      features: [
+        "Everything in the starter and premium plans and more",
+        "Free Access to Financial Wellness Workshop Events.",
+        "Dedicated one-on-one business Support Line.",
       ],
       buttonText: "Subscribe",
     },
@@ -86,11 +101,12 @@ const Pricing = () => {
             </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Start free and upgrade as your needs grow. No hidden fees, no surprises.
+            Start free and upgrade as your needs grow. No hidden fees, no
+            surprises.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8  mx-auto">
           {plans.map((plan, index) => (
             <Card
               key={index}
@@ -109,14 +125,10 @@ const Pricing = () => {
               )}
 
               <CardHeader className="text-center pb-8">
-                <h3 className="text-2xl font-bold  mb-2">
-                  {plan.name}
-                </h3>
+                <h3 className="text-2xl font-bold  mb-2">{plan.name}</h3>
                 <p className="text-gray-500 mb-4">{plan.bestFor}</p>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold">
-                    {plan.price}
-                  </span>
+                  <span className="text-4xl font-bold">{plan.price}</span>
                   <span className="text-gray-500 ml-1">{plan.interval}</span>
                 </div>
               </CardHeader>
@@ -133,11 +145,10 @@ const Pricing = () => {
                   {plan.buttonText}
                 </Button>
 
-                <ul className="space-y-3">
+                <ul className="space-y-3 list-disc list-inside">
                   {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center">
-                      <Check className="h-5 w-5 text-white mr-3 flex-shrink-0" />
-                      <span className="text-gray-600">{feature}</span>
+                    <li key={featureIndex} className="text-gray-600 text-sm">
+                      {feature}
                     </li>
                   ))}
                 </ul>
