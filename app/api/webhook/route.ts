@@ -456,6 +456,27 @@ export async function POST(req: NextRequest) {
         pendingTx.status
       );
 
+      const { error: updateErr } = await supabase
+        .from("transactions")
+        .update({
+          status: "success",
+          reference: nombaTransactionId,
+          external_response: payload,
+        })
+        .eq("id", pendingTx.id);
+
+      if (updateErr) {
+        console.error(
+          "❌ Failed to update withdrawal status to success:",
+          updateErr
+        );
+      } else {
+        console.log(
+          "✅ Withdrawal status updated to success for transaction:",
+          pendingTx.id
+        );
+      }
+
       // Idempotency
       if (pendingTx.status === "success") {
         console.log("⚠️ Withdrawal already marked success. Skipping.");
@@ -484,7 +505,7 @@ export async function POST(req: NextRequest) {
         );
 
         // Update transaction status & reference
-        const { error: updErr } = await supabase
+        const { data, error: updErr } = await supabase
           .from("transactions")
           .update({
             status: "success",
@@ -495,6 +516,8 @@ export async function POST(req: NextRequest) {
             external_response: payload,
           })
           .eq("id", pendingTx.id);
+
+        console.log("transactions data", data);
 
         if (updErr) {
           return NextResponse.json(
