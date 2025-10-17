@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   );
 
   try {
-    const { userId, amount, accountNumber, accountName, bankCode, narration } =
+    const { userId,senderName, amount, accountNumber, accountName, bankCode, narration } =
       await req.json();
 
     // Basic validation
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         amount,
         fee,
         total_deduction: totalDeduction,
-        status: "processing", // mark as processing right away
+        status: "processing", 
         description: `Withdrawal to ${accountName} (${accountNumber})`,
         narration: narration || "Withdrawal",
         merchant_tx_ref: merchantTxRef,
@@ -106,20 +106,20 @@ export async function POST(req: Request) {
         accountNumber,
         accountName,
         bankCode,
-        senderName: "Zidwell", // change as needed
+        senderName,
         merchantTxRef,
         narration: "Withdrawal",
       }),
     });
 
     const data = await res.json();
-
+console.log("transfer data", data)
     // Save raw response (optional) and set status to processing
     await supabase
       .from("transactions")
       .update({
         external_response: JSON.stringify(data || {}),
-        status: "processing",
+        status: "success",
         reference: data?.data?.reference || null,
       })
       .eq("id", pendingTx.id);

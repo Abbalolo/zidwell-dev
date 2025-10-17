@@ -253,6 +253,7 @@ export default function Transfer() {
       // ✅ Prepare payload
       const payload: any = {
         userId: userData?.id,
+        senderName: `${userData?.firstName} ${userData?.lastName}` ,
         amount: Number(amount),
         narration,
         type: transferType,
