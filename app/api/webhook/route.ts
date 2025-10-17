@@ -484,9 +484,7 @@ export async function POST(req: NextRequest) {
         );
 
         // Update transaction status & reference
-        const totalDeduction = Number((amount + fee).toFixed(2));
-
-        await supabase
+        const { error: updErr } = await supabase
           .from("transactions")
           .update({
             status: "success",
@@ -498,7 +496,7 @@ export async function POST(req: NextRequest) {
           })
           .eq("id", pendingTx.id);
 
-     
+        if (updErr) {
           return NextResponse.json(
             { error: "Failed to update transaction" },
             { status: 500 }
