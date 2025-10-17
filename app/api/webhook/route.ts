@@ -517,7 +517,7 @@ export async function POST(req: NextRequest) {
           })
           .eq("id", pendingTx.id);
 
-        console.log("transactions data", data);
+        // console.log("transactions data", data);
 
         if (updErr) {
           return NextResponse.json(

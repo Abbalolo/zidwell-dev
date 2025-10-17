@@ -113,7 +113,7 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-console.log("transfer data", data)
+
     // Save raw response (optional) and set status to processing
     await supabase
       .from("transactions")
