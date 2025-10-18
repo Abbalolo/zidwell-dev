@@ -1,4 +1,5 @@
-// app/api/airtime/purchase/route.ts
+"use server";
+
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { getNombaToken } from "@/lib/nomba";
@@ -12,35 +13,29 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   let transactionId: string | null = null;
+  let userId: string | undefined;
+  let amount: number | undefined;
 
   try {
+    const body = await req.json();
+    userId = body.userId;
+    amount = body.amount;
+    const { phoneNumber, network, merchantTxRef, senderName, pin } = body;
+
+    if (!userId || !pin || !amount || amount < 100) {
+      return NextResponse.json(
+        { message: "Invalid input: userId, pin are required and amount must be >= 100" },
+        { status: 400 }
+      );
+    }
+
+    // Get Nomba token
     const token = await getNombaToken();
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const {
-      userId,
-      amount,
-      phoneNumber,
-      network,
-      merchantTxRef,
-      senderName,
-      pin,
-    } = body;
-
-    if (!userId || !pin || amount < 100) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid input: userId and pin are required, and amount must be at least 100.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // ✅ Fetch user with PIN + wallet balance in a single query
+    // Fetch user with PIN
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("transaction_pin, wallet_balance")
@@ -51,50 +46,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // ✅ Verify PIN
+    // Verify transaction PIN
     const plainPin = Array.isArray(pin) ? pin.join("") : pin;
     const isValid = await bcrypt.compare(plainPin, user.transaction_pin);
-
     if (!isValid) {
-      return NextResponse.json(
-        { message: "Invalid Transaction PIN" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Invalid Transaction PIN" }, { status: 401 });
     }
 
-    // ✅ Check wallet balance
-    if (Number(user.wallet_balance) < Number(amount)) {
-      return NextResponse.json(
-        { message: "Insufficient wallet balance" },
-        { status: 400 }
-      );
+    // Deduct wallet using RPC and create transaction
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("deduct_wallet_balance", {
+      user_id: userId,
+      amt: amount,
+      transaction_type: "airtime",
+      reference: merchantTxRef,
+      description: `Airtime on ${network} for ${phoneNumber}`,
+    });
+
+    if (rpcError) {
+      console.log(rpcError, "rpcError");
+      return NextResponse.json({ message: "Wallet deduction failed", detail: rpcError.message }, { status: 500 });
     }
 
-    // ✅ Create pending transaction record
-    const { data: newTx, error: txError } = await supabase
-      .from("transactions")
-      .insert([
-        {
-          user_id: userId,
-          type: "airtime",
-          amount,
-          status: "pending",
-          reference: merchantTxRef,
-          description: `Airtime on ${network} for ${phoneNumber}`,
-        },
-      ])
-      .select("id")
-      .single();
-
-    if (txError) {
-      return NextResponse.json(
-        { message: "Could not create transaction record" },
-        { status: 500 }
-      );
+    if (rpcResult[0].status !== "OK") {
+      return NextResponse.json({ message: "Insufficient wallet balance" }, { status: 400 });
     }
 
-    transactionId = newTx.id;
+    // Transaction ID from RPC
+    transactionId = rpcResult[0].tx_id;
 
+    // Call Nomba API
     const response = await axios.post(
       `${process.env.NOMBA_URL}/v1/bill/topup`,
       {
@@ -113,52 +93,33 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // ✅ Deduct wallet balance
-    const newWalletBalance = Number(user.wallet_balance) - Number(amount);
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ wallet_balance: newWalletBalance })
-      .eq("id", userId);
+    // Mark transaction as success
+    await supabase.from("transactions").update({ status: "success" }).eq("id", transactionId);
 
-    if (updateError) {
-      await supabase
-        .from("transactions")
-        .update({ status: "refund_pending" })
-        .eq("id", transactionId);
-
-      return NextResponse.json(
-        { message: "Purchase succeeded but wallet deduction failed" },
-        { status: 500 }
-      );
-    }
-
-    // ✅ Mark transaction as success
-    await supabase
-      .from("transactions")
-      .update({ status: "success" })
-      .eq("id", transactionId);
-
-    // ✅ Final response
     return NextResponse.json({
       message: "Airtime purchase successful",
       transaction: response.data,
-      newWalletBalance,
     });
   } catch (error: any) {
-    console.error(
-      "Airtime Purchase Error:",
-      error.response?.data || error.message
-    );
+    console.error("Airtime Purchase Error:", error.response?.data || error.message);
 
-    if (transactionId) {
-      await supabase
-        .from("transactions")
-        .update({ status: "failed" })
-        .eq("id", transactionId);
+    // Refund if userId and amount exist
+    if (userId && amount) {
+      try {
+        await supabase.rpc("refund_wallet_balance", { user_id: userId, amt: amount });
+        if (transactionId) {
+          await supabase.from("transactions").update({ status: "failed_refunded" }).eq("id", transactionId);
+        }
+      } catch (refundError) {
+        console.error("Refund failed:", refundError);
+        if (transactionId) {
+          await supabase.from("transactions").update({ status: "refund_pending" }).eq("id", transactionId);
+        }
+      }
     }
 
     return NextResponse.json(
-      { message: "Transaction failed", detail: error.message },
+      { message: "Transaction failed, user refunded if deducted", detail: error.message },
       { status: 500 }
     );
   }

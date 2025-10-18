@@ -1,5 +1,14 @@
-import { Github, Twitter, Linkedin, Mail, Code } from "lucide-react";
+import {
+  Github,
+  Twitter,
+  Linkedin,
+  Mail,
+  Code,
+  Facebook,
+  Instagram,
+} from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 const Footer = () => {
   return (
@@ -104,28 +113,30 @@ const Footer = () => {
 
             <div className="flex space-x-4">
               <a
-                href="#"
+                href="https://facebook.com/zidwellfinance"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
               >
-                <Twitter className="h-6 w-6" />
+                <Facebook className="h-6 w-6" />
               </a>
+
               <a
-                href="#"
+                href="https://www.instagram.com/zidwellfinance"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <Instagram className="h-6 w-6" />
+              </a>
+
+              <a
+                href="https://www.linkedin.com/company/zidwellfinance"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <Linkedin className="h-6 w-6" />
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <Github className="h-6 w-6" />
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <Mail className="h-6 w-6" />
               </a>
             </div>
           </div>

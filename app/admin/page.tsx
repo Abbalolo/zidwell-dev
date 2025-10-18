@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR, { mutate } from "swr";
 import {
   LineChart,
@@ -23,7 +23,6 @@ import {
 
 import AdminLayout from "../components/admin-components/layout";
 import KPICard from "../components/admin-components/KPICard";
-import Loader from "../components/Loader";
 import { Skeleton } from "../components/ui/skeleton";
 
 const fetcher = (url: string) =>
@@ -51,22 +50,20 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     localStorage.setItem("admin_dashboard_range", range);
-    // reset to page 1 when range changes
     setPage(1);
   }, [range]);
 
-  // data hooks
+  // summary (new consolidated endpoint)
+  const { data: summaryData, error: summaryError } = useSWR<any>(
+    `/api/admin-apis/dashboard/summary?range=${range}`,
+    fetcher
+  );
+
+  // paginated transactions (fallback / existing)
   const { data: paginatedData, error: paginatedError } = useSWR<any>(
     `/api/admin-apis/transactions?page=${page}&range=${range}`,
     fetcher
   );
-
-  const { data: summaryData, error: summaryError } = useSWR<any>(
-    `/api/admin-apis/transactions/summary?range=${range}`,
-    fetcher
-  );
-
-  const rawNombaBalance = Number(summaryData?.nombaBalance) || 0;
 
   useEffect(() => {
     if (paginatedError)
@@ -74,25 +71,33 @@ export default function AdminDashboard() {
     if (summaryError) console.error("Summary error:", summaryError);
   }, [paginatedError, summaryError]);
 
-  const transactions = paginatedData?.transactions ?? [];
+  // map summary fields (defaults to zero)
+  const totalInflow = Number(summaryData?.totalInflow ?? 0);
+  const totalOutflow = Number(summaryData?.totalOutflow ?? 0);
+  const mainWalletBalance = Number(summaryData?.mainWalletBalance ?? 0);
+  const nombaBalanceRaw = Number(summaryData?.nombaBalance ?? 0);
 
-  const totalTransactions = summaryData?.totalTransactions ?? 0;
-  const totalInflow = summaryData?.totalInflow ?? 0;
-  const totalOutflow = summaryData?.totalOutflow ?? 0;
-  const totalUsers = summaryData?.totalUsers ?? 0;
-  const totalWalletBalance = summaryData?.walletBalance ?? 0;
-  const cleanBalance = Math.round(rawNombaBalance * 100) / 100;
+  const totalContracts = Number(summaryData?.totalContracts ?? 0);
+  const pendingContracts = Number(summaryData?.pendingContracts ?? 0);
+  const signedContracts = Number(summaryData?.signedContracts ?? 0);
 
-  const naira = cleanBalance.toLocaleString("en-NG", {
-    style: "currency",
-    currency: "NGN",
-  });
+  const totalInvoices = Number(summaryData?.totalInvoices ?? 0);
+  const paidInvoices = Number(summaryData?.paidInvoices ?? 0);
+  const unpaidInvoices = Number(summaryData?.unpaidInvoices ?? 0);
+
   const monthlyTransactions = summaryData?.monthlyTransactions ?? [];
-  const monthlyUsers = summaryData?.monthlyUsers ?? [];
+  const monthlyInvoices = summaryData?.monthlyInvoices ?? [];
+  const monthlyContracts = summaryData?.monthlyContracts ?? [];
 
-  const recentActivity = transactions.slice(0, 5);
+  // recent activity: prefer latestTransactions from summary, fallback to paginated list
+  const latestFromSummary = summaryData?.latestTransactions ?? null;
+  const paginatedTransactions = paginatedData?.transactions ?? [];
+  const recentActivity =
+    latestFromSummary && latestFromSummary.length > 0
+      ? latestFromSummary
+      : paginatedTransactions.slice(0, 5);
 
-  const hasNextPage = transactions.length === PAGE_LIMIT;
+  const hasNextPage = paginatedTransactions.length === PAGE_LIMIT;
   const hasPrevPage = page > 1;
 
   const goNext = () => {
@@ -108,28 +113,26 @@ export default function AdminDashboard() {
   };
 
   const refresh = async () => {
+    await mutate(`/api/admin-apis/dashboard/summary?range=${range}`);
     await mutate(`/api/admin-apis/transactions?page=${page}&range=${range}`);
-    await mutate(`/api/admin-apis/transactions/summary?range=${range}`);
   };
 
-  const loading = !paginatedData || !summaryData;
+  const loading = !summaryData || !paginatedData;
 
-  const fmtCurrency = (n: number) =>
-    `₦${Number(n || 0).toLocaleString(undefined, {
-      maximumFractionDigits: 2,
-    })}`;
+  const formatCurrency = (value: number | string) => {
+    const n = Number(value || 0);
+    return n.toLocaleString("en-NG", { style: "currency", currency: "NGN" });
+  };
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="px-4 py-6 space-y-8">
-          {/* Header Skeleton */}
           <div className="flex justify-between">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-8 w-32" />
           </div>
 
-          {/* KPI Cards Skeleton */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {Array(4)
               .fill(null)
@@ -138,13 +141,11 @@ export default function AdminDashboard() {
               ))}
           </div>
 
-          {/* Charts Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Skeleton className="h-64 w-full" />
             <Skeleton className="h-64 w-full" />
           </div>
 
-          {/* Recent Transactions Skeleton */}
           <div className="bg-white p-6 rounded-2xl shadow-md">
             <Skeleton className="h-6 w-56 mb-4" />
             <div className="space-y-3">
@@ -171,7 +172,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Top-right controls: filter dropdown + refresh + page indicator */}
           <div className="flex items-center gap-3">
             <label className="text-xs text-gray-500 mb-1">Filter Range</label>
             <Select
@@ -189,6 +189,7 @@ export default function AdminDashboard() {
                 <SelectItem value="year">This Year</SelectItem>
               </SelectContent>
             </Select>
+
             <button
               onClick={refresh}
               className="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200 text-sm"
@@ -200,46 +201,78 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Row 1 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <KPICard title="Total Users" value={totalUsers} />
-          <KPICard title="Total Transactions" value={totalTransactions} />
+          <KPICard title="Total Inflow" value={formatCurrency(totalInflow)} />
+          <KPICard title="Total Outflow" value={formatCurrency(totalOutflow)} />
           <KPICard
-            title="Total Wallet Balance"
-            value={fmtCurrency(totalWalletBalance)}
+            title="Main Wallet Balance"
+            value={formatCurrency(mainWalletBalance)}
           />
-          <KPICard title="Admin Wallet (Nomba)" value={naira} />
+          <KPICard
+            title="Admin Wallet (Nomba)"
+            value={formatCurrency(nombaBalanceRaw)}
+          />
         </div>
 
-        {/* Inflow/Outflow Row */}
+        {/* KPI Row 2 – Contracts & Invoices */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <KPICard title="Total Contracts" value={totalContracts} />
+          <KPICard title="Pending Contracts" value={pendingContracts} />
+          <KPICard title="Signed Contracts" value={signedContracts} />
+          <KPICard title="Total Invoices" value={totalInvoices} />
+        </div>
+
+        {/* KPI Row 3 – Invoice statuses */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <KPICard title="Paid Invoices" value={paidInvoices} />
+          <KPICard title="Unpaid Invoices" value={unpaidInvoices} />
+          <div /> {/* empty slots to keep layout even */}
+          <div />
+        </div>
+
+        {/* Inflow/Outflow Row (big) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white p-4 rounded-2xl shadow-sm">
             <h3 className="font-semibold mb-1">Total Inflow</h3>
-            <div className="text-2xl font-bold">{fmtCurrency(totalInflow)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalInflow)}
+            </div>
           </div>
 
           <div className="bg-white p-4 rounded-2xl shadow-sm">
             <h3 className="font-semibold mb-1">Total Outflow</h3>
             <div className="text-2xl font-bold">
-              {fmtCurrency(totalOutflow)}
+              {formatCurrency(totalOutflow)}
             </div>
           </div>
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white p-6 rounded-2xl shadow-md">
+          <div className="bg-white p-6 rounded-2xl shadow-md col-span-1 lg:col-span-1">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">📈 Transactions Trend</h3>
               <div className="text-sm text-gray-500">Filtered: {range}</div>
             </div>
 
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={260}>
               <LineChart data={monthlyTransactions}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip
+                  formatter={(value) => {
+                    const v = Array.isArray(value) ? value[0] : value;
+
+                    if (typeof v === "number") {
+                      return formatCurrency(v);
+                    }
+
+                    return v;
+                  }}
+                />
+
                 <Line
                   type="monotone"
                   dataKey="transactions"
@@ -250,30 +283,56 @@ export default function AdminDashboard() {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-md">
+          <div className="bg-white p-6 rounded-2xl shadow-md col-span-1 lg:col-span-1">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold">👥 New Users Growth</h3>
+              <h3 className="text-xl font-semibold">🧾 Invoices (monthly)</h3>
               <div className="text-sm text-gray-500">Filtered: {range}</div>
             </div>
 
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyUsers}>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlyInvoices}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value) => {
+                    const v = Array.isArray(value) ? value[0] : value;
+
+                    if (typeof v === "number") {
+                      return formatCurrency(v);
+                    }
+
+                    return v;
+                  }}
+                />
+
+                <Bar dataKey="count" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-md col-span-1 lg:col-span-1">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">📄 Contracts (monthly)</h3>
+              <div className="text-sm text-gray-500">Filtered: {range}</div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlyContracts}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="users" fill="#10b981" />
+                <Bar dataKey="count" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Recent Transactions (paginated) */}
+        {/* Recent Transactions (paginated / latest) */}
         <div className="bg-white p-6 rounded-2xl shadow-md mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold">
-              🕒 Recent Transactions (paginated)
-            </h3>
+            <h3 className="text-xl font-semibold">🕒 Recent Transactions</h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={goPrev}
@@ -306,10 +365,11 @@ export default function AdminDashboard() {
                 <li key={tx.id} className="py-3 flex justify-between text-sm">
                   <div>
                     <div className="font-medium text-gray-800">
-                      ₦{Number(tx.amount).toLocaleString()}
+                      {formatCurrency(tx.amount)}
                     </div>
                     <div className="text-gray-500 text-xs">
-                      {tx.type ?? "—"}
+                      {tx.type ?? "—"}{" "}
+                      {tx.description ? `— ${tx.description}` : ""}
                     </div>
                   </div>
                   <div className="text-gray-500 text-xs">

@@ -14,10 +14,10 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Badge } from "./ui/badge";
+
 import { useUserContextData } from "../context/userData";
 import Image from "next/image";
-import Loader from "./Loader";
+
 import { useRouter } from "next/navigation";
 import PinPopOver from "./PinPopOver";
 
@@ -87,7 +87,7 @@ export default function AirtimePurchase() {
   const [customAmount, setCustomAmount] = useState("");
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const { userData, setUserData } = useUserContextData();
+  const { userData } = useUserContextData();
   const router = useRouter();
   const handlePhoneNumberChange = (value: string) => {
     const cleanValue = value.replace(/\D/g, "");
@@ -153,8 +153,6 @@ export default function AirtimePurchase() {
   const purchaseAirtime = async () => {
     if (!validateForm()) return;
 
-   
-
     const payload = {
       userId: userData?.id,
       pin: pin,
@@ -194,16 +192,18 @@ export default function AirtimePurchase() {
         title: "Airtime Purchase Successful",
         text: `₦${payload.amount} sent to ${payload.phoneNumber}`,
         confirmButtonColor: "#0f172a",
+      }).then(() => {
+        window.location.reload();
       });
 
       // Reset form
-      // setPhoneNumber("");
-      // setPin(Array(inputCount).fill(""));
-      // setSelectedProvider(null);
-      // setSelectedAmount(null);
-      // setCustomAmount("");
-      // setIsCustomAmount(false);
-       window.location.reload();
+      setPhoneNumber("");
+      setPin(Array(inputCount).fill(""));
+      setSelectedProvider(null);
+      setSelectedAmount(null);
+      setCustomAmount("");
+      setIsCustomAmount(false);
+      // window.location.reload();
     } catch (error: any) {
       Swal.fire({
         icon: "error",

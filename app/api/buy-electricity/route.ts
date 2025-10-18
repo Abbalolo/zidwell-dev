@@ -1,4 +1,3 @@
-// app/api/electricity/purchase/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { createClient } from "@supabase/supabase-js";
@@ -13,119 +12,53 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   let transactionId: string | null = null;
 
-  // ✅ Get Nomba token
-  const token = await getNombaToken();
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const body = await req.json();
-    const {
-      userId,
-      pin,
-      disco,
-      meterNumber,
-      meterType,
-      amount,
-      payerName,
-      merchantTxRef,
-    } = body;
+    const token = await getNombaToken();
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // ✅ Validate request body
-    if (
-      !userId ||
-      !pin ||
-      !disco ||
-      !meterNumber ||
-      !meterType ||
-      !amount ||
-      !payerName ||
-      !merchantTxRef
-    ) {
-      return NextResponse.json(
-        { error: "All required fields must be provided" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const { userId, pin, disco, meterNumber, meterType, amount, payerName, merchantTxRef } = body;
+
+    if (!userId || !pin || !disco || !meterNumber || !meterType || !amount || !payerName || !merchantTxRef) {
+      return NextResponse.json({ error: "All required fields must be provided" }, { status: 400 });
     }
 
-    // ✅ 1. Fetch user wallet + PIN
+    const parsedAmount = Number(amount);
+
+    // 1️⃣ Fetch user wallet & PIN
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("transaction_pin, wallet_balance")
       .eq("id", userId)
       .single();
 
-    if (userError || !user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    if (userError || !user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // ✅ 2. Check if transaction PIN is set
-    if (!user.transaction_pin) {
-      return NextResponse.json(
-        { error: "Transaction PIN not set" },
-        { status: 400 }
-      );
-    }
-
-    // ✅ 3. Verify PIN
     const plainPin = Array.isArray(pin) ? pin.join("") : pin;
     const isValid = await bcrypt.compare(plainPin, user.transaction_pin);
-    if (!isValid) {
-      return NextResponse.json(
-        { message: "Invalid transaction PIN" },
-        { status: 401 }
-      );
+    if (!isValid) return NextResponse.json({ message: "Invalid transaction PIN" }, { status: 401 });
+
+    // 2️⃣ Deduct wallet and create transaction via RPC
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("deduct_wallet_balance", {
+      user_id: userId,
+      amt: parsedAmount,
+      transaction_type: "electricity",
+      reference: merchantTxRef,
+      description: `Electricity purchase for ${meterNumber} (${meterType})`,
+    });
+
+    if (rpcError) {
+      console.error("RPC Error:", rpcError);
+      return NextResponse.json({ error: "Wallet deduction failed", detail: rpcError.message }, { status: 500 });
     }
 
-    // ✅ 4. Check wallet balance
-    if (Number(user.wallet_balance) < Number(amount)) {
-      return NextResponse.json(
-        { message: "Insufficient wallet balance" },
-        { status: 400 }
-      );
+    if (rpcResult[0].status !== "OK") {
+      return NextResponse.json({ message: "Insufficient wallet balance" }, { status: 400 });
     }
 
-    // ✅ 5. Create transaction as "pending"
-    const { data: transaction, error: transactionError } = await supabase
-      .from("transactions")
-      .insert([
-        {
-          user_id: userId,
-          type: "electricity",
-          amount,
-          status: "pending",
-          reference: merchantTxRef,
-          description: `Electricity purchase for ${meterNumber} (${meterType})`,
-        },
-      ])
-      .select("id")
-      .single();
+    transactionId = rpcResult[0].tx_id;
 
-    if (transactionError || !transaction) {
-      return NextResponse.json(
-        { error: "Failed to create transaction" },
-        { status: 500 }
-      );
-    }
-
-    transactionId = transaction.id;
-
-    // ✅ 6. Deduct wallet before calling API
-    const newWalletBalance = Number(user.wallet_balance) - Number(amount);
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ wallet_balance: newWalletBalance })
-      .eq("id", userId);
-
-    if (updateError) {
-      return NextResponse.json(
-        { error: "Failed to update wallet balance" },
-        { status: 500 }
-      );
-    }
-
-    // ✅ 7. Call Nomba API
+    // 3️⃣ Call Nomba API
     try {
       const apiResponse = await axios.post(
         `${process.env.NOMBA_URL}/v1/bill/electricity`,
@@ -133,7 +66,7 @@ export async function POST(req: NextRequest) {
           disco,
           customerId: meterNumber,
           meterType,
-          amount,
+          amount: parsedAmount,
           payerName,
           merchantTxRef,
         },
@@ -146,61 +79,32 @@ export async function POST(req: NextRequest) {
         }
       );
 
-      // ✅ 8. Update transaction status → success
+      // 4️⃣ Update transaction status → success
       await supabase
         .from("transactions")
-        .update({
-          status: "success",
-          description: `Electricity token generated for ${meterNumber}`,
-        })
-        .eq("id", transaction.id);
-
-        console.log("Electricity purchase successful:", apiResponse.data);
+        .update({ status: "success", description: `Electricity token generated for ${meterNumber}` })
+        .eq("id", transactionId);
 
       return NextResponse.json({
         success: true,
         token: apiResponse.data,
-        newWalletBalance,
       });
     } catch (apiError: any) {
-      console.error(
-        "⚠️ Electricity API error:",
-        apiError.response?.data || apiError.message
-      );
+      console.error("⚠️ Electricity API error:", apiError.response?.data || apiError.message);
 
-      // ✅ Refund on API failure
-      await supabase
-        .from("users")
-        .update({ wallet_balance: user.wallet_balance }) // revert
-        .eq("id", userId);
+      // Refund wallet via RPC
+      await supabase.rpc("refund_wallet_balance", { user_id: userId, amt: parsedAmount });
 
       await supabase
         .from("transactions")
-        .update({
-          status: "failed",
-          description: `Electricity purchase failed for ${meterNumber}`,
-        })
-        .eq("id", transaction.id);
-
-      return NextResponse.json(
-        { error: "Failed to purchase electricity token" },
-        { status: 500 }
-      );
-    }
-  } catch (error: any) {
-    console.error("⚠️ Electricity purchase error:", error.message);
-
-    // ✅ Mark transaction failed if created
-    if (transactionId) {
-      await supabase
-        .from("transactions")
-        .update({ status: "failed" })
+        .update({ status: "failed_refunded", description: `Electricity purchase failed for ${meterNumber}` })
         .eq("id", transactionId);
-    }
 
-    return NextResponse.json(
-      { error: "Unexpected server error" },
-      { status: 500 }
-    );
+      return NextResponse.json({ error: "Failed to purchase electricity token" }, { status: 500 });
+    }
+  } catch (err: any) {
+    console.error("⚠️ Electricity purchase error:", err.message);
+    if (transactionId) await supabase.from("transactions").update({ status: "failed" }).eq("id", transactionId);
+    return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
 }

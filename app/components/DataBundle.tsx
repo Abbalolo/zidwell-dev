@@ -175,6 +175,8 @@ export default function DataBundlePurchase() {
         title: "Data Bundle Purchase Successful",
         text: `₦${payload.amount} sent to ${payload.phoneNumber}`,
         confirmButtonColor: "#0f172a",
+      }).then(() => {
+        window.location.reload();
       });
 
       // Clear inputs after successful purchase
@@ -275,8 +277,6 @@ export default function DataBundlePurchase() {
       maximumFractionDigits: 2,
     }).format(value);
   };
-
-
 
   return (
     <div className="space-y-6 md:max-w-5xl md:mx-auto">

@@ -205,6 +205,8 @@ export default function ElectricityBills() {
         icon: "success",
         title: "Power Purchase Successful",
         confirmButtonColor: "#0f172a",
+      }).then(() => {
+        window.location.reload();
       });
 
       // Clear form
@@ -266,7 +268,6 @@ export default function ElectricityBills() {
   };
 
   const validateMeterNumber = async () => {
-    
     const newErrors: { [key: string]: string } = {};
 
     if (!selectedProvider?.id) {
@@ -306,7 +307,6 @@ export default function ElectricityBills() {
       });
       const data = await response.json();
 
-
       if (!response.ok) throw new Error(data?.error || "Validation failed");
 
       // Success
@@ -331,7 +331,6 @@ export default function ElectricityBills() {
   useEffect(() => {
     getPowerProviders();
   }, []);
-
 
   // 0209227217814
 
@@ -397,7 +396,6 @@ export default function ElectricityBills() {
                   ))}
                 </div>
               ) : (
-               
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {powerProviders?.map((provider: any) => {
                     const isSelected = selectedProvider?.name === provider.name;
@@ -487,32 +485,36 @@ export default function ElectricityBills() {
                   <div>
                     <Label htmlFor="meterNumber">Meter Number</Label>
                     <div className="flex items-center gap-3">
-                    <Input
-                      id="meterNumber"
-                      type="text"
-                      placeholder="Enter meter number"
-                      value={meterNumber}
-                      onChange={(e) => handleMeterNumberChange(e.target.value)}
-                      className={errors.meterNumber ? "border-destructive" : ""}
-                      onBlur={validateMeterNumber}
-                      maxLength={13}
-                    />
-                    {loading2 ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-                    ) : isVerified ? (
-                      <div className="text-green-600" title="Verified">
-                        <Check className="w-6 h-6" />
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={validateMeterNumber}
-                        disabled={!meterNumber || !meterType}
-                      >
-                        Verify
-                      </Button>
-                    )}
+                      <Input
+                        id="meterNumber"
+                        type="text"
+                        placeholder="Enter meter number"
+                        value={meterNumber}
+                        onChange={(e) =>
+                          handleMeterNumberChange(e.target.value)
+                        }
+                        className={
+                          errors.meterNumber ? "border-destructive" : ""
+                        }
+                        onBlur={validateMeterNumber}
+                        maxLength={13}
+                      />
+                      {loading2 ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                      ) : isVerified ? (
+                        <div className="text-green-600" title="Verified">
+                          <Check className="w-6 h-6" />
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={validateMeterNumber}
+                          disabled={!meterNumber || !meterType}
+                        >
+                          Verify
+                        </Button>
+                      )}
                     </div>
                     {errors.meterNumber && (
                       <div className="flex items-center gap-2 mt-1 text-destructive">

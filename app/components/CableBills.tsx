@@ -179,14 +179,15 @@ export default function CableBills() {
         icon: "success",
         title: "Cable Purchase Successful",
         confirmButtonColor: "#0f172a",
+      }).then(() => {
+        window.location.reload();
       });
 
       // Clear form
-      //   setPin(Array(inputCount).fill(""));
-      // setSelectedProvider(null);
-      // setSelectedPlan(null);
-      // setUserInfo(null);
-      window.location.reload();
+      setPin(Array(inputCount).fill(""));
+      setSelectedProvider(null);
+      setSelectedPlan(null);
+      setUserInfo(null);
     } catch (error: any) {
       Swal.fire({
         icon: "error",
@@ -413,17 +414,19 @@ export default function CableBills() {
                 <div>
                   <Label htmlFor="decorderNumber">Decoder Number</Label>
                   <div className="flex items-center gap-3">
-                     <Input
-                    id="decorderNumber"
-                    type="text"
-                    placeholder="Enter decorder number"
-                    value={decorderNumber}
-                    onChange={(e) => handledecorderNumberChange(e.target.value)}
-                    className={
-                      errors.decorderNumber ? "border-destructive" : ""
-                    }
-                    maxLength={13}
-                  />
+                    <Input
+                      id="decorderNumber"
+                      type="text"
+                      placeholder="Enter decorder number"
+                      value={decorderNumber}
+                      onChange={(e) =>
+                        handledecorderNumberChange(e.target.value)
+                      }
+                      className={
+                        errors.decorderNumber ? "border-destructive" : ""
+                      }
+                      maxLength={13}
+                    />
                     {loading ? (
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                     ) : isVerified ? (
@@ -441,7 +444,7 @@ export default function CableBills() {
                       </Button>
                     )}
                   </div>
-                 
+
                   {errors.decorderNumber && (
                     <div className="flex items-center gap-2 mt-1 text-destructive">
                       <AlertCircle className="w-4 h-4" />
