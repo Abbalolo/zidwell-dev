@@ -53,7 +53,7 @@ export default function AdminSidebar() {
       onClick={() => setIsMobileMenuOpen(false)}
       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
         pathname === href
-          ? "bg-black text-white shadow-sm"
+          ? "bg-[#C29307] text-white shadow-sm"
           : "text-gray-600 hover:bg-gray-100 hover:text-black"
       }`}
     >
@@ -69,7 +69,11 @@ export default function AdminSidebar() {
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className={`lg:hidden fixed top-4 left-4 z-50 p-2 bg-black text-white rounded-lg`}
       >
-        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {isMobileMenuOpen ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <Menu className="w-6 h-6" />
+        )}
       </button>
 
       {/* 🧭 Sidebar */}
@@ -80,7 +84,13 @@ export default function AdminSidebar() {
       >
         {/* 🔝 Logo */}
         <div className="p-5 border-b flex items-center gap-3">
-          <Image src="/logo.png" alt="Logo" width={32} height={32} className="rounded" />
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={32}
+            height={32}
+            className="rounded"
+          />
           <h1 className="text-lg font-bold">Admin Panel</h1>
         </div>
 
