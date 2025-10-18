@@ -77,6 +77,7 @@ async function fetchNombaBalance() {
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
 
+    console.log(data)
     return data.data?.amount ?? 0; 
 
   } catch (err) {
