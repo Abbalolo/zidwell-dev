@@ -65,6 +65,7 @@ export default function AdminDashboard() {
     `/api/admin-apis/transactions/summary?range=${range}`,
     fetcher
   );
+
   const rawNombaBalance = Number(summaryData?.nombaBalance) || 0;
 
   useEffect(() => {
@@ -80,9 +81,9 @@ export default function AdminDashboard() {
   const totalOutflow = summaryData?.totalOutflow ?? 0;
   const totalUsers = summaryData?.totalUsers ?? 0;
   const totalWalletBalance = summaryData?.walletBalance ?? 0;
-  const adminNombaBalance = rawNombaBalance / 100;
+  const cleanBalance = Math.round(rawNombaBalance * 100) / 100;
 
-  const naira = adminNombaBalance.toLocaleString("en-NG", {
+  const naira = cleanBalance.toLocaleString("en-NG", {
     style: "currency",
     currency: "NGN",
   });
