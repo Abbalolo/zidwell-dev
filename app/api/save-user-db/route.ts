@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          accountName: `${first_name} ${last_name}`,
+          accountName: `${first_name} ${last_name}`, 
           accountRef: auth_id,
           bvn: bvn || undefined,
         }),

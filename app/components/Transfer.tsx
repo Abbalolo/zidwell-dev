@@ -564,7 +564,7 @@ export default function Transfer() {
               <div className="space-y-1">
                 <Label>Account Number (Zidwell User)</Label>
                 <Input
-                  type="text"
+                  type="number"
                   value={recepientAcc}
                   onChange={(e) => setRecepientAcc(e.target.value)}
                   placeholder="0234******"
