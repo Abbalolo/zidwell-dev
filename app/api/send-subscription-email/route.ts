@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { transporter } from "@/lib/node-mailer";
 
 const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
