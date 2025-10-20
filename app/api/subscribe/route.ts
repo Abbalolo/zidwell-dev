@@ -42,9 +42,11 @@ export async function POST(req: NextRequest) {
         ? process.env.NEXT_PUBLIC_DEV_URL
         : process.env.NEXT_PUBLIC_BASE_URL;
 
-    const orderReference = `ORDER_${Date.now()}_${Math.floor(
+        const orderReference = `Subscription-plan-${planId}-${Date.now()}_${Math.floor(
       Math.random() * 10000
-    )}`;
+    )}`
+
+
     const localPaymentId = uuidv4();
     const anonToken = uuidv4().replace(/-/g, "");
 

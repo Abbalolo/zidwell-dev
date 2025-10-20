@@ -232,194 +232,6 @@ export async function POST(req: NextRequest) {
       // Compute amounts
       const amount = transactionAmount;
 
-      // ✅ --- Handle Subscriptions (Card Payments Only) ---
-      if (isCardPayment) {
-        try {
-          // Fetch payment row (idempotency & metadata)
-          const { data: paymentRow, error: paymentFetchErr } = await supabase
-            .from("payments")
-            .select("*")
-            .eq("payment_reference", orderReference)
-            .maybeSingle();
-
-          // If we didn't find metadata by orderReference, try to find a payments row by other identifiers (best-effort)
-          if (paymentFetchErr) {
-            console.warn("⚠️ payments lookup error:", paymentFetchErr);
-          }
-
-          // Derive metadata values (prefer stored payments.metadata when present)
-          const metaFromPayments = paymentRow?.metadata ?? {};
-          const subEmail = payload.data?.order?.customerEmail;
-          const subFullName =
-            metaFromPayments?.fullName ??
-            metaFromPayments?.full_name ??
-            "Anonymous User";
-          const subPlanId = payload.data?.order?.metadata?.planId;
-          const metaAmount =
-            metaFromPayments?.amount ?? metaFromPayments?.amt ?? null;
-          const subAmount =
-            metaAmount ??
-            payload?.data?.transaction?.transactionAmount ??
-            transactionAmount ??
-            0;
-
-          // Ensure payments row gets provider_event_id + raw_payload + status (update or insert if needed)
-          // Use the Nomba transaction id as provider_event_id when available
-          const providerEventId =
-            nombaTransactionId ||
-            payload?.data?.transaction?.transactionId ||
-            null;
-          if (paymentRow) {
-            await supabase
-              .from("payments")
-              .update({
-                provider_event_id: providerEventId,
-                raw_payload: payload,
-                status: "successful",
-                amount: paymentRow.amount ?? subAmount,
-              })
-              .eq("id", paymentRow.id);
-          } else {
-            // create a payments row if none exists (best-effort)
-            await supabase.from("payments").insert([
-              {
-                payment_reference: orderReference,
-                provider: "nomba",
-                provider_event_id: providerEventId,
-                amount: subAmount,
-                currency: payload?.data?.order?.currency ?? "NGN",
-                status: "successful",
-                metadata: {
-                  email: subEmail,
-                  fullName: subFullName,
-                  planId: subPlanId,
-                  amount: subAmount,
-                },
-                raw_payload: payload,
-              },
-            ]);
-          }
-
-          // If required metadata missing, log and skip subscription insert
-          if (!subEmail || !subPlanId) {
-            console.warn(
-              "⚠️ Subscription metadata incomplete — email or planId missing; skipping subscriber insert.",
-              {
-                subEmail,
-                subPlanId,
-                orderReference,
-              }
-            );
-          } else {
-            // Idempotency check: subscriber already exists for same payment_reference OR same email+plan
-            const { data: existingSub } = await supabase
-              .from("subscribers")
-              .select("*")
-              .or(
-                `payment_reference.eq.${orderReference},(email.eq.${subEmail},plan_id.eq.${subPlanId})`
-              )
-              .maybeSingle();
-
-            if (existingSub) {
-              console.log(
-                "⚠️ Subscriber or payment already exists. Skipping subscription insert.",
-                {
-                  existingSubId: existingSub.id,
-                  payment_reference: existingSub.payment_reference,
-                  email: existingSub.email,
-                  plan_id: existingSub.plan_id,
-                }
-              );
-
-              // Make sure existing subscriber status is updated to success if this webhook indicates success
-              if (existingSub.payment_status !== "success") {
-                await supabase
-                  .from("subscribers")
-                  .update({
-                    payment_status: "success",
-                    payment_reference: orderReference,
-                    subscription_expires_at:
-                      existingSub.subscription_expires_at || null,
-                  })
-                  .eq("id", existingSub.id);
-              }
-            } else {
-              // Compute expiry: plan-based. For `basic` -> 30 days. Default 30 days.
-              let expiresAt = null;
-              const now = new Date();
-              if (subPlanId === "basic") {
-                expiresAt = new Date(
-                  now.getTime() + 30 * 24 * 60 * 60 * 1000
-                ).toISOString();
-              } else {
-                // default 30 days if unknown; you can extend logic per plan
-                expiresAt = new Date(
-                  now.getTime() + 30 * 24 * 60 * 60 * 1000
-                ).toISOString();
-              }
-
-              // Insert subscriber row — do NOT credit wallet
-              const { error: insertSubErr } = await supabase
-                .from("subscribers")
-                .insert([
-                  {
-                    email: subEmail,
-                    full_name: subFullName,
-                    plan_id: subPlanId,
-                    amount: subAmount,
-                    payment_reference: orderReference,
-                    payment_status: "success",
-                    subscription_expires_at: expiresAt,
-                    anon_token: paymentRow?.metadata?.anonToken ?? null,
-                    created_at: new Date().toISOString(),
-                  },
-                ]);
-
-              if (insertSubErr) {
-                console.error("❌ Failed to insert subscriber:", insertSubErr);
-              } else {
-                console.log(
-                  "✅ Subscriber created:",
-                  subEmail,
-                  subPlanId,
-                  "expiresAt:",
-                  expiresAt
-                );
-              }
-            }
-          }
-
-          // Send confirmation email (best-effort)
-          if (subEmail) {
-            try {
-              await fetch(`${baseUrl}/api/send-subscription-email`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  to: subEmail,
-                  subject: "Subscription Payment Successful ✅",
-                  message: `
-              <p>Hello ${subFullName || "Subscriber"},</p>
-              <p>We received your payment of <strong>₦${subAmount}</strong> for plan <strong>${subPlanId}</strong>.</p>
-              <p>Reference: <strong>${orderReference}</strong></p>
-              <p>Your subscription is now active.</p>
-              <p>Thank you 🎉</p>
-            `,
-                }),
-              });
-              console.log(
-                "📨 Subscription confirmation email attempted for:",
-                subEmail
-              );
-            } catch (emailErr) {
-              console.error("❌ Failed sending subscription email:", emailErr);
-            }
-          }
-        } catch (subErr) {
-          console.error("❌ Subscription handling error:", subErr);
-        }
-      }
-
       const fee = feeFromNomba;
       const netCredit = Number((amount - fee).toFixed(2));
       const total_deduction = Number((amount - fee).toFixed(2)); // for deposit, store net as total_deduction for consistency
@@ -596,6 +408,92 @@ export async function POST(req: NextRequest) {
           );
         }
       }
+
+      // -------------------- SUBSCRIPTION HANDLING --------------------
+      // ✅ Only handle card payments for subscriptions
+      try {
+        // Use fields from payload.data.order instead of meta
+        const subEmail = payload.data?.order?.customerEmail || null;
+        const subFullName = payload.data?.order?.fullName || "Subscriber"; // fallback if no name
+        const subPlanId = "basic"; // default plan, since not in payload
+        const subAmount = payload.data?.transaction?.transactionAmount ?? 0;
+
+        if (subEmail && subPlanId) {
+          // Check if subscriber already exists
+          const { data: existingSub } = await supabase
+            .from("subscribers")
+            .select("*")
+            .or(
+              `payment_reference.eq.${orderReference},(email.eq.${subEmail},plan_id.eq.${subPlanId})`
+            )
+            .maybeSingle();
+
+          const now = new Date();
+          const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+          if (existingSub) {
+            // Update existing subscriber
+            await supabase
+              .from("subscribers")
+              .update({
+                payment_status: "success",
+                subscription_expires_at: expiresAt.toISOString(),
+              })
+              .eq("id", existingSub.id);
+
+            console.log(`⚠️ Subscriber exists, updated expiry for ${subEmail}`);
+          } else {
+            // Insert new subscriber
+            await supabase.from("subscribers").insert([
+              {
+                email: subEmail,
+                full_name: subFullName,
+                plan_id: subPlanId,
+                amount: subAmount,
+                payment_reference: orderReference,
+                payment_status: "success",
+                subscription_expires_at: expiresAt.toISOString(),
+                created_at: now.toISOString(),
+              },
+            ]);
+
+            console.log(
+              `✅ Subscriber created: ${subEmail}, expiresAt: ${expiresAt.toDateString()}`
+            );
+          }
+
+          // Send subscription confirmation email
+          try {
+            await fetch(`${baseUrl}/api/send-subscription-email`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                to: subEmail,
+                subject: "Subscription Payment Successful ✅",
+                message: `
+            <p>Hello ${subFullName},</p>
+            <p>We received your payment of <strong>₦${subAmount}</strong> for your subscription.</p>
+            <p>Your subscription is now active and will expire on <strong>${expiresAt.toDateString()}</strong>.</p>
+            <p>Reference: <strong>${orderReference}</strong></p>
+            <p>Thank you 🎉</p>
+          `,
+              }),
+            });
+            console.log(
+              `📨 Subscription confirmation email sent to ${subEmail}`
+            );
+          } catch (emailErr) {
+            console.error("❌ Failed sending subscription email:", emailErr);
+          }
+        } else {
+          console.warn(
+            "⚠️ Subscription metadata incomplete — skipping insert/email"
+          );
+        }
+      } catch (subErr) {
+        console.error("❌ Subscription handling error:", subErr);
+      }
+      // -------------------- END SUBSCRIPTION HANDLING --------------------
 
       console.log(
         `✅ Auto-created transaction and credited user ${userId} with ₦${netCredit}`
