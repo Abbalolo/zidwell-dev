@@ -1,4 +1,3 @@
-// app/subscribe/page.tsx
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -9,14 +8,14 @@ export default function SubscribePage() {
   const search = useSearchParams();
   const router = useRouter();
 
-  // Optional prefilled plan and amount from query string
+  // Prefill plan and amount from query string
   const prefillPlan = search.get("plan") || "";
   const prefillAmount = search.get("amount") || "";
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [planId, setPlanId] = useState(prefillPlan);
-  const [amount, setAmount] = useState(prefillAmount);
+  const [planId] = useState(prefillPlan);
+  const [amount] = useState(prefillAmount);
   const [loading, setLoading] = useState(false);
 
   const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -70,6 +69,7 @@ export default function SubscribePage() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         Swal.fire({
           icon: "error",
@@ -89,7 +89,6 @@ export default function SubscribePage() {
         showConfirmButton: false,
       });
 
-      // Redirect to Nomba checkout url returned by API
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
@@ -119,9 +118,7 @@ export default function SubscribePage() {
         <h2 className="text-2xl font-bold mb-4">Subscribe</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Full name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Full name</label>
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
@@ -131,9 +128,7 @@ export default function SubscribePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -144,9 +139,7 @@ export default function SubscribePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Plan
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Plan</label>
             <input
               disabled
               value={planId}
@@ -155,9 +148,7 @@ export default function SubscribePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Amount (NGN)
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Amount (NGN)</label>
             <input
               disabled
               value={amount}
@@ -168,20 +159,12 @@ export default function SubscribePage() {
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              disabled={
-                loading ||
-                !fullName.trim() ||
-                !email.trim() ||
-                !planId.trim() ||
-                !amount
-              }
-              className={`px-4 py-2 rounded-md font-semibold text-white
-    ${
-      loading || !fullName.trim() || !email.trim() || !planId.trim() || !amount
-        ? "bg-gray-400 cursor-not-allowed"
-        : "bg-[#C29307] hover:bg-[#a57d05]"
-    }
-  `}
+              disabled={loading || !fullName.trim() || !email.trim() || !planId.trim() || !amount}
+              className={`px-4 py-2 rounded-md font-semibold text-white ${
+                loading || !fullName.trim() || !email.trim() || !planId.trim() || !amount
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#C29307] hover:bg-[#a57d05]"
+              }`}
             >
               {loading ? "Processing..." : "Continue to Payment"}
             </button>
