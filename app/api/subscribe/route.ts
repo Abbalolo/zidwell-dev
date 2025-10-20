@@ -76,6 +76,11 @@ export async function POST(req: NextRequest) {
         amount: numericAmount,
         currency: "NGN",
         accountId: process.env.NOMBA_ACCOUNT_ID,
+        metadata: {
+          planId,
+          localPaymentId,
+          fullName,
+        },
       },
       paymentMethod: {
         channels: ["card"],

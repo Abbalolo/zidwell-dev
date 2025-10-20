@@ -249,16 +249,12 @@ export async function POST(req: NextRequest) {
 
           // Derive metadata values (prefer stored payments.metadata when present)
           const metaFromPayments = paymentRow?.metadata ?? {};
-          const subEmail =
-            metaFromPayments?.email ??
-            payload?.data?.order?.customerEmail ??
-            null;
+          const subEmail = payload.data?.order?.customerEmail;
           const subFullName =
             metaFromPayments?.fullName ??
             metaFromPayments?.full_name ??
             "Anonymous User";
-          const subPlanId =
-            metaFromPayments?.planId ?? metaFromPayments?.plan_id ?? null;
+          const subPlanId = payload.data?.order?.metadata?.planId;
           const metaAmount =
             metaFromPayments?.amount ?? metaFromPayments?.amt ?? null;
           const subAmount =
