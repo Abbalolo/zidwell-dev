@@ -626,7 +626,11 @@ setConfirmTransaction(true)
         fee={monthlyVolume}
         confirmTransaction={confirmTransaction}
         onBack={() => setConfirmTransaction(false)}
-        onConfirm={() =>  setIsOpen(true)}
+        onConfirm={() => {
+          setConfirmTransaction(false)
+          setIsOpen(true)
+        } 
+      }
       />
     </>
   );
