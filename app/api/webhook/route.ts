@@ -94,7 +94,6 @@ export async function POST(req: NextRequest) {
     const eventType: string = payload.event_type || payload.eventType;
     const tx = payload.data?.transaction || payload.data?.txn || {};
     const order = payload.data?.order || null;
-    const meta = payload.data?.meta || payload.data?.merchant || {};
 
     // try several fields for IDs / refs
     const nombaTransactionId =

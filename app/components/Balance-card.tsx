@@ -134,8 +134,10 @@ useEffect(() => {
           </div>
 
           {userData?.referralCode && (
+
+            // pointer-events-none opacity-50
            
-            <div className="bg-gray-100 p-4 rounded-lg text-center pointer-events-none opacity-50">
+            <div className="bg-gray-100 p-4 rounded-lg text-center ">
               <p className="text-gray-700 text-sm mb-2 font-semibold">
                 Invite friends & earn rewards 🎉
               </p>

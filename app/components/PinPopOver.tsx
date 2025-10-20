@@ -10,7 +10,7 @@ interface PinPopOverProps {
   pin: string[];
   setPin: (pin: string[]) => void;
   inputCount: number;
-  onConfirm?: (code: string) => void; 
+  onConfirm?: (code: string) => void;
 }
 
 export default function PinPopOver({
@@ -60,7 +60,6 @@ export default function PinPopOver({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const code = pin.join("");
-    
 
     // 👇 Trigger parent's API call if provided
     if (onConfirm) {
@@ -119,9 +118,14 @@ export default function PinPopOver({
                         inputsRef.current[i] = el;
                       }}
                       type="text"
+                      inputMode="numeric" 
+                      pattern="[0-9]*" 
                       maxLength={1}
                       value={digit}
-                      onChange={(e) => handleInput(i, e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, ""); // strip non-numeric
+                        handleInput(i, val);
+                      }}
                       onKeyDown={(e) => handleKeyDown(e, i)}
                       onFocus={(e) => e.target.select()}
                       onPaste={handlePaste}
@@ -139,8 +143,6 @@ export default function PinPopOver({
                   </Button>
                 </div>
               </form>
-
-             
             </div>
           </motion.div>
         </>
