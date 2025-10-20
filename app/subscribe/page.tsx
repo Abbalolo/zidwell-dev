@@ -1,10 +1,10 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Swal from "sweetalert2";
 
-export default function SubscribePage() {
+function SubscribePage() {
   const search = useSearchParams();
   const router = useRouter();
 
@@ -172,5 +172,14 @@ export default function SubscribePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+
+export default function SubscribePageSuspense() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SubscribePage />
+    </Suspense>
   );
 }
