@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await nombaRes.json();
+    console.log("Nomba checkout response:", data);
 
     if (!nombaRes.ok) {
       return NextResponse.json(
