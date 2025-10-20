@@ -61,7 +61,7 @@ function PaymentSuccessContent() {
           title: "Payment Failed ❌",
           text: "We could not verify your payment. Please try again.",
           confirmButtonText: "Retry",
-          confirmButtonColor: "#dc2626", // Tailwind red-600
+          confirmButtonColor: "#dc2626", 
         }).then(() => {
           router.push("/dashboard");
         });

@@ -1,12 +1,19 @@
+"use client";
 import { useRouter } from "next/navigation";
 import { useUserContextData } from "../context/userData";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Check } from "lucide-react";
+import Swal from "sweetalert2";
+import { useState } from "react";
 
 const Pricing = () => {
   const router = useRouter();
-  const { user } = useUserContextData();
+
+const handleSubscribe = (plan: any) => {
+  router.push(`/subscribe?plan=${encodeURIComponent(plan.name)}&amount=${plan.price}`);
+};
+
 
   const plans = [
     {
@@ -39,12 +46,10 @@ const Pricing = () => {
       features: [
         "Unlimited Invoices & Receipts (no ₦100 fee)",
         "Invoice payment fees: 1.5% (reduced from 3%)",
-        "Contracts:  10 contracts per month",
-        "Lawyer-Signed Contracts: Still ₦11,000 each (discounted at ₦9,500 for subscribers)",
-        "Cashback & rewards: same as Free plan",
+        "Contracts: 10 contracts per month",
+        "Lawyer-Signed Contracts: ₦9,500 each",
+        "Cashback & rewards included",
         "Tax Filing Support: 2% of monthly revenue capped at ₦100k",
-        "Wallet charges: same as Free plan",
-        " Discounted Access to Financial Wellness Workshop Events - 30% off.",
       ],
       buttonText: "Subscribe",
       highlighted: true,
@@ -56,14 +61,10 @@ const Pricing = () => {
       bestFor:
         "serious entrepreneurs who want peace of mind, growth, and full access.",
       features: [
-        "Unlimited Invoices, Receipts & Contracts (no per-use fees)",
-        "Unlimited Lawyer-Signed Contracts (worth ₦11k each – free!)",
-        "Zero Transaction Fees on invoice payments (your customers save up to ₦1,500 per invoice)",
-        "Tax Filing Support: 1% of monthly revenue capped at ₦200k",
-        "Wallet: Zero fees on deposits and withdrawals (Zidwell absorbs backend costs).",
-        "Discounted Access to Financial Wellness Workshop Events - 50% off.",
-        "Free access to all BOH events",
-        "Priority Support Line (get answers faster).",
+        "Unlimited Invoices & Receipts",
+        "Unlimited Contracts",
+        "Zero Transaction Fees on invoices",
+        "Priority Support",
       ],
       buttonText: "Subscribe",
     },
@@ -72,23 +73,15 @@ const Pricing = () => {
       price: "₦20,000",
       interval: "per month",
       bestFor:
-        "Best for busy entrepreneurs who want a one-on-one approach to their account needs; someone to talk to, not app interaction.",
+        "Entrepreneurs who want one-on-one financial support.",
       features: [
-        "Everything in the starter and premium plans and more",
-        "Free Access to Financial Wellness Workshop Events.",
-        "Dedicated one-on-one business Support Line.",
+        "Dedicated Business Advisor",
+        "Premium CFO Support",
+        "Free Access to BOH Events",
       ],
       buttonText: "Subscribe",
     },
   ];
-
-  const handleSubscribe = (plan: any) => {
-    if (!user) {
-      router.push(`/auth/login?redirect=/pricing?plan=${plan.name}`);
-    } else {
-      router.push(`/checkout?plan=${plan.name}&price=${plan.price}`);
-    }
-  };
 
   return (
     <section id="pricing" className="py-20 bg-white">
@@ -101,12 +94,11 @@ const Pricing = () => {
             </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Start free and upgrade as your needs grow. No hidden fees, no
-            surprises.
+            Start free and upgrade as your needs grow. No hidden fees, no surprises.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8  mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mx-auto">
           {plans.map((plan, index) => (
             <Card
               key={index}
@@ -125,7 +117,7 @@ const Pricing = () => {
               )}
 
               <CardHeader className="text-center pb-8">
-                <h3 className="text-2xl font-bold  mb-2">{plan.name}</h3>
+                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
                 <p className="text-gray-500 mb-4">{plan.bestFor}</p>
                 <div className="mb-4">
                   <span className="text-4xl font-bold">{plan.price}</span>
@@ -136,31 +128,19 @@ const Pricing = () => {
               <CardContent>
                 <Button
                   onClick={() => handleSubscribe(plan)}
-                  className={`w-full mb-6 ${
-                    plan.highlighted
-                      ? " border hover:border-[#7b5f0b] bg-[#C29307] "
-                      : "bg-[#C29307] hover:border-[#7b5f0b]"
-                  } text-white py-3 rounded-lg font-semibold transition-all duration-300`}
+                  className="w-full bg-[#C29307] hover:bg-[#a67a05] text-white py-3 rounded-lg font-semibold"
                 >
-                  {plan.buttonText}
+                 {plan.buttonText}
                 </Button>
 
-                <ul className="space-y-3 list-disc list-inside">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="text-gray-600 text-sm">
-                      {feature}
-                    </li>
+                <ul className="space-y-3 list-disc list-inside mt-4">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="text-gray-600 text-sm">{feature}</li>
                   ))}
                 </ul>
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <p className="text-gray-600 mb-4">
-            All plans include secure payments and 24/7 customer support.
-          </p>
         </div>
       </div>
     </section>
