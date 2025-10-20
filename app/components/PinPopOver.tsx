@@ -123,7 +123,7 @@ export default function PinPopOver({
                       maxLength={1}
                       value={digit}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, ""); // strip non-numeric
+                        const val = e.target.value.replace(/\D/g, ""); 
                         handleInput(i, val);
                       }}
                       onKeyDown={(e) => handleKeyDown(e, i)}

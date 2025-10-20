@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import PinPopOver from "./PinPopOver";
+import TransactionSummary from "./TransactionSummary";
 
 interface Bank {
   name: string;
@@ -65,6 +66,7 @@ export default function Transfer() {
   const [pin, setPin] = useState(Array(inputCount).fill(""));
   // Popover state for searchable bank select
   const [open, setOpen] = useState(false);
+  const [confirmTransaction, setConfirmTransaction] = useState(false);
   const [search, setSearch] = useState("");
 
   // Filter banks dynamically
@@ -344,8 +346,8 @@ export default function Transfer() {
 
       return;
     }
-
-    setIsOpen(true);
+setConfirmTransaction(true)
+   
   };
 
   const isDisabled =
@@ -613,6 +615,19 @@ export default function Transfer() {
           </form>
         </CardContent>
       </Card>
+      <TransactionSummary
+        senderName={`${userData?.firstName} ${userData?.lastName}`}
+        senderAccount={`Nomba ${userData?.firstName}`}
+        recipientName={accountName || p2pDetails?.name || userDetails?.p_account_number}
+        recipientAccount={accountNumber || userDetails?.p_account_name || recepientAcc}
+        recipientBank={bankName || userDetails?.p_bank_name || "Zidwell"}
+        purpose={narration}
+        amount={amount}
+        fee={monthlyVolume}
+        confirmTransaction={confirmTransaction}
+        onBack={() => setConfirmTransaction(false)}
+        onConfirm={() =>  setIsOpen(true)}
+      />
     </>
   );
 }

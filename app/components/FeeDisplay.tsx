@@ -21,14 +21,14 @@ export default function FeeDisplay({ monthlyVolume, type, amount }: Props) {
     : undefined;
 
   return (
-    <div className="text-sm text-gray-700 mt-2">
+    <div className="text-sm text-gray-700">
       {/* <p className="text-xs text-gray-500">
         Note: {feeRule}
         {appFeeText}
       </p> */}
 
       {feeDetails && (
-        <div className="mt-2 text-sm text-gray-800">
+        <div className="text-sm text-gray-800">
           {/* <p>
             Nomba fee: <span className="font-semibold">{formatNaira(feeDetails.nombaFee)}</span>
           </p>
