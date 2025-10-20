@@ -21,8 +21,9 @@ const statusConfig: any = {
 
 export default function TransactionHistory() {
   const [filter, setFilter] = useState("All transactions");
- 
-  const { userData,loading, transactions, searchTerm, setSearchTerm } = useUserContextData();
+
+  const { userData, loading, transactions, searchTerm, setSearchTerm } =
+    useUserContextData();
 
   const filteredTransactions = transactions.filter((tx) => {
     const matchesFilter =
@@ -31,6 +32,7 @@ export default function TransactionHistory() {
     return matchesFilter;
   });
 
+  console.log("filteredTransactions", filteredTransactions);
 
   return (
     <Card className="bg-white shadow-sm">
@@ -97,7 +99,7 @@ export default function TransactionHistory() {
               className="flex items-center justify-between p-2 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors duration-150"
             >
               <div className="flex justify-start gap-3">
-                <div className="flex items-center gap-2 md:hidden">
+                {/* <div className="flex items-center gap-2 md:hidden">
                   {tx.status?.toLowerCase() === "success" ? (
                     <Button
                       variant="outline"
@@ -123,9 +125,9 @@ export default function TransactionHistory() {
                       <X className="w-4 h-4" />
                     </Button>
                   )}
-                </div>
+                </div> */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 md:text-lg">
+                  <h3 className="font-semibold text-gray-900 md:text-lg text-sm">
                     {tx.description || tx.type}
                   </h3>
                   <p className="text-gray-500 text-sm">
@@ -138,7 +140,7 @@ export default function TransactionHistory() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center md:flex-col">
                 <div className="hidden md:flex items-center gap-2">
                   <div
                     className={`w-2 h-2 rounded-full ${
@@ -157,11 +159,22 @@ export default function TransactionHistory() {
                 </div>
 
                 <div className="text-right">
-                  <p className="font-bold text-gray-900 md:text-lg">
-                    ₦
-                    {Number(tx.amount).toLocaleString("en-NG", {
-                      minimumFractionDigits: 2,
-                    })}
+                  <p
+                    className={`font-bold md:text-lg text-sm ${
+                      tx.type?.toLowerCase() === "p2p_transfer" ||
+                      tx.type?.toLowerCase() === "withdrawal"
+                        ? "text-red-500"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {tx.type?.toLowerCase() === "p2p_transfer" ||
+                    tx.type?.toLowerCase() === "withdrawal"
+                      ? `-₦${Number(tx.amount).toLocaleString("en-NG", {
+                          minimumFractionDigits: 2,
+                        })}`
+                      : `₦${Number(tx.amount).toLocaleString("en-NG", {
+                          minimumFractionDigits: 2,
+                        })}`}
                   </p>
                 </div>
               </div>
