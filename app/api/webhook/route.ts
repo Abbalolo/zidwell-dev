@@ -151,6 +151,119 @@ export async function POST(req: NextRequest) {
       isCardPayment ||
       isVirtualAccountDeposit
     ) {
+      // -------------------- SUBSCRIPTION HANDLING --------------------
+      // ✅ Only handle card payments with subscription references (SUB-)
+      try {
+        if (isCardPayment && orderReference?.includes("SUB-")) {
+          // Extract email, full name, plan, and amount from payload
+          const subEmail =
+            payload.data?.order?.customerEmail ||
+            payload.data?.customer?.customerEmail ||
+            null;
+
+          const subFullName =
+            payload.data?.order?.fullName ||
+            payload.data?.customer?.fullName ||
+            "Subscriber";
+
+          const subPlanId =
+            payload.data?.order?.metadata?.planId ||
+            payload.data?.meta?.planId ||
+            "basic";
+
+          const subAmount =
+            safeNum(payload.data?.transaction?.transactionAmount) ||
+            safeNum(payload.data?.order?.amount) ||
+            0;
+
+          const paymentReference = orderReference;
+
+          if (subEmail && subPlanId && paymentReference) {
+            // Idempotent: check existing subscriber
+            const { data: existingSub } = await supabase
+              .from("subscribers")
+              .select("*")
+              .or(
+                `payment_reference.eq.${paymentReference},(email.eq.${subEmail},plan_id.eq.${subPlanId})`
+              )
+              .maybeSingle();
+
+            const now = new Date();
+            const expiresAt = new Date(
+              now.getTime() + 30 * 24 * 60 * 60 * 1000
+            ); // 30 days
+
+            if (existingSub) {
+              await supabase
+                .from("subscribers")
+                .update({
+                  payment_status: "success",
+                  subscription_expires_at: expiresAt.toISOString(),
+                })
+                .eq("id", existingSub.id);
+
+              console.log(
+                `⚠️ Subscriber exists, updated expiry for ${subEmail}`
+              );
+            } else {
+              await supabase.from("subscribers").insert([
+                {
+                  email: subEmail,
+                  full_name: subFullName,
+                  plan_id: subPlanId,
+                  amount: subAmount,
+                  payment_reference: paymentReference,
+                  payment_status: "success",
+                  subscription_expires_at: expiresAt.toISOString(),
+                  created_at: now.toISOString(),
+                },
+              ]);
+
+              console.log(
+                `✅ Subscriber created: ${subEmail}, expiresAt: ${expiresAt.toDateString()}`
+              );
+            }
+
+            // Send subscription confirmation email
+            try {
+              await fetch(`${baseUrl}/api/send-subscription-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  to: subEmail,
+                  subject: "Subscription Payment Successful ✅",
+                  message: `
+          <p>Hello ${subFullName},</p>
+          <p>We received your payment of <strong>₦${subAmount}</strong> for your subscription.</p>
+          <p>Your subscription is now active and will expire on <strong>${expiresAt.toDateString()}</strong>.</p>
+          <p>Reference: <strong>${paymentReference}</strong></p>
+          <p>Thank you 🎉</p>
+        `,
+                }),
+              });
+              console.log(
+                `📨 Subscription confirmation email sent to ${subEmail}`
+              );
+            } catch (emailErr) {
+              console.error("❌ Failed sending subscription email:", emailErr);
+            }
+
+            // ✅ IMPORTANT: stop further processing for subscription
+            return NextResponse.json(
+              { success: true, message: "Subscription processed" },
+              { status: 200 }
+            );
+          } else {
+            console.warn(
+              "⚠️ Subscription metadata incomplete — skipping insert/update/email"
+            );
+          }
+        }
+      } catch (subErr) {
+        console.error("❌ Subscription handling error:", subErr);
+      }
+      // -------------------- END SUBSCRIPTION HANDLING --------------------
+
       // DETERMINE userId & reference for transaction
       let userId: string | null = null;
       let referenceToUse: string | null =
@@ -408,118 +521,6 @@ export async function POST(req: NextRequest) {
           );
         }
       }
-
-   // -------------------- SUBSCRIPTION HANDLING --------------------
-// ✅ Only handle card payments for subscriptions
-try {
-  // Extract email, full name, plan, and amount from payload
-  const subEmail =
-    payload.data?.order?.customerEmail ||
-    payload.data?.customer?.customerEmail ||
-    null;
-
-  const subFullName =
-    payload.data?.order?.fullName ||
-    payload.data?.customer?.fullName ||
-    "Subscriber";
-
-  const subPlanId =
-    payload.data?.order?.metadata?.planId ||
-    payload.data?.meta?.planId ||
-    "basic";
-
-  const subAmount =
-    safeNum(payload.data?.transaction?.transactionAmount) ||
-    safeNum(payload.data?.order?.amount) ||
-    0;
-
-  // Ensure orderReference exists (fallback to transactionId if missing)
-  const paymentReference =
-    orderReference || payload.data?.transaction?.transactionId || null;
-
-  if (subEmail && subPlanId && paymentReference) {
-    // Update payments table status to success
-    const { error: payErr } = await supabase
-      .from("payments")
-      .update({ status: "success" })
-      .eq("payment_reference", paymentReference);
-
-    if (payErr) console.error("❌ Failed to update payment status:", payErr);
-    else console.log(`✅ Payment status updated for ${paymentReference}`);
-
-    // Check if subscriber already exists (idempotent)
-    const { data: existingSub } = await supabase
-      .from("subscribers")
-      .select("*")
-      .or(
-        `payment_reference.eq.${paymentReference},(email.eq.${subEmail},plan_id.eq.${subPlanId})`
-      )
-      .maybeSingle();
-
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-    if (existingSub) {
-      // Update existing subscriber
-      await supabase
-        .from("subscribers")
-        .update({
-          payment_status: "success",
-          subscription_expires_at: expiresAt.toISOString(),
-        })
-        .eq("id", existingSub.id);
-
-      console.log(`⚠️ Subscriber exists, updated expiry for ${subEmail}`);
-    } else {
-      // Insert new subscriber
-      await supabase.from("subscribers").insert([
-        {
-          email: subEmail,
-          full_name: subFullName,
-          plan_id: subPlanId,
-          amount: subAmount,
-          payment_reference: paymentReference,
-          payment_status: "success",
-          subscription_expires_at: expiresAt.toISOString(),
-          created_at: now.toISOString(),
-        },
-      ]);
-
-      console.log(
-        `✅ Subscriber created: ${subEmail}, expiresAt: ${expiresAt.toDateString()}`
-      );
-    }
-
-    // Send subscription confirmation email
-    try {
-      await fetch(`${baseUrl}/api/send-subscription-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: subEmail,
-          subject: "Subscription Payment Successful ✅",
-          message: `
-            <p>Hello ${subFullName},</p>
-            <p>We received your payment of <strong>₦${subAmount}</strong> for your subscription.</p>
-            <p>Your subscription is now active and will expire on <strong>${expiresAt.toDateString()}</strong>.</p>
-            <p>Reference: <strong>${paymentReference}</strong></p>
-            <p>Thank you 🎉</p>
-          `,
-        }),
-      });
-      console.log(`📨 Subscription confirmation email sent to ${subEmail}`);
-    } catch (emailErr) {
-      console.error("❌ Failed sending subscription email:", emailErr);
-    }
-  } else {
-    console.warn(
-      "⚠️ Subscription metadata incomplete — skipping insert/update/email"
-    );
-  }
-} catch (subErr) {
-  console.error("❌ Subscription handling error:", subErr);
-}
-// -------------------- END SUBSCRIPTION HANDLING --------------------
 
       console.log(
         `✅ Auto-created transaction and credited user ${userId} with ₦${netCredit}`
