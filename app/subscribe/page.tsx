@@ -64,7 +64,7 @@ function SubscribePage() {
           email,
           fullName,
           planId,
-          amount: numericAmount,
+          amount: 100,
         }),
       });
 
@@ -151,7 +151,7 @@ function SubscribePage() {
             <label className="block text-sm font-medium text-gray-700">Amount (NGN)</label>
             <input
               disabled
-              value={100}
+              value={amount}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
             />
           </div>
