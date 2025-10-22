@@ -1,4 +1,3 @@
-// app/api/deductFunds/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
@@ -8,20 +7,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     let { userId, amount, description, pin } = body;
 
-    amount = Number(amount); 
+    amount = Number(amount);
 
-    // console.log(userId, amount, pin)
     if (!userId || !amount || amount <= 0 || !pin) {
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
     }
 
+    // ✅ Fetch user and verify PIN
     const { data: user, error: fetchError } = await supabase
       .from("users")
       .select("transaction_pin, wallet_balance")
@@ -46,76 +43,47 @@ export async function POST(req: Request) {
     const isValid = await bcrypt.compare(plainPin, user.transaction_pin);
 
     if (!isValid) {
-      return NextResponse.json({ message: "Invalid transaction PIN" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid transaction PIN" }, { status: 401 });
     }
 
-    const currentBalance = Number(user.wallet_balance ?? 0);
-    if (currentBalance < amount) {
-      return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
-    }
-
-    let newWalletBalance: number | null = null;
-    let deductError;
-
+    // ✅ Call RPC `deduct_wallet_balance`
+    const reference = crypto.randomUUID();
     const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "decrement_wallet_balance",
-      { user_id: userId, amt: amount }
+      "deduct_wallet_balance",
+      {
+        user_id: userId,
+        amt: amount,
+        transaction_type: "debit",
+        reference,
+        description: description || "Funds deducted",
+      }
     );
 
     if (rpcError) {
-      console.error("⚠️ RPC failed, falling back to manual update:", rpcError.message);
-
-      // fallback method
-      const updatedBalance = currentBalance - amount;
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ wallet_balance: updatedBalance })
-        .eq("id", userId);
-
-      if (updateError) {
-        return NextResponse.json(
-          { error: "Failed to deduct balance" },
-          { status: 500 }
-        );
-      }
-
-      newWalletBalance = updatedBalance;
-      deductError = updateError;
-    } else {
-
-      newWalletBalance =
-        Array.isArray(rpcData) && rpcData.length > 0
-          ? rpcData[0].wallet_balance || rpcData[0].balance
-          : currentBalance - amount;
+      console.error("❌ RPC deduct_wallet_balance failed:", rpcError.message);
+      return NextResponse.json(
+        { error: "Failed to deduct wallet balance via RPC" },
+        { status: 500 }
+      );
     }
 
-    // ✅ 5. Record transaction
-    const { error: txError } = await supabase.from("transactions").insert({
-      user_id: userId,
-      amount,
-      type: "debit",
-      status: "success",
-      reference: crypto.randomUUID(),
-      description: description || "Funds deducted",
-    });
+    // RPC returns tx_id, new_balance, status
+    const result =
+      Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
 
-    if (txError) {
-      // ⚠️ Attempt rollback (optional)
-      await supabase
-        .from("users")
-        .update({ wallet_balance: currentBalance })
-        .eq("id", userId);
-
+    if (!result || result.status !== "OK") {
       return NextResponse.json(
-        { error: "Transaction logging failed. Deduction rolled back." },
-        { status: 500 }
+        { error: result?.status || "Deduction failed" },
+        { status: 400 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Funds deducted and transaction recorded",
-      newWalletBalance,
+      message: "Funds deducted successfully",
+      reference,
+      transactionId: result.tx_id,
+      newWalletBalance: result.balance || result.new_balance,
     });
   } catch (err: any) {
     console.error("❌ Deduct Funds Error:", err.message);

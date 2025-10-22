@@ -528,306 +528,170 @@ export async function POST(req: NextRequest) {
     } // end deposit handling
 
     // ---------- WITHDRAWAL / TRANSFER (OUTGOING) ----------
-    if (isPayoutOrTransfer) {
-      console.log("➡️ Handling payout/transfer flow");
+if (isPayoutOrTransfer) {
+  console.log("➡️ Handling payout/transfer flow");
 
-      // Try to find matching tx by merchant_tx_ref or reference or transactionId
-      const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
-      console.log("🔎 Searching transaction by candidates:", refCandidates);
+  const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
+  console.log("🔎 Searching transaction by candidates:", refCandidates);
 
-      const orExprParts = refCandidates
-        .map((r) => `merchant_tx_ref.eq.${r}`)
-        .concat(refCandidates.map((r) => `reference.eq.${r}`));
-      const orExpr = orExprParts.join(",");
+  const orExprParts = refCandidates
+    .map((r) => `merchant_tx_ref.eq.${r}`)
+    .concat(refCandidates.map((r) => `reference.eq.${r}`));
+  const orExpr = orExprParts.join(",");
 
-      const { data: pendingTx, error: pendingErr } = await supabase
-        .from("transactions")
-        .select("*")
-        .or(orExpr)
-        .maybeSingle();
+  const { data: pendingTx, error: pendingErr } = await supabase
+    .from("transactions")
+    .select("*")
+    .or(orExpr)
+    .maybeSingle();
 
-      if (pendingErr) {
-        console.error(
-          "❌ DB error while finding pending transaction:",
-          pendingErr
-        );
-        return NextResponse.json({ error: "DB error" }, { status: 500 });
+  if (pendingErr) {
+    console.error("❌ DB error while finding pending transaction:", pendingErr);
+    return NextResponse.json({ error: "DB error" }, { status: 500 });
+  }
+
+  if (!pendingTx) {
+    console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
+    return NextResponse.json(
+      { message: "No matching withdrawal transaction" },
+      { status: 200 }
+    );
+  }
+
+  console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
+
+  // Idempotency
+  if (["success", "failed"].includes(pendingTx.status)) {
+    console.log(`⚠️ Withdrawal already ${pendingTx.status}. Skipping.`);
+    return NextResponse.json({ message: "Already processed" }, { status: 200 });
+  }
+
+  const fee = safeNum(pendingTx.fee ?? feeFromNomba);
+  const amount = safeNum(pendingTx.amount ?? transactionAmount);
+  const totalDeduction = Number((amount + fee).toFixed(2));
+
+  // ✅ Success case
+  if (eventType === "payout_success" || txStatus === "success") {
+    console.log("✅ Payout success. Deducting wallet via RPC...");
+
+    // Call the new deduct_wallet_balance RPC
+    const reference = nombaTransactionId || crypto.randomUUID();
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "deduct_wallet_balance",
+      {
+        user_id: pendingTx.user_id,
+        amt: totalDeduction,
+        transaction_type: "debit",
+        reference,
+        description: `Withdrawal of ₦${amount} (including ₦${fee} fee)`,
       }
+    );
 
-      if (!pendingTx) {
-        console.warn(
-          "⚠️ No matching pending withdrawal found for refs:",
-          refCandidates
-        );
-        // We can decide to create a record, but safer is to log and ignore to avoid debiting wrong user.
-        return NextResponse.json(
-          { message: "No matching withdrawal transaction" },
-          { status: 200 }
-        );
-      }
-
-      console.log(
-        "📦 Found pending withdrawal:",
-        pendingTx.id,
-        "status:",
-        pendingTx.status
-      );
-
-      const { error: updateErr } = await supabase
+    if (rpcError) {
+      console.error("❌ RPC deduct_wallet_balance failed:", rpcError.message);
+      // Mark transaction failed
+      await supabase
         .from("transactions")
-        .update({
-          status: "success",
-          reference: nombaTransactionId,
-          external_response: payload,
-        })
+        .update({ status: "failed", external_response: payload })
         .eq("id", pendingTx.id);
-
-      if (updateErr) {
-        console.error(
-          "❌ Failed to update withdrawal status to success:",
-          updateErr
-        );
-      } else {
-        console.log(
-          "✅ Withdrawal status updated to success for transaction:",
-          pendingTx.id
-        );
-      }
-
-      // Idempotency
-      if (pendingTx.status === "success") {
-        console.log("⚠️ Withdrawal already marked success. Skipping.");
-        return NextResponse.json(
-          { message: "Already processed" },
-          { status: 200 }
-        );
-      }
-      if (pendingTx.status === "failed") {
-        console.log("⚠️ Withdrawal already marked failed. Skipping.");
-        return NextResponse.json(
-          { message: "Already failed" },
-          { status: 200 }
-        );
-      }
-
-      // Compute amounts: user pays amount + fee
-      const fee = safeNum(pendingTx.fee ?? feeFromNomba);
-      const amount = safeNum(pendingTx.amount ?? transactionAmount);
-      const totalDeduction = Number((amount + fee).toFixed(2));
-
-      // Success case
-      if (eventType === "payout_success" || txStatus === "success") {
-        console.log(
-          "✅ Payout success. Attempting to mark transaction and deduct wallet."
-        );
-
-        // Update transaction status & reference
-        const { data, error: updErr } = await supabase
-          .from("transactions")
-          .update({
-            status: "success",
-            amount,
-            fee,
-            total_deduction: totalDeduction,
-            reference: nombaTransactionId,
-            external_response: payload,
-          })
-          .eq("id", pendingTx.id);
-
-        // console.log("transactions data", data);
-
-        if (updErr) {
-          return NextResponse.json(
-            { error: "Failed to update transaction" },
-            { status: 500 }
-          );
-        }
-
-        // Try RPC decrement_wallet_balance if you have it
-        let decremented = false;
-        try {
-          const { error: rpcErr } = await supabase.rpc(
-            "decrement_wallet_balance",
-            {
-              user_id: pendingTx.user_id,
-              amt: totalDeduction,
-            }
-          );
-          if (!rpcErr) {
-            decremented = true;
-            console.log("✅ Wallet decremented via RPC");
-          } else {
-            console.warn(
-              "⚠️ decrement_wallet_balance rpc returned error, falling back:",
-              rpcErr
-            );
-          }
-        } catch (rpcEx) {
-          console.warn(
-            "⚠️ decrement_wallet_balance rpc threw, falling back:",
-            rpcEx
-          );
-        }
-
-        if (!decremented) {
-          // Fallback: manual safe decrement: check balance then update
-          const { data: userRow } = await supabase
-            .from("users")
-            .select("wallet_balance")
-            .eq("id", pendingTx.user_id)
-            .single();
-
-          if (!userRow) {
-            console.error("❌ User not found for debit fallback");
-            // mark tx failed and return
-            await supabase
-              .from("transactions")
-              .update({ status: "failed", external_response: payload })
-              .eq("id", pendingTx.id);
-            return NextResponse.json(
-              { error: "User not found" },
-              { status: 500 }
-            );
-          }
-
-          const currentBal = Number(userRow.wallet_balance ?? 0);
-          console.log(
-            "🔎 User current balance:",
-            currentBal,
-            "needed:",
-            totalDeduction
-          );
-
-          if (currentBal < totalDeduction) {
-            console.error(
-              "❌ Insufficient balance at payout confirmation time. Marking failed and NOT debiting."
-            );
-            // mark tx failed
-            await supabase
-              .from("transactions")
-              .update({ status: "failed", external_response: payload })
-              .eq("id", pendingTx.id);
-            return NextResponse.json(
-              { error: "Insufficient balance", status: 400 },
-              { status: 200 }
-            );
-          }
-
-          const { error: userUpdErr } = await supabase
-            .from("users")
-            .update({ wallet_balance: currentBal - totalDeduction })
-            .eq("id", pendingTx.user_id);
-
-          if (userUpdErr) {
-            console.error(
-              "❌ Failed to update user balance in fallback:",
-              userUpdErr
-            );
-            // try to mark transaction failed
-            await supabase
-              .from("transactions")
-              .update({ status: "failed", external_response: payload })
-              .eq("id", pendingTx.id);
-            return NextResponse.json(
-              { error: "Failed to debit wallet" },
-              { status: 500 }
-            );
-          }
-
-          console.log("✅ Wallet decremented via manual fallback");
-        }
-
-        // Record fee tx (non-blocking)
-        // const { error: feeTxErr } = await supabase.from("transactions").insert({
-        //   user_id: pendingTx.user_id,
-        //   type: "fee",
-        //   amount: fee,
-        //   status: "success",
-        //   description: `Withdrawal fee for ₦${amount}`,
-        //   merchant_tx_ref: `FEE_${
-        //     pendingTx.merchant_tx_ref || pendingTx.reference
-        //   }`,
-        // });
-
-        // if (feeTxErr) {
-        //   console.warn("⚠️ Failed to record fee transaction:", feeTxErr);
-        // }
-
-        console.log(
-          `✅ Withdrawal processed and debited ₦${totalDeduction} for user ${pendingTx.user_id}`
-        );
-        return NextResponse.json({ success: true }, { status: 200 });
-      }
-
-      // Failure case: payout_failed
-      if (eventType === "payout_failed" || txStatus === "failed") {
-        console.log(
-          "❌ Payout failed. Marking failed and refunding if necessary."
-        );
-
-        // mark transaction failed and save payload
-        await supabase
-          .from("transactions")
-          .update({
-            status: "failed",
-            external_response: payload,
-            reference: nombaTransactionId || pendingTx.reference,
-          })
-          .eq("id", pendingTx.id);
-
-        // If the user's wallet was already decremented earlier (older logic), refund.
-        // We'll heuristically check for fee tx or check if user's balance looks like it was decremented.
-        // Best approach: if you deducted earlier, you should have inserted a fee tx or changed status->success.
-        // We'll attempt a safe refund via RPC (idempotent if rpc handles it).
-        try {
-          const { error: rpcErr } = await supabase.rpc(
-            "increment_wallet_balance",
-            {
-              user_id: pendingTx.user_id,
-              amt: Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0),
-            }
-          );
-          if (rpcErr) {
-            console.warn("⚠️ RPC refund failed:", rpcErr);
-            // fallback manual refund
-            const { data: u } = await supabase
-              .from("users")
-              .select("wallet_balance")
-              .eq("id", pendingTx.user_id)
-              .single();
-
-            if (u) {
-              const newBal =
-                Number(u.wallet_balance ?? 0) +
-                Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0);
-              await supabase
-                .from("users")
-                .update({ wallet_balance: newBal })
-                .eq("id", pendingTx.user_id);
-            }
-          } else {
-            console.log("✅ Refund processed via RPC");
-          }
-        } catch (rEx) {
-          console.warn(
-            "⚠️ Refund RPC threw error, attempted manual refund",
-            rEx
-          );
-        }
-
-        console.log(
-          "✅ Payout failed processed and refund attempted if needed"
-        );
-        return NextResponse.json({ refunded: true }, { status: 200 });
-      }
-
-      // Unhandled statuses for transfer
-      console.log("ℹ️ Unhandled transfer event/status. Ignoring.");
       return NextResponse.json(
-        { message: "Ignored transfer event" },
-        { status: 200 }
+        { error: "Wallet deduction failed via RPC" },
+        { status: 500 }
       );
-    } // end payout handling
+    }
+
+    const rpcResult = Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
+
+    if (!rpcResult || rpcResult.status !== "OK") {
+      console.error("⚠️ RPC returned non-OK:", rpcResult);
+      await supabase
+        .from("transactions")
+        .update({ status: "failed", external_response: payload })
+        .eq("id", pendingTx.id);
+      return NextResponse.json(
+        { error: rpcResult?.status || "Deduction failed" },
+        { status: 400 }
+      );
+    }
+
+    // Update transaction with payout reference and success status
+    await supabase
+      .from("transactions")
+      .update({
+        status: "success",
+        reference,
+        external_response: payload,
+        total_deduction: totalDeduction,
+        fee,
+      })
+      .eq("id", pendingTx.id);
+
+    console.log(
+      `✅ Withdrawal processed successfully. ₦${totalDeduction} deducted for user ${pendingTx.user_id}`
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Withdrawal processed successfully",
+        newWalletBalance: rpcResult.balance || rpcResult.new_balance,
+      },
+      { status: 200 }
+    );
+  }
+
+  // ❌ Failure case: payout_failed
+  if (eventType === "payout_failed" || txStatus === "failed") {
+    console.log("❌ Payout failed. Marking transaction failed and refunding if necessary.");
+
+    await supabase
+      .from("transactions")
+      .update({
+        status: "failed",
+        external_response: payload,
+        reference: nombaTransactionId || pendingTx.reference,
+      })
+      .eq("id", pendingTx.id);
+
+    // Attempt safe refund via increment_wallet_balance RPC
+    try {
+      const { error: rpcErr } = await supabase.rpc("increment_wallet_balance", {
+        user_id: pendingTx.user_id,
+        amt: Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0),
+      });
+
+      if (rpcErr) {
+        console.warn("⚠️ Refund RPC failed:", rpcErr);
+        const { data: u } = await supabase
+          .from("users")
+          .select("wallet_balance")
+          .eq("id", pendingTx.user_id)
+          .single();
+
+        if (u) {
+          const newBal =
+            Number(u.wallet_balance ?? 0) +
+            Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0);
+          await supabase
+            .from("users")
+            .update({ wallet_balance: newBal })
+            .eq("id", pendingTx.user_id);
+        }
+      } else {
+        console.log("✅ Refund processed via RPC");
+      }
+    } catch (rEx) {
+      console.warn("⚠️ Refund RPC threw error, attempted manual refund", rEx);
+    }
+
+    console.log("✅ Payout failed processed and refund attempted if needed");
+    return NextResponse.json({ refunded: true }, { status: 200 });
+  }
+
+  console.log("ℹ️ Unhandled transfer event/status. Ignoring.");
+  return NextResponse.json({ message: "Ignored transfer event" }, { status: 200 });
+}
+
 
     // If we reach here, event type not handled specifically
     console.log("ℹ️ Event type not matched. Ignoring.");
