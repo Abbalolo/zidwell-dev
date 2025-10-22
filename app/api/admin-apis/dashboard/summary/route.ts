@@ -9,9 +9,11 @@ const supabaseAdmin = createClient(
 
 // Nomba caching (1 minute)
 let _cachedNomba = { ts: 0, value: 0 };
-const NOMBA_CACHE_TTL = 60 * 1000; // 60 seconds
+const NOMBA_CACHE_TTL = 60 * 1000;
 
-async function fetchNombaBalanceCached(getTokenFn: () => Promise<string | null>) {
+async function fetchNombaBalanceCached(
+  getTokenFn: () => Promise<string | null>
+) {
   try {
     const now = Date.now();
     if (now - _cachedNomba.ts < NOMBA_CACHE_TTL) {
@@ -25,13 +27,16 @@ async function fetchNombaBalanceCached(getTokenFn: () => Promise<string | null>)
       return 0;
     }
 
-    const res = await fetch(`${process.env.NOMBA_URL ?? ""}/v1/accounts/balance`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        accountId: process.env.NOMBA_ACCOUNT_ID ?? "",
-      },
-    });
+    const res = await fetch(
+      `${process.env.NOMBA_URL ?? ""}/v1/accounts/balance`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accountId: process.env.NOMBA_ACCOUNT_ID ?? "",
+        },
+      }
+    );
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
@@ -93,21 +98,27 @@ function parseRangeToDates(range: string | null) {
 }
 
 // Helper to build monthly buckets for the last 12 months or within a provided range
-function buildMonthLabelsFromRange(rangeDates: { start: string; end: string } | null) {
+function buildMonthLabelsFromRange(
+  rangeDates: { start: string; end: string } | null
+) {
   const labels: string[] = [];
   if (!rangeDates) {
     // last 12 months
     const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      labels.push(d.toLocaleString("default", { month: "short", year: "numeric" })); // e.g. "Oct 2025"
+      labels.push(
+        d.toLocaleString("default", { month: "short", year: "numeric" })
+      ); // e.g. "Oct 2025"
     }
   } else {
     const start = new Date(rangeDates.start);
     const end = new Date(rangeDates.end);
     const cur = new Date(start.getFullYear(), start.getMonth(), 1);
     while (cur <= end) {
-      labels.push(cur.toLocaleString("default", { month: "short", year: "numeric" }));
+      labels.push(
+        cur.toLocaleString("default", { month: "short", year: "numeric" })
+      );
       cur.setMonth(cur.getMonth() + 1);
     }
   }
@@ -131,9 +142,14 @@ export async function GET(req: Request) {
     const rangeDates = parseRangeToDates(rangeParam);
 
     // --- Transactions (apply range if provided) ---
-    let txQuery = supabaseAdmin.from("transactions").select("id, amount, type, status, created_at").order("created_at", { ascending: false });
+    let txQuery = supabaseAdmin
+      .from("transactions")
+      .select("id, amount, type, status, created_at")
+      .order("created_at", { ascending: false });
     if (rangeDates) {
-      txQuery = txQuery.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
+      txQuery = txQuery
+        .gte("created_at", rangeDates.start)
+        .lte("created_at", rangeDates.end);
     }
     // Only successful transactions (you requested success-only)
     // supabase .filter uses match or eq; we can post-filter or add .eq('status','success')
@@ -143,52 +159,98 @@ export async function GET(req: Request) {
     if (txError) {
       console.error("[/api/summary] error fetching transactions:", txError);
     } else {
-      console.log("[/api/summary] transactions fetched:", (transactions as any[]).length);
+      console.log(
+        "[/api/summary] transactions fetched:",
+        (transactions as any[]).length
+      );
     }
 
     // Transaction aggregates
-    const INFLOW_TYPES = ["deposit", "card_deposit"];
-    const OUTFLOW_TYPES = ["withdrawal", "airtime", "electricity", "cable", "data"];
+    const INFLOW_TYPES = [
+      "deposit",
+      "card_deposit",
+      "referral",
+      "referral_reward",
+      "p2p_received",
+    ];
+
+    const OUTFLOW_TYPES = [
+      "withdrawal",
+      "airtime",
+      "electricity",
+      "cable",
+      "data",
+      "debit",
+    ];
+
     const totalTransactions = (transactions ?? []).length;
 
     const totalInflow = (transactions ?? [])
-      .filter((t: any) => INFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase()))
+      .filter((t: any) =>
+        INFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
+      )
       .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
 
     const totalOutflow = (transactions ?? [])
-      .filter((t: any) => OUTFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase()))
+      .filter((t: any) =>
+        OUTFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
+      )
       .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
 
     // latestTransactions (last 5) - we already ordered desc
-    const latestTransactions = (transactions ?? []).slice(0, 5).map((t: any) => ({
-      id: t.id,
-      type: t.type,
-      amount: Number(t.amount ?? 0),
-      status: t.status,
-      created_at: t.created_at,
-    }));
+    const latestTransactions = (transactions ?? [])
+      .slice(0, 5)
+      .map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        amount: Number(t.amount ?? 0),
+        status: t.status,
+        created_at: t.created_at,
+      }));
 
     // --- Users wallet balance (sum wallet_balance across users) ---
-    const { data: usersBalances = [], error: ubError } = await supabaseAdmin.from("users").select("wallet_balance");
-    if (ubError) console.error("[/api/summary] users wallet fetch error:", ubError);
-    const mainWalletBalance = (usersBalances ?? []).reduce((s: number, u: any) => s + Number(u.wallet_balance ?? 0), 0);
+    const { data: usersBalances = [], error: ubError } = await supabaseAdmin
+      .from("users")
+      .select("wallet_balance");
+    if (ubError)
+      console.error("[/api/summary] users wallet fetch error:", ubError);
+    const mainWalletBalance = (usersBalances ?? []).reduce(
+      (s: number, u: any) => s + Number(u.wallet_balance ?? 0),
+      0
+    );
     console.log("[/api/summary] mainWalletBalance:", mainWalletBalance);
 
     // --- Users total count ---
-    const { count: totalUsersCount } = await supabaseAdmin.from("users").select("*", { count: "exact", head: true });
+    const { count: totalUsersCount } = await supabaseAdmin
+      .from("users")
+      .select("*", { count: "exact", head: true });
     const totalUsers = Number(totalUsersCount ?? 0);
 
     // --- Contracts stats (apply range if provided) ---
-    let contractsQuery = supabaseAdmin.from("contracts").select("id, status, created_at");
+    let contractsQuery = supabaseAdmin
+      .from("contracts")
+      .select("id, status, created_at");
     if (rangeDates) {
-      contractsQuery = contractsQuery.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
+      contractsQuery = contractsQuery
+        .gte("created_at", rangeDates.start)
+        .lte("created_at", rangeDates.end);
     }
-    const { data: contractsData = [], error: contractsError } = await contractsQuery;
-    if (contractsError) console.error("[/api/summary] contracts fetch error:", contractsError);
+    const { data: contractsData = [], error: contractsError } =
+      await contractsQuery;
+    if (contractsError)
+      console.error("[/api/summary] contracts fetch error:", contractsError);
     const totalContractsIssued = (contractsData ?? []).length;
-    const pendingContracts = (contractsData ?? []).filter((c: any) => (c.status ?? "pending") === "pending").length;
-    const signedContracts = (contractsData ?? []).filter((c: any) => (c.status ?? "").toLowerCase() === "signed").length;
-    console.log("[/api/summary] contracts:", { totalContractsIssued, pendingContracts, signedContracts });
+    const pendingContracts = (contractsData ?? []).filter(
+      (c: any) => (c.status ?? "pending") === "pending"
+    ).length;
+    const signedContracts = (contractsData ?? []).filter(
+      (c: any) => (c.status ?? "").toLowerCase() === "signed"
+    ).length;
+    console.log("[/api/summary] contracts:", {
+      totalContractsIssued,
+      pendingContracts,
+      signedContracts,
+    });
 
     // monthlyContracts breakdown
     const monthLabels = buildMonthLabelsFromRange(rangeDates);
@@ -196,49 +258,96 @@ export async function GET(req: Request) {
     (contractsData ?? []).forEach((c: any) => {
       const d = new Date(c.created_at);
       if (isNaN(d.getTime())) return;
-      const key = d.toLocaleString("default", { month: "short", year: "numeric" });
+      const key = d.toLocaleString("default", {
+        month: "short",
+        year: "numeric",
+      });
       monthlyContractsMap[key] = (monthlyContractsMap[key] ?? 0) + 1;
     });
-    const monthlyContracts = monthLabels.map((m) => ({ month: m, count: monthlyContractsMap[m] ?? 0 }));
+    const monthlyContracts = monthLabels.map((m) => ({
+      month: m,
+      count: monthlyContractsMap[m] ?? 0,
+    }));
 
     // --- Invoices stats (apply range if provided) ---
-    let invoicesQuery = supabaseAdmin.from("invoices").select("id, status, created_at, paid_amount");
+    let invoicesQuery = supabaseAdmin
+      .from("invoices")
+      .select("id, status, created_at, paid_amount");
     if (rangeDates) {
-      invoicesQuery = invoicesQuery.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
+      invoicesQuery = invoicesQuery
+        .gte("created_at", rangeDates.start)
+        .lte("created_at", rangeDates.end);
     }
-    const { data: invoicesData = [], error: invoicesError } = await invoicesQuery;
-    if (invoicesError) console.error("[/api/summary] invoices fetch error:", invoicesError);
+    const { data: invoicesData = [], error: invoicesError } =
+      await invoicesQuery;
+    if (invoicesError)
+      console.error("[/api/summary] invoices fetch error:", invoicesError);
     const totalInvoicesIssued = (invoicesData ?? []).length;
-    const paidInvoices = (invoicesData ?? []).filter((inv: any) => (inv.status ?? "").toLowerCase() === "paid").length;
-    const unpaidInvoices = (invoicesData ?? []).filter((inv: any) => (inv.status ?? "").toLowerCase() === "unpaid").length;
+    const paidInvoices = (invoicesData ?? []).filter(
+      (inv: any) => (inv.status ?? "").toLowerCase() === "paid"
+    ).length;
+    const unpaidInvoices = (invoicesData ?? []).filter(
+      (inv: any) => (inv.status ?? "").toLowerCase() === "unpaid"
+    ).length;
     const totalInvoiceRevenue = (invoicesData ?? [])
       .filter((inv: any) => (inv.status ?? "").toLowerCase() === "paid")
-      .reduce((s: number, inv: any) => s + Number(inv.paid_amount ?? inv.total_amount ?? 0), 0);
-    console.log("[/api/summary] invoices:", { totalInvoicesIssued, paidInvoices, unpaidInvoices, totalInvoiceRevenue });
+      .reduce(
+        (s: number, inv: any) =>
+          s + Number(inv.paid_amount ?? inv.total_amount ?? 0),
+        0
+      );
+    console.log("[/api/summary] invoices:", {
+      totalInvoicesIssued,
+      paidInvoices,
+      unpaidInvoices,
+      totalInvoiceRevenue,
+    });
 
     // monthlyInvoices breakdown (count + revenue)
-    const monthlyInvoicesMap: Record<string, { count: number; revenue: number }> = {};
+    const monthlyInvoicesMap: Record<
+      string,
+      { count: number; revenue: number }
+    > = {};
     (invoicesData ?? []).forEach((inv: any) => {
       const d = new Date(inv.created_at);
       if (isNaN(d.getTime())) return;
-      const key = d.toLocaleString("default", { month: "short", year: "numeric" });
-      monthlyInvoicesMap[key] = monthlyInvoicesMap[key] ?? { count: 0, revenue: 0 };
+      const key = d.toLocaleString("default", {
+        month: "short",
+        year: "numeric",
+      });
+      monthlyInvoicesMap[key] = monthlyInvoicesMap[key] ?? {
+        count: 0,
+        revenue: 0,
+      };
       monthlyInvoicesMap[key].count += 1;
-      if (((inv.status ?? "").toLowerCase() === "paid")) {
-        monthlyInvoicesMap[key].revenue += Number(inv.paid_amount ?? inv.total_amount ?? 0);
+      if ((inv.status ?? "").toLowerCase() === "paid") {
+        monthlyInvoicesMap[key].revenue += Number(
+          inv.paid_amount ?? inv.total_amount ?? 0
+        );
       }
     });
-    const monthlyInvoices = monthLabels.map((m) => ({ month: m, count: monthlyInvoicesMap[m]?.count ?? 0, revenue: monthlyInvoicesMap[m]?.revenue ?? 0 }));
+    const monthlyInvoices = monthLabels.map((m) => ({
+      month: m,
+      count: monthlyInvoicesMap[m]?.count ?? 0,
+      revenue: monthlyInvoicesMap[m]?.revenue ?? 0,
+    }));
 
     // --- Monthly transactions breakdown (sum amounts per month) ---
     const monthlyTransactionsMap: Record<string, number> = {};
     (transactions ?? []).forEach((t: any) => {
       const d = new Date(t.created_at);
       if (isNaN(d.getTime())) return;
-      const key = d.toLocaleString("default", { month: "short", year: "numeric" });
-      monthlyTransactionsMap[key] = (monthlyTransactionsMap[key] ?? 0) + Number(t.amount ?? 0);
+      const key = d.toLocaleString("default", {
+        month: "short",
+        year: "numeric",
+      });
+      monthlyTransactionsMap[key] =
+        (monthlyTransactionsMap[key] ?? 0) + Number(t.amount ?? 0);
     });
-    const monthlyTransactions = monthLabels.map((m) => ({ month: m, transactions: monthlyTransactionsMap[m] ?? 0 }));
+    const monthlyTransactions = monthLabels.map((m) => ({
+      month: m,
+      transactions: monthlyTransactionsMap[m] ?? 0,
+    }));
 
     // --- Nomba balance (cached) ---
     const nombaBalance = await fetchNombaBalanceCached(async () => {
