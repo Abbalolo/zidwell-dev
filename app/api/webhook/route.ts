@@ -1318,6 +1318,7 @@ export async function POST(req: NextRequest) {
 if (isPayoutOrTransfer) {
   console.log("➡️ Handling payout/transfer flow");
 
+  // ... (existing code to find pendingTx)
   const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
   console.log("🔎 Searching transaction by candidates:", refCandidates);
 
@@ -1353,49 +1354,54 @@ if (isPayoutOrTransfer) {
     return NextResponse.json({ message: "Already processed" }, { status: 200 });
   }
 
-  // FIXED: Calculate withdrawal fees properly
+  // IMPLEMENT: 0.5% (₦20 min, ₦2000 cap) fee structure
   const withdrawalAmount = Number(pendingTx.amount ?? transactionAmount ?? 0);
   
-  // Calculate app fee for withdrawal (use existing fee from transaction or calculate new one)
-  let withdrawalAppFee = Number(pendingTx.fee ?? 0); // Use existing fee if available
-  
-  // If no existing fee, calculate a reasonable withdrawal fee
-  if (!withdrawalAppFee || withdrawalAppFee === 0) {
-    // Define your withdrawal fee structure here
-    if (pendingTx.channel === 'bank_transfer' || pendingTx.type?.includes('transfer')) {
-      withdrawalAppFee = Math.max(100, withdrawalAmount * 0.01); // 1% min ₦100
-    } else {
-      withdrawalAppFee = Math.max(50, withdrawalAmount * 0.005); // 0.5% min ₦50
-    }
-    console.log("📊 Calculated new withdrawal app fee:", withdrawalAppFee);
-  } else {
-    console.log("📊 Using existing withdrawal fee from transaction:", withdrawalAppFee);
-  }
+  // Calculate app fee: 0.5% (₦20 min, ₦2000 cap)
+  let withdrawalAppFee = withdrawalAmount * 0.005; // 0.5%
+  withdrawalAppFee = Math.max(withdrawalAppFee, 20); // Minimum ₦20
+  withdrawalAppFee = Math.min(withdrawalAppFee, 2000); // Maximum ₦2000
+  withdrawalAppFee = Number(withdrawalAppFee.toFixed(2));
 
-  // Use Nomba's actual fee from webhook + our app fee
+  // Use Nomba's actual fee
   const totalFees = Number((nombaFee + withdrawalAppFee).toFixed(2));
   const totalDeduction = withdrawalAmount + totalFees;
 
-  console.log("💰 Withdrawal calculations (FIXED):");
-  console.log("   - Withdrawal amount:", withdrawalAmount);
-  console.log("   - Nomba fee (from webhook):", nombaFee);
-  console.log("   - Our app fee:", withdrawalAppFee);
+  console.log("💰 Withdrawal calculations (0.5% FEE):");
+  console.log("   - Withdrawal amount (to user's bank):", withdrawalAmount);
+  console.log("   - Nomba fee:", nombaFee);
+  console.log("   - Our app fee (0.5%, ₦20-₦2000):", withdrawalAppFee);
   console.log("   - Total fees:", totalFees);
-  console.log("   - Total deduction from user:", totalDeduction);
+  console.log("   - Total deduction from user wallet:", totalDeduction);
+  console.log("   - User receives:", withdrawalAmount);
+  console.log("   - Effective total fee rate:", Number((totalFees / withdrawalAmount * 100).toFixed(1)) + "%");
+  console.log("   - Our profit:", Number((withdrawalAppFee - nombaFee).toFixed(2)));
+
+  // Show fee calculation examples
+  console.log("📊 Fee Examples:");
+  console.log("   - ₦1,000 withdrawal: ₦5 (0.5%) → ₦20 (min)");
+  console.log("   - ₦5,000 withdrawal: ₦25 (0.5%)");
+  console.log("   - ₦10,000 withdrawal: ₦50 (0.5%)");
+  console.log("   - ₦100,000 withdrawal: ₦500 (0.5%)");
+  console.log("   - ₦500,000 withdrawal: ₦2,000 (max)");
 
   // ✅ Success case - withdrawal completed successfully
   if (eventType === "payout_success" || txStatus === "success") {
     console.log("✅ Payout success - updating transaction status to success");
 
-    // Store fee breakdown in external_response (no database changes)
+    // Store fee breakdown in external_response
     const updatedExternalResponse = {
       ...payload,
       fee_breakdown: {
+        withdrawal_amount: withdrawalAmount,
         nomba_fee: nombaFee,
         app_fee: withdrawalAppFee,
+        app_fee_calculation: "0.5% (₦20 min, ₦2000 cap)",
         total_fee: totalFees,
-        withdrawal_amount: withdrawalAmount,
-        total_deduction: totalDeduction
+        total_deduction: totalDeduction,
+        user_receives: withdrawalAmount,
+        our_profit: Number((withdrawalAppFee - nombaFee).toFixed(2)),
+        effective_fee_rate: Number((totalFees / withdrawalAmount * 100).toFixed(1)) + "%"
       }
     };
 
@@ -1405,8 +1411,8 @@ if (isPayoutOrTransfer) {
         status: "success",
         merchant_tx_ref: nombaTransactionId,
         external_response: updatedExternalResponse,
-        fee: totalFees, // Store total fees in existing fee column
-        total_deduction: totalDeduction, // Update total deduction
+        fee: totalFees,
+        total_deduction: totalDeduction,
       })
       .eq("id", pendingTx.id);
 
@@ -1420,17 +1426,20 @@ if (isPayoutOrTransfer) {
 
     // Check if balance needs to be deducted
     if (pendingTx.status === 'pending') {
-      console.log("💰 Deducting balance...");
-      try {
-        // Use manual deduction (no RPC function needed)
-        const { data: user } = await supabase
-          .from("users")
-          .select("wallet_balance")
-          .eq("id", pendingTx.user_id)
-          .single();
+      console.log("💰 Checking if balance needs deduction...");
+      
+      const { data: user } = await supabase
+        .from("users")
+        .select("wallet_balance")
+        .eq("id", pendingTx.user_id)
+        .single();
 
-        if (user) {
-          const currentBalance = Number(user.wallet_balance ?? 0);
+      if (user) {
+        const currentBalance = Number(user.wallet_balance ?? 0);
+        const expectedBalanceAfterDeduction = currentBalance - totalDeduction;
+        
+        if (expectedBalanceAfterDeduction >= 0) {
+          console.log("💰 Deducting balance from user wallet...");
           const newBalance = Math.max(0, currentBalance - totalDeduction);
           
           const { error: updateBalanceError } = await supabase
@@ -1447,10 +1456,8 @@ if (isPayoutOrTransfer) {
           }
           console.log(`✅ Balance deducted. Old: ₦${currentBalance}, New: ₦${newBalance}`);
         } else {
-          console.error("❌ User not found for balance deduction");
+          console.log("ℹ️ Balance already deducted or insufficient");
         }
-      } catch (deductEx) {
-        console.error("❌ Balance deduction failed:", deductEx);
       }
     } else {
       console.log("ℹ️ Balance was already deducted during withdrawal initiation");
@@ -1481,7 +1488,7 @@ if (isPayoutOrTransfer) {
       }
     };
 
-    // Update transaction status
+    // Update transaction status first
     const { error: updateError } = await supabase
       .from("transactions")
       .update({
@@ -1499,11 +1506,11 @@ if (isPayoutOrTransfer) {
       );
     }
 
-    // REFUND user if balance was deducted
+    // REFUND the user's wallet if balance was deducted
     if (pendingTx.status === 'pending') {
-      console.log("🔄 Refunding user wallet...");
+      console.log("🔄 Refunding user wallet (balance was deducted)...");
       try {
-        const refundAmount = withdrawalAmount; 
+        const refundAmount = withdrawalAmount; // Only refund the principal amount
         
         const { data: user } = await supabase
           .from("users")
@@ -1520,13 +1527,18 @@ if (isPayoutOrTransfer) {
 
           if (updUserErr) {
             console.error("❌ Manual wallet refund failed:", updUserErr);
-          } else {
-            console.log(`✅ Refund completed. New balance: ₦${newBal}`);
+            return NextResponse.json(
+              { error: "Failed to refund wallet" },
+              { status: 500 }
+            );
           }
+          console.log(`✅ Manual refund completed. New balance: ₦${newBal}`);
         }
       } catch (rEx) {
-        console.warn("⚠️ Refund failed:", rEx);
+        console.warn("⚠️ Refund RPC threw error, attempted manual refund", rEx);
       }
+    } else {
+      console.log("ℹ️ No refund needed - balance was not deducted");
     }
 
     console.log("✅ Payout failed processed");
