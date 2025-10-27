@@ -1337,6 +1337,7 @@ export async function POST(req: NextRequest) {
       }
 
       console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
+      console.log("📦 Found pending withdrawal payload:", pendingTx);
 
       // Idempotency - check if already processed
       if (["success", "failed"].includes(pendingTx.status)) {
