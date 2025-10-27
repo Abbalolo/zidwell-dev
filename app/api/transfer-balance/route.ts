@@ -147,15 +147,15 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-
-    if(data.code === "400") {
+ console.log("transfer data", data)
+    if(data?.code === "400") {
       return NextResponse.json({
       message: data.description,
       
     });
     }
 
-    console.log("transfer data", data)
+   
 
     // Save Nomba response and set status to processing
     await supabase
