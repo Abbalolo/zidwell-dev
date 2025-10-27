@@ -1400,7 +1400,7 @@ export async function POST(req: NextRequest) {
         if (pendingTx.status === 'pending') {
           console.log("💰 Deducting balance (was not deducted during initiation)...");
           try {
-            const { error: deductError } = await supabase.rpc("decrement_wallet_balance", {
+            const { error: deductError } = await supabase.rpc("deduct_wallet_balance", {
               user_id: pendingTx.user_id,
               amt: totalDeduction,
             });
