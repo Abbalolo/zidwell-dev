@@ -1,4 +1,4 @@
-// app/api/admin-apis/tax-filings/route.ts
+// app/api/admin-apis/disputes/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -52,7 +52,7 @@ function getRangeDates(range: string | null) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-// 📄 GET: List tax filings with filters and pagination
+// GET: List disputes with filters and pagination
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -61,22 +61,25 @@ export async function GET(req: Request) {
     const range = url.searchParams.get("range") ?? "total";
     const search = url.searchParams.get("search") ?? "";
     const status = url.searchParams.get("status") ?? "";
-    const type = url.searchParams.get("type") ?? "";
-    const startDate = url.searchParams.get("startDate") ?? "";
-    const endDate = url.searchParams.get("endDate") ?? "";
+    const priority = url.searchParams.get("priority") ?? "";
+    const category = url.searchParams.get("category") ?? "";
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
     // Build the query
     let query = supabaseAdmin
-      .from("tax_filings")
-      .select("*", { count: "exact" })
+      .from("dispute_tickets")
+      .select(`
+        *,
+        messages:dispute_messages(count),
+        attachments:dispute_attachments(*)
+      `, { count: "exact" })
       .order("created_at", { ascending: false });
 
     // Apply search filter
     if (search) {
-      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,company_name.ilike.%${search}%,nin.ilike.%${search}%`);
+      query = query.or(`ticket_id.ilike.%${search}%,subject.ilike.%${search}%,user_email.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
     // Apply status filter
@@ -84,25 +87,20 @@ export async function GET(req: Request) {
       query = query.eq("status", status);
     }
 
-    // Apply type filter
-    if (type) {
-      query = query.eq("filing_type", type);
+    // Apply priority filter
+    if (priority) {
+      query = query.eq("priority", priority);
     }
 
-    // Apply date range filter (priority: custom dates > predefined range)
-    if (startDate && endDate) {
-      // Custom date range
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      
-      query = query.gte("created_at", start.toISOString()).lte("created_at", end.toISOString());
-    } else {
-      // Predefined range
-      const rangeDates = getRangeDates(range);
-      if (rangeDates) {
-        query = query.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
-      }
+    // Apply category filter
+    if (category) {
+      query = query.eq("category", category);
+    }
+
+    // Apply date range filter
+    const rangeDates = getRangeDates(range);
+    if (rangeDates) {
+      query = query.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
     }
 
     // Get total count for pagination
@@ -110,34 +108,40 @@ export async function GET(req: Request) {
     const totalCount = count || 0;
 
     if (countError) {
-      console.error("Error counting tax filings:", countError);
+      console.error("Error counting disputes:", countError);
       return NextResponse.json({ error: countError.message }, { status: 500 });
     }
 
     // Apply pagination
     query = query.range(from, to);
 
-    const { data: filings, error } = await query;
+    const { data: tickets, error } = await query;
 
     if (error) {
-      console.error("Error fetching paginated tax filings:", error);
+      console.error("Error fetching paginated disputes:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Format response
+    const formattedTickets = tickets?.map(ticket => ({
+      ...ticket,
+      message_count: ticket.messages?.[0]?.count || 0
+    })) || [];
 
     return NextResponse.json({
       page,
       limit,
       total: totalCount,
       range,
-      filings: filings ?? [],
+      tickets: formattedTickets,
     });
   } catch (err: any) {
-    console.error("Server error (tax-filings route):", err);
+    console.error("Server error (disputes route):", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
   }
 }
 
-// 🔄 PATCH: Bulk update filing status
+// PATCH: Update ticket status
 export async function PATCH(req: Request) {
   try {
     const { id, status } = await req.json();
@@ -150,8 +154,13 @@ export async function PATCH(req: Request) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("tax_filings")
-      .update({ status, updated_at: new Date().toISOString() })
+      .from("dispute_tickets")
+      .update({ 
+        status, 
+        updated_at: new Date().toISOString(),
+        ...(status === 'resolved' && { resolved_at: new Date().toISOString() }),
+        ...(status === 'closed' && { closed_at: new Date().toISOString() })
+      })
       .eq("id", id)
       .select();
 
@@ -159,37 +168,9 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ message: "Tax filing status updated", data });
+    return NextResponse.json({ message: "Ticket status updated", data });
   } catch (err: any) {
-    console.error("Server error (tax-filings PATCH):", err);
-    return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
-  }
-}
-
-// 🗑️ DELETE: Remove a filing
-export async function DELETE(req: Request) {
-  try {
-    const { id } = await req.json();
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "'id' is required to delete a filing." },
-        { status: 400 }
-      );
-    }
-
-    const { error } = await supabaseAdmin
-      .from("tax_filings")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: "Tax filing deleted successfully" });
-  } catch (err: any) {
-    console.error("Server error (tax-filings DELETE):", err);
+    console.error("Server error (disputes PATCH):", err);
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
   }
 }

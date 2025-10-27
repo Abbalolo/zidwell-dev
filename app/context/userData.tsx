@@ -32,6 +32,7 @@ export interface UserData {
   email: string;
   phone?: string;
   // walletBalance: number;
+  current_login_session: any;
   zidcoinBalance: number;
   bvnVerification: string;
   referralCode: string;

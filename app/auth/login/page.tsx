@@ -58,6 +58,16 @@ const Page = () => {
 
       if (!profile) throw new Error("User profile not found.");
 
+      if (profile) {
+        await fetch("/api/activity/last-login", {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: profile.id,
+            email: profile.email,
+          }),
+        });
+      }
+
       // 2️⃣ Save profile locally
       setUserData(profile);
 

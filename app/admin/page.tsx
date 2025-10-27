@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   const mainWalletBalance = Number(summaryData?.mainWalletBalance ?? 0);
   const nombaBalanceRaw = Number(summaryData?.nombaBalance ?? 0);
 
-  const totalContracts = Number(summaryData?.totalContracts ?? 0);
+  const totalContracts = Number(summaryData?.totalContractsIssued ?? 0);
   const pendingContracts = Number(summaryData?.pendingContracts ?? 0);
   const signedContracts = Number(summaryData?.signedContracts ?? 0);
 

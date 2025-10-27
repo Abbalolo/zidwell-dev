@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "./context/userData";
 import SessionWatcher from "./components/SessionWatcher";
+import FloatingHelpButton from "./components/FloatingHelpButton";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <UserProvider>
           <SessionWatcher>
             {children}
+             <FloatingHelpButton />
           </SessionWatcher>
         </UserProvider>
       </body>

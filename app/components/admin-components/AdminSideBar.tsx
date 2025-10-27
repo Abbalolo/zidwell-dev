@@ -12,16 +12,20 @@ import {
   Users,
   Menu,
   X,
+  FileChartColumnIncreasing,
+  Headphones,
 } from "lucide-react";
 import Image from "next/image";
 
 const navLinks = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Transactions", href: "/admin/transactions", icon:  FileChartColumnIncreasing },
   { name: "Receipts", href: "/admin/receipts", icon: Receipt },
   { name: "Invoices", href: "/admin/invoices", icon: FileSpreadsheet },
   { name: "Contracts", href: "/admin/contracts", icon: FileText },
   { name: "Tax Filings", href: "/admin/tax-filings", icon: ClipboardList },
+  { name: "Support & disputes", href: "/admin/disputes-supports", icon: Headphones },
 ];
 
 export default function AdminSidebar() {

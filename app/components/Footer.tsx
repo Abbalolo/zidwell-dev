@@ -79,31 +79,46 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Support</h3>
-
-            <div className="flex flex-col gap-2 ">
-              <a
-                href="#"
-                className="hover:text-white text-gray-400 transition-colors"
-              >
-                Help center
-              </a>
-              <a
-                href="#"
-                className="hover:text-white text-gray-400 transition-colors"
-              >
-                Terms of Service
-              </a>
-              <a
-                href="#"
-                className="hover:text-white text-gray-400 transition-colors"
-              >
-                Privacy Policy
-              </a>
-            </div>
+           <div>
+            <h3 className="font-semibold mb-4">Support</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/support/create-ticket"
+                  className="hover:text-white text-gray-400 transition-colors"
+                >
+                  Create Ticket
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/support/tickets"
+                  className="hover:text-white text-gray-400 transition-colors"
+                >
+                  My Tickets
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/help"
+                  className="hover:text-white text-gray-400 transition-colors"
+                >
+                  Help Center
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#contact"
+                  className="hover:text-white text-gray-400 transition-colors"
+                >
+                  Contact Us
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
+
+       
 
         <div className="border-t border-gray-800 pt-8">
           <div className="flex  justify-between items-center">

@@ -47,7 +47,6 @@ async function fetchNombaBalanceCached(
     const data = await res.json().catch(() => ({}));
     const amount = Number(data?.data?.amount ?? 0);
     _cachedNomba = { ts: now, value: amount };
-    console.log("Fetched Nomba balance:", amount);
     return amount;
   } catch (err) {
     console.error("Error fetching Nomba balance:", err);
@@ -55,10 +54,6 @@ async function fetchNombaBalanceCached(
   }
 }
 
-// Replace this with your actual function that returns a Nomba auth token.
-// You indicated earlier you use `getNombaToken()`; if available, import & use it.
-// For this file I'll assume there's a helper at "@/lib/nomba" exporting getNombaToken.
-// If you don't have that import in this file, swap the implementation accordingly.
 import { getNombaToken } from "@/lib/nomba";
 
 function parseRangeToDates(range: string | null) {
@@ -73,7 +68,6 @@ function parseRangeToDates(range: string | null) {
       end.setHours(23, 59, 59, 999);
       break;
     case "week": {
-      // start on Monday
       const day = now.getDay();
       const diffToMonday = (day + 6) % 7;
       start.setDate(now.getDate() - diffToMonday);
@@ -97,19 +91,17 @@ function parseRangeToDates(range: string | null) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-// Helper to build monthly buckets for the last 12 months or within a provided range
 function buildMonthLabelsFromRange(
   rangeDates: { start: string; end: string } | null
 ) {
   const labels: string[] = [];
   if (!rangeDates) {
-    // last 12 months
     const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       labels.push(
         d.toLocaleString("default", { month: "short", year: "numeric" })
-      ); // e.g. "Oct 2025"
+      );
     }
   } else {
     const start = new Date(rangeDates.start);
@@ -129,31 +121,27 @@ export async function GET(req: Request) {
   try {
     console.log("[/api/summary] incoming request");
 
-    // --- Auth gate: require sb-access-token cookie to be present (session cookie)
     const cookieHeader = req.headers.get("cookie") || "";
     if (!cookieHeader.includes("sb-access-token")) {
-      console.warn("[/api/summary] sb-access-token cookie missing");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.log("[/api/summary] session cookie found (presence check passed)");
 
     const url = new URL(req.url);
     const rangeParam = url.searchParams.get("range") ?? "total";
     const rangeDates = parseRangeToDates(rangeParam);
 
     // --- Transactions (apply range if provided) ---
+    // REMOVED: .eq("status", "success") filter to include all transactions
     let txQuery = supabaseAdmin
       .from("transactions")
       .select("id, amount, type, status, created_at")
       .order("created_at", { ascending: false });
+    
     if (rangeDates) {
       txQuery = txQuery
         .gte("created_at", rangeDates.start)
         .lte("created_at", rangeDates.end);
     }
-    // Only successful transactions (you requested success-only)
-    // supabase .filter uses match or eq; we can post-filter or add .eq('status','success')
-    txQuery = txQuery.eq("status", "success");
 
     const { data: transactions = [], error: txError } = await txQuery;
     if (txError) {
@@ -161,11 +149,12 @@ export async function GET(req: Request) {
     } else {
       console.log(
         "[/api/summary] transactions fetched:",
-        (transactions as any[]).length
+        (transactions as any[]).length,
+        "including all statuses"
       );
     }
 
-    // Transaction aggregates
+    // Transaction aggregates - now including all statuses
     const INFLOW_TYPES = [
       "deposit",
       "card_deposit",
@@ -185,19 +174,31 @@ export async function GET(req: Request) {
 
     const totalTransactions = (transactions ?? []).length;
 
-    const totalInflow = (transactions ?? [])
+    // Calculate successful transactions only for specific metrics if needed
+    const successfulTransactions = (transactions ?? []).filter(
+      (t: any) => t.status === "success"
+    );
+    const failedTransactions = (transactions ?? []).filter(
+      (t: any) => t.status === "failed"
+    );
+    const pendingTransactions = (transactions ?? []).filter(
+      (t: any) => t.status === "pending"
+    );
+
+    // For financial calculations, you might still want only successful transactions
+    const totalInflow = successfulTransactions
       .filter((t: any) =>
         INFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
       )
       .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
 
-    const totalOutflow = (transactions ?? [])
+    const totalOutflow = successfulTransactions
       .filter((t: any) =>
         OUTFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
       )
       .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
 
-    // latestTransactions (last 5) - we already ordered desc
+    // latestTransactions (last 5) - now includes all statuses
     const latestTransactions = (transactions ?? [])
       .slice(0, 5)
       .map((t: any) => ({
@@ -218,7 +219,6 @@ export async function GET(req: Request) {
       (s: number, u: any) => s + Number(u.wallet_balance ?? 0),
       0
     );
-    console.log("[/api/summary] mainWalletBalance:", mainWalletBalance);
 
     // --- Users total count ---
     const { count: totalUsersCount } = await supabaseAdmin
@@ -240,17 +240,13 @@ export async function GET(req: Request) {
     if (contractsError)
       console.error("[/api/summary] contracts fetch error:", contractsError);
     const totalContractsIssued = (contractsData ?? []).length;
+
     const pendingContracts = (contractsData ?? []).filter(
       (c: any) => (c.status ?? "pending") === "pending"
     ).length;
     const signedContracts = (contractsData ?? []).filter(
       (c: any) => (c.status ?? "").toLowerCase() === "signed"
     ).length;
-    console.log("[/api/summary] contracts:", {
-      totalContractsIssued,
-      pendingContracts,
-      signedContracts,
-    });
 
     // monthlyContracts breakdown
     const monthLabels = buildMonthLabelsFromRange(rangeDates);
@@ -296,12 +292,6 @@ export async function GET(req: Request) {
           s + Number(inv.paid_amount ?? inv.total_amount ?? 0),
         0
       );
-    console.log("[/api/summary] invoices:", {
-      totalInvoicesIssued,
-      paidInvoices,
-      unpaidInvoices,
-      totalInvoiceRevenue,
-    });
 
     // monthlyInvoices breakdown (count + revenue)
     const monthlyInvoicesMap: Record<
@@ -333,8 +323,9 @@ export async function GET(req: Request) {
     }));
 
     // --- Monthly transactions breakdown (sum amounts per month) ---
+    // For monthly breakdown, you might still want only successful transactions
     const monthlyTransactionsMap: Record<string, number> = {};
-    (transactions ?? []).forEach((t: any) => {
+    successfulTransactions.forEach((t: any) => {
       const d = new Date(t.created_at);
       if (isNaN(d.getTime())) return;
       const key = d.toLocaleString("default", {
@@ -359,7 +350,7 @@ export async function GET(req: Request) {
       }
     });
 
-    // --- final flat response (Option A style) ---
+    // --- final response with transaction status breakdown ---
     const response = {
       totalInflow,
       totalOutflow,
@@ -379,9 +370,28 @@ export async function GET(req: Request) {
       monthlyInvoices,
       monthlyContracts,
       range: rangeParam,
+      
+      // NEW: Transaction status breakdown
+      transactionStatus: {
+        success: successfulTransactions.length,
+        failed: failedTransactions.length,
+        pending: pendingTransactions.length,
+      },
+      
+      // NEW: Include all transactions count by status in the main response
+      successfulTransactions: successfulTransactions.length,
+      failedTransactions: failedTransactions.length,
+      pendingTransactions: pendingTransactions.length,
     };
 
-    console.log("[/api/summary] response built");
+    console.log("[/api/summary] response built with all transactions");
+    console.log("[/api/summary] Transaction breakdown:", {
+      total: totalTransactions,
+      success: successfulTransactions.length,
+      failed: failedTransactions.length,
+      pending: pendingTransactions.length,
+    });
+
     return NextResponse.json(response);
   } catch (err) {
     console.error("[/api/summary] Unhandled error:", err);

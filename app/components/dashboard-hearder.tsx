@@ -15,6 +15,17 @@ export default function DashboardHeader() {
     try {
       await fetch("/api/logout", { method: "POST" });
 
+         if (userData) {
+        await fetch("/api/activity/last-logout", {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: userData.id,
+            email: userData.email,
+            login_history_id: userData.currentLoginSession 
+          }),
+        });
+      }
+
       if (typeof window !== "undefined") {
         localStorage.removeItem("userData");
         localStorage.clear();

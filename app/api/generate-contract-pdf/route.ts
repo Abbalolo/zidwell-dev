@@ -123,7 +123,7 @@ async function generatePdfBufferFromHtml(html: string): Promise<Buffer> {
 export async function POST(request: NextRequest) {
   try {
     const contract = await request.json();
-    console.log(contract);
+    // console.log(contract);
     const base64Logo = getLogoBase64();
     const base64Watermark = getWatermarkBase64();
 

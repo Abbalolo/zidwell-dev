@@ -1,111 +1,3 @@
-// import { NextResponse } from "next/server";
-// import supabase from "@/app/supabase/supabase";
-// import { cookies } from "next/headers";
-
-// export async function POST(req: Request) {
-//   try {
-//     const { email, password } = await req.json();
-
-//     // 1️⃣ Sign in the user
-//     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-//       email,
-//       password,
-//     });
-
-//     if (authError || !authData?.session) {
-//       return NextResponse.json({ error: authError?.message || "Invalid email or password" }, { status: 401 });
-//     }
-
-//     const { access_token, refresh_token, expires_in } = authData.session;
-//     const userId = authData.user.id;
-
-//     // 2️⃣ Set secure HTTP-only cookies
-//     const cookieStore = await cookies();
-//     cookieStore.set("sb-access-token", access_token, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "strict",
-//       path: "/",
-//       maxAge: expires_in,
-//     });
-
-//     cookieStore.set("sb-refresh-token", refresh_token, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "strict",
-//       path: "/",
-//       maxAge: 60 * 60 * 24 * 30,
-//     });
-
-//     // 3️⃣ Try to fetch profile from `users`
-//     const { data: userProfile } = await supabase
-//       .from("users")
-//       .select(
-//         "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification, city, state, address, date_of_birth"
-//       )
-//       .eq("id", userId)
-//       .maybeSingle();
-
-//     let profile = null;
-
-//     if (userProfile) {
-//       profile = {
-//         id: userProfile.id,
-//         firstName: userProfile.first_name,
-//         lastName: userProfile.last_name,
-//         email: userProfile.email,
-//         phone: userProfile.phone,
-//         walletBalance: userProfile.wallet_balance,
-//         zidcoinBalance: userProfile.zidcoin_balance,
-//         bvnVerification: userProfile.bvn_verification,
-//         referralCode: userProfile.referral_code,
-//         state: userProfile.state,
-//         city: userProfile.city,
-//         address: userProfile.address,
-//         dateOfBirth: userProfile.date_of_birth,
-//       };
-//     }
-
-//     // 4️⃣ If not found, check pending_users
-//     if (!profile) {
-//       const { data: pendingProfile } = await supabase
-//         .from("pending_users")
-//         .select(
-//           "auth_id, first_name, last_name, email, phone, referred_by, verified, bvn_verification"
-//         )
-//         .eq("auth_id", userId)
-//         .maybeSingle();
-
-//       if (pendingProfile) {
-//         profile = {
-//           id: pendingProfile.auth_id,
-//           firstName: pendingProfile.first_name,
-//           lastName: pendingProfile.last_name,
-//           email: pendingProfile.email,
-//           phone: pendingProfile.phone,
-//           referredBy: pendingProfile.referred_by,
-//           verified: pendingProfile.verified,
-//           bvnVerification: pendingProfile.bvn_verification,
-//         };
-//       }
-//     }
-
-//     if (!profile) {
-//       return NextResponse.json(
-//         { error: "Account not found. Please sign up first." },
-//         { status: 404 }
-//       );
-//     }
-
-//     return NextResponse.json({
-//       profile,
-//       isVerified: profile?.bvnVerification === "verified",
-//     });
-//   } catch (err: any) {
-//     console.error("Login API Error:", err.message);
-//     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-//   }
-// }
 
 import { NextResponse } from "next/server";
 import supabase from "@/app/supabase/supabase";
@@ -155,7 +47,7 @@ export async function POST(req: Request) {
     const { data: userProfile } = await supabase
       .from("users")
       .select(
-        "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification, role, city, state, address, date_of_birth, profile_picture"
+        "id, first_name, last_name, email, phone, wallet_balance, zidcoin_balance, referral_code, bvn_verification, role, city, state, address, date_of_birth, profile_picture, current_login_session"
       )
       .eq("id", userId)
       .maybeSingle();
@@ -210,6 +102,7 @@ export async function POST(req: Request) {
         lastName: userProfile.last_name,
         email: userProfile.email,
         phone: userProfile.phone,
+        currentLoginSession: userProfile.current_login_session,
         // walletBalance: userProfile.wallet_balance,
         zidcoinBalance: userProfile.zidcoin_balance,
         bvnVerification: userProfile.bvn_verification,

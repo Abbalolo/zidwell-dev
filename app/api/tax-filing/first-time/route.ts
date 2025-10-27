@@ -25,15 +25,26 @@ export async function POST(req: Request) {
 
     // Upload files to Supabase Storage
     const uploadFile = async (bucket: string, file: File | null) => {
-      if (!file) return null;
-      const ext = file.name.split(".").pop();
-      const path = `${userId}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(path, file, { contentType: file.type });
-      if (error) throw error;
-      return `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-    };
+  if (!file) return null;
+
+  const ext = file.name.split(".").pop();
+  const path = `${userId}/${Date.now()}-${file.name}`;
+
+  // Convert the file to an ArrayBuffer — supported by Supabase Storage
+  const arrayBuffer = await file.arrayBuffer();
+
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, arrayBuffer, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (error) throw error;
+
+  return `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+};
+
 
     
 

@@ -20,9 +20,8 @@ function getRangeDates(range: string | null) {
       end.setHours(23, 59, 59, 999);
       break;
     case "week": {
-      // ISO week, week starts Monday
-      const day = now.getDay(); // 0 (Sun) - 6
-      const diffToMonday = (day + 6) % 7; // days since Monday
+      const day = now.getDay();
+      const diffToMonday = (day + 6) % 7;
       start.setDate(now.getDate() - diffToMonday);
       start.setHours(0, 0, 0, 0);
       end = new Date(start);
@@ -35,7 +34,7 @@ function getRangeDates(range: string | null) {
       start.setHours(0, 0, 0, 0);
       end = new Date(start);
       end.setMonth(start.getMonth() + 1);
-      end.setDate(0); // last day of month
+      end.setDate(0);
       end.setHours(23, 59, 59, 999);
       break;
     case "year":
@@ -57,24 +56,65 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const page = Number(url.searchParams.get("page") ?? 1);
+    const limit = Number(url.searchParams.get("limit") ?? 20);
     const range = url.searchParams.get("range") ?? "total";
-    const limit = 50;
+    const search = url.searchParams.get("search") ?? "";
+    const type = url.searchParams.get("type") ?? "";
+    const status = url.searchParams.get("status") ?? "";
+    const startDate = url.searchParams.get("startDate") ?? "";
+    const endDate = url.searchParams.get("endDate") ?? "";
+
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const rangeDates = getRangeDates(range);
-
+    // Build the query
     let query = supabaseAdmin
       .from("transactions")
-      .select(
-        "id, user_id, type, amount, status, reference, created_at"
-      )
-      .order("created_at", { ascending: false })
-      .range(from, to);
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
 
-    if (rangeDates) {
-      query = query.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
+    // Apply search filter
+    if (search) {
+      query = query.or(`reference.ilike.%${search}%,user_id.ilike.%${search}%,description.ilike.%${search}%,phone_number.ilike.%${search}%`);
     }
+
+    // Apply type filter
+    if (type) {
+      query = query.eq("type", type);
+    }
+
+    // Apply status filter
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    // Apply date range filter (priority: custom dates > predefined range)
+    if (startDate && endDate) {
+      // Custom date range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      query = query.gte("created_at", start.toISOString()).lte("created_at", end.toISOString());
+    } else {
+      // Predefined range
+      const rangeDates = getRangeDates(range);
+      if (rangeDates) {
+        query = query.gte("created_at", rangeDates.start).lte("created_at", rangeDates.end);
+      }
+    }
+
+    // Get total count for pagination
+    const { data: countData, error: countError } = await query;
+    const totalCount = countData?.length || 0;
+
+    if (countError) {
+      console.error("Error counting transactions:", countError);
+      return NextResponse.json({ error: countError.message }, { status: 500 });
+    }
+
+    // Apply pagination
+    query = query.range(from, to);
 
     const { data: transactions, error } = await query;
 
@@ -86,6 +126,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       page,
       limit,
+      total: totalCount,
       range,
       transactions: transactions ?? [],
     });
