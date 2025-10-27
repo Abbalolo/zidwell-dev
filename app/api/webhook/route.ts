@@ -1503,7 +1503,7 @@ if (isPayoutOrTransfer) {
     if (pendingTx.status === 'pending') {
       console.log("🔄 Refunding user wallet...");
       try {
-        const refundAmount = withdrawalAmount; // Only refund the principal amount
+        const refundAmount = withdrawalAmount; 
         
         const { data: user } = await supabase
           .from("users")

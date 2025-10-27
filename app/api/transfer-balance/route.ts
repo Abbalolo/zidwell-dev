@@ -170,7 +170,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Withdraw API error:", error);
     return NextResponse.json(
-      { error: "Server error: " + error.message },
+      { error: "Server error: " + error.message || error.description },
       { status: 500 }
     );
   }
