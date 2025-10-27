@@ -83,12 +83,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fee calculation
-    const feeRate = 0.0075;
-    const fee = Math.ceil(amount * feeRate);
-    const totalDeduction = amount + fee;
 
-    if (user.wallet_balance < totalDeduction) {
+
+    if (user.wallet_balance < amount) {
       return NextResponse.json(
         { message: "Insufficient wallet balance (including fees)" },
         { status: 400 }
@@ -113,9 +110,8 @@ export async function POST(req: Request) {
         user_id: userId,
         type: "withdrawal",
         amount,
-        fee,
-        total_deduction: totalDeduction,
-        status: "processing",
+        total_deduction: amount,
+        status: "pending",
         description: `Withdrawal to ${accountName} (${accountNumber})`,
         narration: narration || "Withdrawal",
         merchant_tx_ref: merchantTxRef,

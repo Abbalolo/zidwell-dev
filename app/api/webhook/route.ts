@@ -1396,6 +1396,7 @@ export async function POST(req: NextRequest) {
 
         // Check if balance needs to be deducted (if not already done by your function)
         // If the transaction was created as 'pending', balance was likely NOT deducted
+        
         if (pendingTx.status === 'pending') {
           console.log("💰 Deducting balance (was not deducted during initiation)...");
           try {
