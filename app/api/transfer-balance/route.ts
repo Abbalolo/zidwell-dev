@@ -164,7 +164,6 @@ export async function POST(req: Request) {
       })
       .eq("id", pendingTx.id);
 
-    // ❗ Important: Do NOT deduct wallet here. Deduction occurs only on webhook confirmation.
 
     return NextResponse.json({
       message: "Withdrawal initiated (processing). Waiting for webhook confirmation.",
