@@ -692,7 +692,6 @@
 //   return NextResponse.json({ message: "Ignored transfer event" }, { status: 200 });
 // }
 
-
 //     // If we reach here, event type not handled specifically
 //     console.log("ℹ️ Event type not matched. Ignoring.");
 //     return NextResponse.json({ message: "Ignored event" }, { status: 200 });
@@ -704,7 +703,6 @@
 //     );
 //   }
 // }
-
 
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
@@ -732,6 +730,112 @@ function safeNum(v: any) {
   return Number.isFinite(n) ? n : 0;
 }
 
+// ===== NOMBA'S FEE STRUCTURE (What you pay to Nomba) =====
+function calculateNombaCheckoutFee(amount: number): number {
+  // Checkout: 1.4% + N1800 flat fee
+  const percentageFee = amount * 0.014; // 1.4%
+  const totalFee = percentageFee + 1800; // + N1800 flat fee
+  return Number(totalFee.toFixed(2));
+}
+
+function calculateNombaVirtualAccountFee(amount: number): number {
+  // Virtual Account: 0.5% (N10 min, N100 cap)
+  const calculatedFee = amount * 0.005; // 0.5%
+  const minFee = 10; // N10 minimum
+  const cappedFee = Math.min(Math.max(calculatedFee, minFee), 100); // Min N10, Max N100
+  return Number(cappedFee.toFixed(2));
+}
+
+function calculateNombaPayByTransferFee(amount: number): number {
+  // Pay by transfer: 0.5% (N20 min, N100 cap)
+  const calculatedFee = amount * 0.005; // 0.5%
+  const minFee = 20; // N20 minimum
+  const cappedFee = Math.min(Math.max(calculatedFee, minFee), 100); // Min N20, Max N100
+  return Number(cappedFee.toFixed(2));
+}
+
+// ===== YOUR APP FEE STRUCTURE (What you charge customers) =====
+function calculateOurCheckoutFee(amount: number): number {
+  // Checkout: 1.6% CAPPED at N20,000
+  const calculatedFee = amount * 0.016; // 1.6%
+  const cappedFee = Math.min(calculatedFee, 20000); // Cap at N20,000
+  return Number(cappedFee.toFixed(2));
+}
+
+function calculateOurVirtualAccountFee(amount: number): number {
+  // Virtual Account: 0.5% (N10 min, N2000 cap)
+  const calculatedFee = amount * 0.005; // 0.5%
+  const minFee = 10; // N10 minimum
+  const cappedFee = Math.min(Math.max(calculatedFee, minFee), 2000); // Min N10, Max N2000
+  return Number(cappedFee.toFixed(2));
+}
+
+function calculateOurPayByTransferFee(amount: number): number {
+  // Pay by transfer: 0.5% (N20 min, N2000 cap)
+  const calculatedFee = amount * 0.005; // 0.5%
+  const minFee = 20; // N20 minimum
+  const cappedFee = Math.min(Math.max(calculatedFee, minFee), 2000); // Min N20, Max N2000
+  return Number(cappedFee.toFixed(2));
+}
+
+// Main fee calculation function
+// Main fee calculation function
+function calculateFees(
+  amount: number,
+  channel: string,
+  txType: string,
+  feeFromNomba: number
+): {
+  nombaFee: number;
+  ourFee: number;
+  ourMargin: number;
+} {
+  console.log(
+    `💰 Calculating fees for amount: ₦${amount}, channel: ${channel}, type: ${txType}`
+  );
+
+  let nombaFee = 0;
+  let ourFee = 0;
+
+  // Determine which fee structure to apply based on payment method
+  if (channel === "card" || txType === "card_deposit") {
+    nombaFee = calculateNombaCheckoutFee(amount);
+    ourFee = calculateOurCheckoutFee(amount);
+    console.log(`   - Nomba Checkout fee (1.4% + ₦1800): ₦${nombaFee}`);
+    console.log(`   - Our Checkout fee (1.6% capped at ₦20,000): ₦${ourFee}`);
+  } else if (
+    channel === "virtual_account" ||
+    txType === "virtual_account_deposit"
+  ) {
+    nombaFee = calculateNombaVirtualAccountFee(amount);
+    ourFee = calculateOurVirtualAccountFee(amount);
+    console.log(`   - Nomba VA fee (0.5%: ₦10 min, ₦100 cap): ₦${nombaFee}`);
+    console.log(`   - Our VA fee (0.5%: ₦10 min, ₦2000 cap): ₦${ourFee}`);
+  } else if (channel === "bank_transfer" || txType === "transfer_deposit") {
+    nombaFee = calculateNombaPayByTransferFee(amount);
+    ourFee = calculateOurPayByTransferFee(amount);
+    console.log(
+      `   - Nomba Transfer fee (0.5%: ₦20 min, ₦100 cap): ₦${nombaFee}`
+    );
+    console.log(`   - Our Transfer fee (0.5%: ₦20 min, ₦2000 cap): ₦${ourFee}`);
+  } else {
+    // Default fallback - use the fee from Nomba
+    console.log(`   - Using Nomba fee as fallback`);
+    nombaFee = feeFromNomba;
+    ourFee = feeFromNomba;
+  }
+
+  // Calculate our margin (profit)
+  const ourMargin = Number((ourFee - nombaFee).toFixed(2));
+  console.log(`   - Our margin (profit): ₦${ourMargin}`);
+
+  return {
+    nombaFee,
+    ourFee,
+    ourMargin,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     console.log("====== Nomba Webhook Triggered ======");
@@ -740,12 +844,15 @@ export async function POST(req: NextRequest) {
     console.log("📥 Reading raw body...");
     const rawBody = await req.text();
     console.log("🔸 Raw body length:", rawBody?.length);
-    
+
     let payload: any;
     try {
       payload = JSON.parse(rawBody);
       console.log("✅ JSON parsed successfully");
-      console.log("📋 payload.event_type:", payload?.event_type || payload?.eventType);
+      console.log(
+        "📋 payload.event_type:",
+        payload?.event_type || payload?.eventType
+      );
     } catch (err) {
       console.error("❌ Failed to parse JSON body", err);
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -777,7 +884,7 @@ export async function POST(req: NextRequest) {
     }:${payload.data?.transaction?.type || ""}:${
       payload.data?.transaction?.time || ""
     }:${payload.data?.transaction?.responseCode || ""}`;
-    
+
     const message = `${hashingPayload}:${timestamp}`;
 
     // Generate expected signature
@@ -792,7 +899,10 @@ export async function POST(req: NextRequest) {
     console.log("🔐 Signature verification details:");
     console.log("   - Received:", signature);
     console.log("   - Expected:", expectedSignature);
-    console.log("   - Same length?:", receivedBuffer.length === expectedBuffer.length);
+    console.log(
+      "   - Same length?:",
+      receivedBuffer.length === expectedBuffer.length
+    );
 
     // Verify signature matches
     if (
@@ -871,7 +981,7 @@ export async function POST(req: NextRequest) {
       try {
         if (isCardPayment && orderReference?.includes("SUB-")) {
           console.log("📦 Processing subscription payment...");
-          
+
           // Extract subscription details from payload
           const subEmail =
             payload.data?.order?.customerEmail ||
@@ -917,7 +1027,9 @@ export async function POST(req: NextRequest) {
 
             // Calculate subscription expiry (30 days from now)
             const now = new Date();
-            const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            const expiresAt = new Date(
+              now.getTime() + 30 * 24 * 60 * 60 * 1000
+            );
 
             if (existingSub) {
               console.log("🔄 Updating existing subscriber...");
@@ -980,7 +1092,9 @@ export async function POST(req: NextRequest) {
               { status: 200 }
             );
           } else {
-            console.warn("⚠️ Subscription metadata incomplete - skipping subscription handling");
+            console.warn(
+              "⚠️ Subscription metadata incomplete - skipping subscription handling"
+            );
           }
         }
       } catch (subErr) {
@@ -990,7 +1104,7 @@ export async function POST(req: NextRequest) {
 
       // ===== REGULAR DEPOSIT PROCESSING =====
       console.log("💳 Processing regular deposit...");
-      
+
       // Determine user ID and reference for the transaction
       let userId: string | null = null;
       let referenceToUse: string | null =
@@ -1006,14 +1120,19 @@ export async function POST(req: NextRequest) {
       if (isVirtualAccountDeposit) {
         console.log("🏦 Processing Virtual Account deposit...");
         userId = aliasAccountReference; // aliasAccountReference should be the user ID
-        referenceToUse = nombaTransactionId || tx.sessionId || `nomba-${Date.now()}`;
+        referenceToUse =
+          nombaTransactionId || tx.sessionId || `nomba-${Date.now()}`;
+        txType = "virtual_account_deposit";
+        channel = "virtual_account";
         console.log("   - VA User ID:", userId);
-      } 
+      }
       // Handle Card payments
       else if (isCardPayment) {
         console.log("💳 Processing Card payment deposit...");
         referenceToUse = orderReference;
-        
+        txType = "card_deposit";
+        channel = "card";
+
         // Find the pending transaction to get user ID
         const { data: pendingByRef, error: refErr } = await supabase
           .from("transactions")
@@ -1031,7 +1150,9 @@ export async function POST(req: NextRequest) {
           console.log("   - Found user ID from pending transaction:", userId);
         } else {
           // Fallback: try to find user by customer email
-          console.log("   - No pending transaction found, trying email lookup...");
+          console.log(
+            "   - No pending transaction found, trying email lookup..."
+          );
           const customerEmail =
             order?.customerEmail ||
             payload.data?.customer?.customerEmail ||
@@ -1063,16 +1184,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Calculate financial amounts
+      // ===== CALCULATE FEES AND MARGINS =====
       const amount = transactionAmount;
-      const fee = feeFromNomba;
-      const netCredit = Number((amount - fee).toFixed(2));
-      const total_deduction = Number((amount - fee).toFixed(2));
 
-      console.log("💰 Financial calculations:");
+      // Calculate both Nomba's fee and our fee (pass feeFromNomba as parameter)
+      const { nombaFee, ourFee, ourMargin } = calculateFees(
+        amount,
+        channel,
+        txType,
+        feeFromNomba
+      );
+
+      // Use our fee (what we charge the customer)
+      const finalFee = ourFee;
+      const netCredit = Number((amount - finalFee).toFixed(2));
+      const total_deduction = Number((amount - finalFee).toFixed(2));
+
+      console.log("💰 Final financial calculations:");
       console.log("   - Amount:", amount);
-      console.log("   - Fee:", fee);
-      console.log("   - Net credit:", netCredit);
+      console.log("   - Nomba's actual fee:", nombaFee);
+      console.log("   - Our charged fee:", ourFee);
+      console.log("   - Our margin (profit):", ourMargin);
+      console.log("   - Net credit to user:", netCredit);
       console.log("   - Total deduction:", total_deduction);
 
       // ===== IDEMPOTENCY CHECK =====
@@ -1102,18 +1235,25 @@ export async function POST(req: NextRequest) {
       // ===== EXISTING TRANSACTION UPDATE =====
       if (existingTx) {
         console.log("🔄 Found existing transaction - updating to success");
-        
-        // Update transaction status to success
+
+        // Update transaction status to success with our fee structure
         const { error: updErr } = await supabase
           .from("transactions")
           .update({
             status: "success",
             amount,
-            fee,
+            fee: finalFee,
             total_deduction,
             merchant_tx_ref: nombaTransactionId,
             external_response: payload,
             channel,
+            // Store fee breakdown for reporting
+            fee_breakdown: {
+              nomba_fee: nombaFee,
+              our_fee: ourFee,
+              our_margin: ourMargin,
+              nomba_reported_fee: feeFromNomba,
+            },
           })
           .eq("id", existingTx.id);
 
@@ -1138,7 +1278,7 @@ export async function POST(req: NextRequest) {
         if (rpcErr) {
           console.error("❌ RPC increment_wallet_balance failed:", rpcErr);
           console.log("🔄 Falling back to manual wallet update...");
-          
+
           // Fallback: manual wallet balance update
           const { data: before } = await supabase
             .from("users")
@@ -1169,28 +1309,43 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        console.log(`✅ Credited user ${existingTx.user_id} with ₦${netCredit}`);
+        console.log(
+          `✅ Credited user ${existingTx.user_id} with ₦${netCredit}`
+        );
         return NextResponse.json({ success: true }, { status: 200 });
       }
 
       // ===== NEW TRANSACTION CREATION =====
-      console.log("🆕 No existing transaction found - creating new transaction");
-      
-      // Insert new transaction record
+      console.log(
+        "🆕 No existing transaction found - creating new transaction"
+      );
+
+      // Insert new transaction record with fee breakdown
       const { error: insertErr } = await supabase.from("transactions").insert([
         {
           user_id: userId,
-          type: txType === "card_deposit" ? "card_deposit" : "deposit",
+          type: txType,
           amount,
-          fee,
+          fee: finalFee,
           total_deduction,
           status: "success",
           reference: referenceToUse,
           merchant_tx_ref: nombaTransactionId,
           description:
-            txType === "card_deposit" ? "Card deposit" : "Bank deposit",
+            txType === "card_deposit"
+              ? "Card deposit"
+              : txType === "virtual_account_deposit"
+              ? "Virtual Account deposit"
+              : "Bank deposit",
           external_response: payload,
-          channel: txType === "card_deposit" ? "card" : "bank",
+          channel: channel,
+          // Store detailed fee breakdown for analytics and reporting
+          fee_breakdown: {
+            nomba_fee: nombaFee,
+            our_fee: ourFee,
+            our_margin: ourMargin,
+            nomba_reported_fee: feeFromNomba,
+          },
         },
       ]);
 
@@ -1219,18 +1374,18 @@ export async function POST(req: NextRequest) {
           amt: netCredit,
         }
       );
-      
+
       if (rpcErr2) {
         console.error("❌ RPC increment failed (after insert):", rpcErr2);
         console.log("🔄 Falling back to manual wallet credit...");
-        
+
         // Fallback manual credit
         const { data: before } = await supabase
           .from("users")
           .select("wallet_balance")
           .eq("id", userId)
           .single();
-          
+
         if (!before) {
           console.error("❌ User not found for manual credit fallback");
           return NextResponse.json(
@@ -1238,13 +1393,13 @@ export async function POST(req: NextRequest) {
             { status: 500 }
           );
         }
-        
+
         const newBal = Number(before.wallet_balance) + netCredit;
         const { error: uiErr } = await supabase
           .from("users")
           .update({ wallet_balance: newBal })
           .eq("id", userId);
-          
+
         if (uiErr) {
           console.error("❌ Manual wallet update failed:", uiErr);
           return NextResponse.json(
@@ -1254,7 +1409,9 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      console.log(`✅ Auto-created transaction and credited user ${userId} with ₦${netCredit}`);
+      console.log(
+        `✅ Auto-created transaction and credited user ${userId} with ₦${netCredit}`
+      );
       return NextResponse.json({ success: true }, { status: 200 });
     } // ===== END DEPOSIT HANDLING =====
 
@@ -1280,24 +1437,38 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (pendingErr) {
-        console.error("❌ DB error while finding pending transaction:", pendingErr);
+        console.error(
+          "❌ DB error while finding pending transaction:",
+          pendingErr
+        );
         return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
 
       if (!pendingTx) {
-        console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
+        console.warn(
+          "⚠️ No matching pending withdrawal found for refs:",
+          refCandidates
+        );
         return NextResponse.json(
           { message: "No matching withdrawal transaction" },
           { status: 200 }
         );
       }
 
-      console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
+      console.log(
+        "📦 Found pending withdrawal:",
+        pendingTx.id,
+        "status:",
+        pendingTx.status
+      );
 
       // ===== IDEMPOTENCY CHECK FOR WITHDRAWAL =====
       if (["success", "failed"].includes(pendingTx.status)) {
         console.log(`⚠️ Withdrawal already ${pendingTx.status} - skipping`);
-        return NextResponse.json({ message: "Already processed" }, { status: 200 });
+        return NextResponse.json(
+          { message: "Already processed" },
+          { status: 200 }
+        );
       }
 
       // Calculate withdrawal amounts
@@ -1316,28 +1487,31 @@ export async function POST(req: NextRequest) {
 
         // Generate reference for the deduction transaction
         const reference = nombaTransactionId || crypto.randomUUID();
-        
+
         // Deduct from wallet using RPC function
         const { data: rpcData, error: rpcError } = await supabase.rpc(
           "deduct_wallet_balance",
           {
             user_id: pendingTx.user_id,
             amt: totalDeduction,
-            transaction_type: "debit", 
+            transaction_type: "debit",
             reference,
             description: `Withdrawal of ₦${amount} (including ₦${fee} fee)`,
           }
         );
 
         if (rpcError) {
-          console.error("❌ RPC deduct_wallet_balance failed:", rpcError.message);
-          
+          console.error(
+            "❌ RPC deduct_wallet_balance failed:",
+            rpcError.message
+          );
+
           // Mark transaction as failed if deduction fails
           await supabase
             .from("transactions")
             .update({ status: "failed", external_response: payload })
             .eq("id", pendingTx.id);
-            
+
           return NextResponse.json(
             { error: "Wallet deduction failed via RPC" },
             { status: 500 }
@@ -1345,17 +1519,18 @@ export async function POST(req: NextRequest) {
         }
 
         // Process RPC response
-        const rpcResult = Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
+        const rpcResult =
+          Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
 
         if (!rpcResult || rpcResult.status !== "OK") {
           console.error("⚠️ RPC returned non-OK:", rpcResult);
-          
+
           // Mark transaction as failed
           await supabase
             .from("transactions")
             .update({ status: "failed", external_response: payload })
             .eq("id", pendingTx.id);
-            
+
           return NextResponse.json(
             { error: rpcResult?.status || "Deduction failed" },
             { status: 400 }
@@ -1374,7 +1549,9 @@ export async function POST(req: NextRequest) {
           })
           .eq("id", pendingTx.id);
 
-        console.log(`✅ Withdrawal processed successfully. ₦${totalDeduction} deducted for user ${pendingTx.user_id}`);
+        console.log(
+          `✅ Withdrawal processed successfully. ₦${totalDeduction} deducted for user ${pendingTx.user_id}`
+        );
 
         return NextResponse.json(
           {
@@ -1388,7 +1565,9 @@ export async function POST(req: NextRequest) {
 
       // ===== FAILED WITHDRAWAL =====
       if (eventType === "payout_failed" || txStatus === "failed") {
-        console.log("❌ Payout failed - marking transaction failed and refunding...");
+        console.log(
+          "❌ Payout failed - marking transaction failed and refunding..."
+        );
 
         // Update transaction as failed
         await supabase
@@ -1403,14 +1582,20 @@ export async function POST(req: NextRequest) {
         // Attempt to refund user's wallet
         try {
           console.log("🔄 Attempting to refund user wallet...");
-          const { error: rpcErr } = await supabase.rpc("increment_wallet_balance", {
-            user_id: pendingTx.user_id,
-            amt: Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0),
-          });
+          const { error: rpcErr } = await supabase.rpc(
+            "increment_wallet_balance",
+            {
+              user_id: pendingTx.user_id,
+              amt: Number(pendingTx.total_deduction ?? pendingTx.amount ?? 0),
+            }
+          );
 
           if (rpcErr) {
-            console.warn("⚠️ Refund RPC failed - trying manual refund:", rpcErr);
-            
+            console.warn(
+              "⚠️ Refund RPC failed - trying manual refund:",
+              rpcErr
+            );
+
             // Manual refund fallback
             const { data: u } = await supabase
               .from("users")
@@ -1440,13 +1625,15 @@ export async function POST(req: NextRequest) {
       }
 
       console.log("ℹ️ Unhandled transfer event/status - ignoring");
-      return NextResponse.json({ message: "Ignored transfer event" }, { status: 200 });
+      return NextResponse.json(
+        { message: "Ignored transfer event" },
+        { status: 200 }
+      );
     }
 
     // ===== STEP 7: UNHANDLED EVENT TYPE =====
     console.log("ℹ️ Event type not matched - ignoring");
     return NextResponse.json({ message: "Ignored event" }, { status: 200 });
-    
   } catch (err: any) {
     // ===== STEP 8: ERROR HANDLING =====
     console.error("🔥 Webhook processing error:", err);
