@@ -1065,36 +1065,16 @@ export async function POST(req: NextRequest) {
         referenceToUse
       );
 
-      // Compute amounts - FIXED: Use our app fee calculation
+      // Compute amounts
       const amount = transactionAmount;
-      
-      // Calculate our app fee based on payment method
-      let ourAppFee = 0;
-      if (channel === "card" || txType === "card_deposit") {
-        // Checkout: 1.6% capped at ₦20,000
-        ourAppFee = amount * 0.016;
-        ourAppFee = Math.min(ourAppFee, 20000);
-      } else if (channel === "virtual_account" || txType === "virtual_account_deposit") {
-        // Virtual Account: 0.5% (₦10 min, ₦2000 cap)
-        ourAppFee = amount * 0.005;
-        ourAppFee = Math.min(Math.max(ourAppFee, 10), 2000);
-      } else {
-        // Bank transfer: 0.5% (₦20 min, ₦2000 cap)
-        ourAppFee = amount * 0.005;
-        ourAppFee = Math.min(Math.max(ourAppFee, 20), 2000);
-      }
-      
-      // Use OUR app fee (what we charge customers), not Nomba's fee
-      const finalFee = Number(ourAppFee.toFixed(2));
-      const netCredit = Number((amount - finalFee).toFixed(2));
-      const total_deduction = Number((amount - finalFee).toFixed(2));
+      const fee = feeFromNomba;
+      const netCredit = Number((amount - fee).toFixed(2));
+      const total_deduction = Number((amount - fee).toFixed(2)); // for deposit, store net as total_deduction for consistency
 
       console.log("💰 Deposit calculations:");
       console.log("   - Amount:", amount);
-      console.log("   - Nomba's fee (what we pay):", feeFromNomba);
-      console.log("   - Our app fee (what we charge):", finalFee);
-      console.log("   - Our margin (profit):", Number((finalFee - feeFromNomba).toFixed(2)));
-      console.log("   - Net credit to user:", netCredit);
+      console.log("   - Fee:", fee);
+      console.log("   - Net credit:", netCredit);
 
       // Idempotency: check existing transaction by reference or merchant_tx_ref
       const { data: existingTx, error: existingErr } = await supabase
@@ -1126,13 +1106,12 @@ export async function POST(req: NextRequest) {
         console.log(
           "🔁 Found existing transaction. Updating to success and crediting user."
         );
-        // FIXED: Remove fee_breakdown field
         const { error: updErr } = await supabase
           .from("transactions")
           .update({
             status: "success",
             amount,
-            fee: finalFee, // Use OUR app fee
+            fee,
             total_deduction,
             merchant_tx_ref: nombaTransactionId,
             external_response: payload,
@@ -1199,13 +1178,12 @@ export async function POST(req: NextRequest) {
       console.log(
         "➕ No existing tx — creating transaction and crediting user now (auto-create)."
       );
-      // FIXED: Remove fee_breakdown field
       const { error: insertErr } = await supabase.from("transactions").insert([
         {
           user_id: userId,
           type: txType,
           amount,
-          fee: finalFee, // Use OUR app fee
+          fee,
           total_deduction,
           status: "success",
           reference: referenceToUse,
@@ -1331,14 +1309,15 @@ export async function POST(req: NextRequest) {
       if (eventType === "payout_success" || txStatus === "success") {
         console.log("✅ Payout success - updating transaction status (NO DEDUCTION)");
 
-        // FIXED: Remove updated_at field since it doesn't exist in your table
+        // Only update transaction status, DO NOT deduct again
         const { error: updateError } = await supabase
           .from("transactions")
           .update({
             status: "success",
             merchant_tx_ref: nombaTransactionId,
             external_response: payload,
-            fee: feeFromNomba, // Store Nomba's actual fee
+            fee: feeFromNomba,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", pendingTx.id);
 
