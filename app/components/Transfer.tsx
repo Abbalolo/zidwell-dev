@@ -40,6 +40,8 @@ interface P2PDetails {
   id: string;
 }
 
+type PaymentMethod = "checkout" | "virtual_account" | "bank_transfer";
+
 export default function Transfer() {
   const inputCount = 4;
   const [isOpen, setIsOpen] = useState(false);
@@ -346,8 +348,7 @@ export default function Transfer() {
 
       return;
     }
-setConfirmTransaction(true)
-   
+    setConfirmTransaction(true);
   };
 
   const isDisabled =
@@ -359,6 +360,14 @@ setConfirmTransaction(true)
     (transferType === "other-bank" &&
       (!bankCode || !accountNumber || !accountName)) ||
     (transferType === "p2p" && (!recepientAcc || !p2pDetails?.id));
+
+  // Determine payment method for FeeDisplay - FIXED TYPE
+  const getPaymentMethod = (): PaymentMethod => {
+    if (transferType === "my-account" || transferType === "other-bank") {
+      return "bank_transfer";
+    }
+    return "bank_transfer"; // Default for P2P as well
+  };
 
   return (
     <>
@@ -382,7 +391,6 @@ setConfirmTransaction(true)
           performTransfer();
         }}
       />
-      ;
       <Card className="shadow-xl border rounded-2xl">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-gray-800">
@@ -426,9 +434,9 @@ setConfirmTransaction(true)
               />
               {transferType !== "p2p" && (
                 <FeeDisplay
-                  monthlyVolume={monthlyVolume}
                   type="transfer"
                   amount={Number(amount) || undefined}
+                  paymentMethod={getPaymentMethod()}
                 />
               )}
               {errors.amount && (
@@ -618,8 +626,8 @@ setConfirmTransaction(true)
       <TransactionSummary
         senderName={`${userData?.firstName} ${userData?.lastName}`}
         senderAccount={`Nomba ${userData?.firstName}`}
-        recipientName={accountName || p2pDetails?.name || userDetails?.p_account_number}
-        recipientAccount={accountNumber || userDetails?.p_account_name || recepientAcc}
+        recipientName={accountName || p2pDetails?.name || userDetails?.p_account_name}
+        recipientAccount={accountNumber || userDetails?.p_account_number || recepientAcc}
         recipientBank={bankName || userDetails?.p_bank_name || "Zidwell"}
         purpose={narration}
         amount={amount}
@@ -627,10 +635,10 @@ setConfirmTransaction(true)
         confirmTransaction={confirmTransaction}
         onBack={() => setConfirmTransaction(false)}
         onConfirm={() => {
-          setConfirmTransaction(false)
-          setIsOpen(true)
-        } 
-      }
+          setConfirmTransaction(false);
+          setIsOpen(true);
+        }}
+        paymentMethod={getPaymentMethod()}
       />
     </>
   );

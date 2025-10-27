@@ -34,7 +34,7 @@ export default function FeeDisplay({ type, amount, paymentMethod = "checkout" }:
       {!amount && (
         <p className="text-xs text-gray-500">
           {getFeeDescription()}
-          {type === "transfer" && " + 0.5% transfer fee"}
+          {/* {type === "transfer" && " + 0.5% transfer fee"} */}
         </p>
       )}
 

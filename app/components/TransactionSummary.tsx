@@ -16,6 +16,7 @@ interface TransactionSummaryProps {
   confirmTransaction: boolean;
   onBack: () => void;
   onConfirm: () => void;
+  paymentMethod?: "checkout" | "virtual_account" | "bank_transfer";
 }
 
 export default function TransactionSummary({
@@ -30,6 +31,7 @@ export default function TransactionSummary({
   confirmTransaction,
   onBack,
   onConfirm,
+  paymentMethod = "bank_transfer", // Default to bank transfer for withdrawals
 }: TransactionSummaryProps) {
   return (
     <AnimatePresence>
@@ -57,12 +59,12 @@ export default function TransactionSummary({
               <div className="flex flex-col items-center ">
                 <div className="text-gray-500 text-sm">You're sending</div>
                 <div className="text-3xl font-bold text-gray-900">
-                  ₦{amount.toLocaleString()}
+                  ₦{typeof amount === 'number' ? amount.toLocaleString() : amount}
                 </div>
                 <FeeDisplay
-                  monthlyVolume={fee}
                   type="transfer"
-                  amount={Number(amount) || undefined}
+                  amount={typeof amount === 'string' ? Number(amount) : amount}
+                  paymentMethod={paymentMethod}
                 />
               </div>
 
