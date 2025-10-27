@@ -7,20 +7,25 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// ✅ Use async/await on params like your preferred logic
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
-  const id  = (await params).id;
+  const { id } = await params; 
 
   try {
-    // Check for Supabase session cookie
+    // ✅ Verify Supabase session cookie
     const cookieHeader = req.headers.get("cookie") || "";
     if (!cookieHeader.includes("sb-access-token")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch contract
+    // ✅ Fetch contract details
     const { data: contract, error: contractError } = await supabaseAdmin
       .from("contracts")
       .select("*")
@@ -34,7 +39,7 @@ export async function GET(
       );
     }
 
-    // Fetch related audit logs
+    // ✅ Fetch related audit logs
     const { data: auditLogs, error: auditError } = await supabaseAdmin
       .from("contract_audit_logs")
       .select("*")
@@ -43,6 +48,7 @@ export async function GET(
 
     if (auditError) console.error("Audit log fetch error:", auditError);
 
+    // ✅ Return both contract + logs
     return NextResponse.json({
       contract,
       auditLogs: auditLogs || [],

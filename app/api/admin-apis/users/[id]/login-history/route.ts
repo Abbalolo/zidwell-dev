@@ -9,19 +9,25 @@ const supabaseAdmin = createClient(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
   try {
+    const { id } = await params;
     // Auth check - verify admin access
     const cookieHeader = req.headers.get("cookie") || "";
     if (!cookieHeader.includes("sb-access-token")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-
     if (!id) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
     }
 
     // First, verify the user exists
@@ -45,12 +51,16 @@ export async function GET(
 
     if (error) {
       // If table doesn't exist, return empty array instead of error
-      if (error.code === '42P01') { // table doesn't exist
+      if (error.code === "42P01") {
+        // table doesn't exist
         console.log("Login history table doesn't exist yet");
         return NextResponse.json([]);
       }
       console.error("Error fetching login history:", error);
-      return NextResponse.json({ error: "Failed to fetch login history" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch login history" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(history || []);

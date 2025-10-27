@@ -9,8 +9,14 @@ const supabaseAdmin = createClient(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
+
+    const { id } = await params;
   try {
     // Auth check
     const cookieHeader = req.headers.get("cookie") || "";
@@ -18,7 +24,6 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
 
     if (!id) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });

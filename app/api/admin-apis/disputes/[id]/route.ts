@@ -9,12 +9,22 @@ const supabaseAdmin = createClient(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
-    // Get ticket with messages and attachments
+    // ✅ Optionally check authentication cookie
+    const cookieHeader = req.headers.get("cookie") || "";
+    if (!cookieHeader.includes("sb-access-token")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // ✅ Get dispute ticket with nested messages + attachments
     const { data: ticket, error } = await supabaseAdmin
       .from("dispute_tickets")
       .select(`
@@ -29,6 +39,7 @@ export async function GET(
       .single();
 
     if (error) {
+      console.error("Error fetching dispute:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -36,9 +47,13 @@ export async function GET(
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
+    // ✅ Return full ticket data with messages & attachments
     return NextResponse.json(ticket);
   } catch (err: any) {
     console.error("Server error (dispute detail):", err);
-    return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }
