@@ -1126,6 +1126,7 @@ export async function POST(req: NextRequest) {
         console.log(
           "🔁 Found existing transaction. Updating to success and crediting user."
         );
+        // FIXED: Remove fee_breakdown field
         const { error: updErr } = await supabase
           .from("transactions")
           .update({
@@ -1136,12 +1137,6 @@ export async function POST(req: NextRequest) {
             merchant_tx_ref: nombaTransactionId,
             external_response: payload,
             channel,
-            // Store fee breakdown
-            fee_breakdown: {
-              nomba_fee: feeFromNomba,
-              our_fee: finalFee,
-              our_margin: Number((finalFee - feeFromNomba).toFixed(2)),
-            }
           })
           .eq("id", existingTx.id);
 
@@ -1204,6 +1199,7 @@ export async function POST(req: NextRequest) {
       console.log(
         "➕ No existing tx — creating transaction and crediting user now (auto-create)."
       );
+      // FIXED: Remove fee_breakdown field
       const { error: insertErr } = await supabase.from("transactions").insert([
         {
           user_id: userId,
@@ -1219,12 +1215,6 @@ export async function POST(req: NextRequest) {
             txType === "virtual_account_deposit" ? "Virtual Account deposit" : "Bank deposit",
           external_response: payload,
           channel: channel,
-          // Store fee breakdown
-          fee_breakdown: {
-            nomba_fee: feeFromNomba,
-            our_fee: finalFee,
-            our_margin: Number((finalFee - feeFromNomba).toFixed(2)),
-          }
         },
       ]);
 
