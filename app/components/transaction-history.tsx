@@ -19,6 +19,28 @@ const statusConfig: any = {
   failed: { color: "text-red-600", dotColor: "bg-red-500" },
 };
 
+// Define transaction types that should show as positive amounts (incoming money)
+const inflowTypes = [
+  "deposit",                    
+  "virtual_account_deposit",   
+  "card_deposit",             
+  "p2p_received",              
+  "referral",                  
+  "referral_reward"            
+];
+
+// Define transaction types that should show as negative amounts (outgoing money)
+const outflowTypes = [
+  "withdrawal",
+  "debit", 
+  "airtime",
+  "data",
+  "electricity",
+  "cable",
+  "transfer",
+  "p2p_transfer"
+];
+
 export default function TransactionHistory() {
   const [filter, setFilter] = useState("All transactions");
 
@@ -31,6 +53,16 @@ export default function TransactionHistory() {
       tx.status?.toLowerCase() === filter.toLowerCase();
     return matchesFilter;
   });
+
+  // Function to determine if transaction amount should be negative
+  const isOutflow = (transactionType: string) => {
+    return outflowTypes.includes(transactionType?.toLowerCase());
+  };
+
+  // Function to determine if transaction amount should be positive
+  const isInflow = (transactionType: string) => {
+    return inflowTypes.includes(transactionType?.toLowerCase());
+  };
 
   return (
     <Card className="bg-white shadow-sm">
@@ -97,33 +129,6 @@ export default function TransactionHistory() {
               className="flex items-center justify-between p-2 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors duration-150"
             >
               <div className="flex justify-start gap-3">
-                {/* <div className="flex items-center gap-2 md:hidden">
-                  {tx.status?.toLowerCase() === "success" ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-green-600 border-green-600"
-                    >
-                      <Check className="w-4 h-4" />
-                    </Button>
-                  ) : tx.status?.toLowerCase() === "pending" ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-blue-600 border-blue-600"
-                    >
-                      <Clock className="w-4 h-4 animate-pulse" />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 border-red-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div> */}
                 <div>
                   <h3 className="font-semibold text-gray-900 md:text-lg text-sm">
                     {tx.description || tx.type}
@@ -157,16 +162,15 @@ export default function TransactionHistory() {
                 </div>
 
                 <div className="text-right">
+                  {/* ✅ UPDATED AMOUNT DISPLAY LOGIC */}
                   <p
                     className={`font-bold md:text-lg text-sm ${
-                      tx.type?.toLowerCase() === "p2p_transfer" ||
-                      tx.type?.toLowerCase() === "withdrawal"
-                        ? "text-red-500"
+                      isOutflow(tx.type) 
+                        ? "text-red-500" 
                         : "text-green-600"
                     }`}
                   >
-                    {tx.type?.toLowerCase() === "p2p_transfer" ||
-                    tx.type?.toLowerCase() === "withdrawal"
+                    {isOutflow(tx.type)
                       ? `-₦${Number(tx.amount).toLocaleString("en-NG", {
                           minimumFractionDigits: 2,
                         })}`
