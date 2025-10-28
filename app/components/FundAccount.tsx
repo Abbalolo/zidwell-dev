@@ -19,24 +19,6 @@ export default function FundAccountMethods() {
   const [showCurrent, setShowCurrent] = useState(true);
   const { userData, balance, lifetimeBalance } = useUserContextData();
 
-  const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
-
-  // fetch monthlyVolume when user loads (add useEffect)
-  useEffect(() => {
-    const fetchVolumes = async () => {
-      if (!userData?.id) return;
-      try {
-        const res = await fetch(
-          `/api/get-monthly-volumes?userId=${userData.id}`
-        );
-        const data = await res.json();
-        setMonthlyVolume(data.monthlyVolume || 0);
-      } catch (err) {
-        console.error("failed to fetch volumes", err);
-      }
-    };
-    fetchVolumes();
-  }, [userData?.id]);
 
   const generateVirtualAccountNumber = async () => {
     if (!userData) return null;

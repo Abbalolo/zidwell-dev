@@ -32,8 +32,6 @@ export default function TransactionHistory() {
     return matchesFilter;
   });
 
-  console.log("filteredTransactions", filteredTransactions);
-
   return (
     <Card className="bg-white shadow-sm">
       <CardHeader className="pb-4">
