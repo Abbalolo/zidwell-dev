@@ -705,6 +705,7 @@
 // }
 
 
+
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -840,28 +841,33 @@ export async function POST(req: NextRequest) {
       txStatus
     );
 
-    // 🚫 CRITICAL: IGNORE ALL SERVICE PURCHASES COMPLETELY
-    const serviceTypes = ["data", "airtime", "cable-tv", "electricity", "utility", "bill"];
+    // 🚫 CRITICAL: IGNORE ALL SERVICE PURCHASES COMPLETELY - FIXED VERSION
+    const serviceTypes = ["data", "airtime", "cable-tv", "electricity", "utility", "bill", "topup"];
+    const serviceRefPatterns = ["Data-", "Airtime-", "Cable-", "Electricity-", "Bill-", "Utility-", "Topup-", "AIRTIME-", "DATA-", "CABLE-", "ELECTRICITY-"];
+
     const isServicePurchase = serviceTypes.some(service => 
-      transactionType.includes(service) ||
-      merchantTxRef?.includes("Data-") ||
-      merchantTxRef?.includes("Airtime-") ||
-      merchantTxRef?.includes("Cable-") ||
-      merchantTxRef?.includes("Electricity-") ||
-      merchantTxRef?.includes("Bill-") ||
-      merchantTxRef?.includes("Utility-")
+      transactionType.includes(service)
+    ) || serviceRefPatterns.some(pattern => 
+      merchantTxRef?.includes(pattern)
     );
 
     if (isServicePurchase) {
-      console.log("📱 Ignoring service purchase (data/airtime/cable/electricity) - already handled by main API");
+      console.log("📱 Ignoring service purchase (data/airtime/cable/electricity/topup) - already handled by main API");
       return NextResponse.json(
         { message: "Service purchase ignored - already processed by main API" },
         { status: 200 }
       );
     }
 
-    // Also ignore ALL payout_success events for service purchases
-    if (eventType.includes("payout_success") && isServicePurchase) {
+    // Also ignore ALL payout_success events for service purchases regardless of detection
+    if (eventType.includes("payout_success") && 
+        (transactionType.includes("topup") || 
+         merchantTxRef?.includes("AIRTIME-") || 
+         merchantTxRef?.includes("DATA-") ||
+         merchantTxRef?.includes("Airtime-") ||
+         merchantTxRef?.includes("Data-") ||
+         transactionType.includes("airtime") ||
+         transactionType.includes("data"))) {
       console.log("📱 Ignoring service purchase payout event");
       return NextResponse.json(
         { message: "Service purchase payout event ignored" },
@@ -1401,19 +1407,14 @@ export async function POST(req: NextRequest) {
       if (eventType === "payout_success" || txStatus === "success") {
         console.log("✅ Payout success - updating transaction status to success");
 
-        // Store fee breakdown in external_response
         const updatedExternalResponse = {
           ...payload,
           fee_breakdown: {
             withdrawal_amount: withdrawalAmount,
             nomba_fee: nombaFee,
             app_fee: withdrawalAppFee,
-            app_fee_calculation: "0.5% (₦20 min, ₦2000 cap)",
             total_fee: totalFees,
             total_deduction: totalDeduction,
-            user_receives: withdrawalAmount,
-            our_profit: Number((withdrawalAppFee - nombaFee).toFixed(2)),
-            effective_fee_rate: Number((totalFees / withdrawalAmount * 100).toFixed(1)) + "%"
           }
         };
 
@@ -1436,54 +1437,8 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Check if balance needs to be deducted
-        if (pendingTx.status === 'pending') {
-          console.log("💰 Checking if balance needs deduction...");
-          
-          const { data: user } = await supabase
-            .from("users")
-            .select("wallet_balance")
-            .eq("id", pendingTx.user_id)
-            .single();
-
-          if (user) {
-            const currentBalance = Number(user.wallet_balance ?? 0);
-            const expectedBalanceAfterDeduction = currentBalance - totalDeduction;
-            
-            if (expectedBalanceAfterDeduction >= 0) {
-              console.log("💰 Deducting balance from user wallet...");
-              const newBalance = Math.max(0, currentBalance - totalDeduction);
-              
-              const { error: updateBalanceError } = await supabase
-                .from("users")
-                .update({ wallet_balance: newBalance })
-                .eq("id", pendingTx.user_id);
-
-              if (updateBalanceError) {
-                console.error("❌ Manual balance update failed:", updateBalanceError);
-                return NextResponse.json(
-                  { error: "Failed to deduct balance" },
-                  { status: 500 }
-                );
-              }
-              console.log(`✅ Balance deducted. Old: ₦${currentBalance}, New: ₦${newBalance}`);
-            } else {
-              console.log("ℹ️ Balance already deducted or insufficient");
-            }
-          }
-        } else {
-          console.log("ℹ️ Balance was already deducted during withdrawal initiation");
-        }
-
         console.log(`✅ Withdrawal completed for user ${pendingTx.user_id}`);
-        
-        return NextResponse.json(
-          {
-            success: true,
-            message: "Withdrawal processed successfully",
-          },
-          { status: 200 }
-        );
+        return NextResponse.json({ success: true }, { status: 200 });
       }
 
       // ❌ Failure case: payout_failed - REFUND the user
