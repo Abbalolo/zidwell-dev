@@ -10,10 +10,15 @@ const supabaseAdmin = createClient(
 // GET: Single notification
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
+
 
     const { data: notification, error } = await supabaseAdmin
       .from("notifications")
@@ -39,10 +44,14 @@ export async function GET(
 // DELETE: Cancel notification
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const { error } = await supabaseAdmin
       .from("notifications")
