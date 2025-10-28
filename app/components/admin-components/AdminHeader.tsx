@@ -1,5 +1,6 @@
 'use client'
 import React from 'react'
+import NotificationBell from '../NotificationBell'
 
 
 export default function AdminTopbar() {
@@ -12,6 +13,8 @@ return (
 <input placeholder="Search..." className="border rounded px-3 py-1" />
 <div className="rounded-full bg-gray-200 w-8 h-8 flex items-center justify-center">AL</div>
 </div>
+
+   <NotificationBell />
 </header>
 )
 }

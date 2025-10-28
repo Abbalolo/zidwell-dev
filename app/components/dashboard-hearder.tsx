@@ -6,6 +6,7 @@ import { Button } from "@/app/components/ui/button";
 import { useUserContextData } from "../context/userData";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import NotificationBell from "./NotificationBell";
 
 export default function DashboardHeader() {
   const router = useRouter();
@@ -81,7 +82,9 @@ export default function DashboardHeader() {
             <LogOut className="w-4 h-4 hidden md:block" />
             <span>Logout</span>
           </Button>
+
         </div>
+             {/* <NotificationBell /> */}
       </div>
     </header>
   );

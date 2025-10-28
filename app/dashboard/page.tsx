@@ -1,18 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+
 import BalanceCard from "../components/Balance-card";
 import DashboardHeader from "../components/dashboard-hearder";
 import DashboardSidebar from "../components/dashboard-sidebar";
 import ServiceCards from "../components/service-card";
 import TransactionHistory from "../components/transaction-history";
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useUserContextData } from "../context/userData";
-
-
 export default function DashboardPage() {
-
-
   return (
     <div className="min-h-screen bg-gray-50 fade-in overflow-x-hidden">
       <DashboardSidebar />
@@ -35,7 +29,6 @@ export default function DashboardPage() {
                 Data Bundle, Airtime, Bill Payments...
               </p>
             </div>
-
 
             {/* Balance Section */}
             <BalanceCard />

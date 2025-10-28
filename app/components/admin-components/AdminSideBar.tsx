@@ -14,6 +14,7 @@ import {
   X,
   FileChartColumnIncreasing,
   Headphones,
+  Bell,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -26,6 +27,7 @@ const navLinks = [
   { name: "Contracts", href: "/admin/contracts", icon: FileText },
   { name: "Tax Filings", href: "/admin/tax-filings", icon: ClipboardList },
   { name: "Support & disputes", href: "/admin/disputes-supports", icon: Headphones },
+  { name: "Notications", href: "/admin/notifications", icon:  Bell },
 ];
 
 export default function AdminSidebar() {

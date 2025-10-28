@@ -4,6 +4,7 @@ import "./globals.css";
 import { UserProvider } from "./context/userData";
 import SessionWatcher from "./components/SessionWatcher";
 import FloatingHelpButton from "./components/FloatingHelpButton";
+import NotificationToast from "./components/NotificationToast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,6 +28,7 @@ export default function RootLayout({
           <SessionWatcher>
             {children}
              <FloatingHelpButton />
+             <NotificationToast />
           </SessionWatcher>
         </UserProvider>
       </body>
