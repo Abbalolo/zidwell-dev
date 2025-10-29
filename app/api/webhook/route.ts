@@ -1104,40 +1104,20 @@ export async function POST(req: NextRequest) {
       );
 
       // ✅ DEPOSIT FEE CALCULATIONS
-      const amount = transactionAmount;
+const amount = transactionAmount;
 
-      // Calculate our app fee based on payment method
-      let ourAppFee = 0;
-      if (channel === "card" || txType === "card_deposit") {
-        // Checkout: 1.6% capped at ₦20,000
-        ourAppFee = amount * 0.016;
-        ourAppFee = Math.min(ourAppFee, 20000);
-      } else if (
-        channel === "virtual_account" ||
-        txType === "virtual_account_deposit"
-      ) {
-        // Virtual Account: 0.5% (₦10 min, ₦2000 cap)
-        ourAppFee = amount * 0.005;
-        ourAppFee = amount * 0.005;
-        ourAppFee = Math.min(Math.max(ourAppFee, 10), 2000);
-      } else {
-        // Bank transfer: 0.5% (₦20 min, ₦2000 cap)
-        ourAppFee = amount * 0.005;
-        ourAppFee = Math.min(Math.max(ourAppFee, 20), 2000);
-      }
+// NO APP FEES FOR ANY PAYMENT METHOD
+let ourAppFee = 0;
+let totalFees = Number(nombaFee.toFixed(2));
+let netCredit = Number((amount - totalFees).toFixed(2));
+const total_deduction = amount; 
 
-      const finalOurAppFee = Number(ourAppFee.toFixed(2));
-      const totalFees = Number((nombaFee + finalOurAppFee).toFixed(2));
-      const netCredit = Number((amount - totalFees).toFixed(2));
-      const total_deduction = amount; // Gross amount deposited
-
-      console.log("💰 Deposit calculations (WITH FEES):");
-      console.log("   - Amount:", amount);
-      console.log("   - Nomba's fee:", nombaFee);
-      console.log("   - Our app fee:", finalOurAppFee);
-      console.log("   - Total fees:", totalFees);
-      console.log("   - Our margin:", Number((finalOurAppFee - nombaFee).toFixed(2)));
-      console.log("   - Net credit to user:", netCredit);
+console.log("💰 Deposit calculations (NO CHARGES):");
+console.log("   - Amount:", amount);
+console.log("   - Nomba's fee:", nombaFee);
+console.log("   - Our app fee:", ourAppFee);
+console.log("   - Total fees:", totalFees);
+console.log("   - Net credit to user:", netCredit);
 
       // Idempotency: check existing transaction by reference or merchant_tx_ref
       const { data: existingTx, error: existingErr } = await supabase
