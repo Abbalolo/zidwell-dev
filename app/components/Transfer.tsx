@@ -225,83 +225,86 @@ export default function Transfer() {
   }, [recepientAcc, transferType]);
 
   // 1. Actual transfer logic
-  const performTransfer = async () => {
-    setLoading(true);
-    try {
-      const payload: any = {
-        userId: userData?.id,
-        senderName: `${userData?.firstName} ${userData?.lastName}`,
-        amount: Number(amount),
-        narration,
-        type: transferType,
-        pin, // include the collected PIN
-      };
+ const performTransfer = async () => {
+  setLoading(true);
+  try {
+    const payload: any = {
+      userId: userData?.id,
+      senderName: `${userData?.firstName} ${userData?.lastName}`,
+      amount: Number(amount),
+      narration,
+      type: transferType,
+      pin, // include the collected PIN
+    };
 
-      if (transferType === "my-account") {
-        payload.bankCode = userDetails.p_bank_code;
-        payload.accountNumber = userDetails.p_account_number;
-        payload.accountName = userDetails.p_account_name;
-      }
+    if (transferType === "my-account") {
+      payload.bankCode = userDetails.p_bank_code;
+      payload.accountNumber = userDetails.p_account_number;
+      payload.accountName = userDetails.p_account_name;
+    }
 
-      if (transferType === "other-bank") {
-        payload.bankCode = bankCode;
-        payload.accountNumber = accountNumber;
-        payload.accountName = accountName;
-      }
+    if (transferType === "other-bank") {
+      payload.bankCode = bankCode;
+      payload.accountNumber = accountNumber;
+      payload.accountName = accountName;
+    }
 
-      if (transferType === "p2p") {
-        payload.receiverAccountId = p2pDetails?.id;
-      }
+    if (transferType === "p2p") {
+      payload.receiverAccountId = p2pDetails?.id;
+    }
 
-      const endpoint =
-        transferType === "p2p" ? "/api/p2p-transfer" : "/api/transfer-balance";
+    const endpoint =
+      transferType === "p2p" ? "/api/p2p-transfer" : "/api/transfer-balance";
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    // Handle successful response (including processing withdrawals)
+    if (res.ok && data.status !== false) {
+      Swal.fire({
+        icon: "success",
+        title: "Transfer Initiated",
+        text: data?.message || "Your transfer has been initiated successfully and is being processed.",
+      }).then(() => {
+        window.location.reload();
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        Swal.fire({
-          icon: "success",
-          title: "Transfer Successful",
-          text: "Your transaction has been processed successfully.",
-        }).then(() => {
-          window.location.reload();
-        });
-
-        // Reset form
-        setAmount("");
-        setAccountNumber("");
-        setAccountName("");
-        setNarration("");
-        setRecepientAcc("");
-        setBankCode("");
-        setBankName("");
-        setPin(Array(inputCount).fill(""));
-        setErrors({});
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Transfer Failed",
-          text: data?.message,
-        });
-        setErrors({ form: data?.message || "Transfer failed." });
-      }
-    } catch (err: any) {
+      // Reset form
+      setAmount("");
+      setAccountNumber("");
+      setAccountName("");
+      setNarration("");
+      setRecepientAcc("");
+      setBankCode("");
+      setBankName("");
+      setPin(Array(inputCount).fill(""));
+      setErrors({});
+    } 
+    // Handle error response
+    else {
       Swal.fire({
         icon: "error",
-        title: "Something went wrong",
-        text: err?.message || "Please try again later.",
+        title: "Transfer Failed",
+        text: data?.description || data?.message || "Transfer failed. Please try again.",
       });
-      setErrors({ form: err?.message || "Something went wrong." });
-    } finally {
-      setLoading(false);
+      setErrors({ form: data?.description || data?.message || "Transfer failed." });
     }
-  };
+  } catch (err: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Something went wrong",
+      text: err?.message || "Please try again later.",
+    });
+    setErrors({ form: err?.message || "Something went wrong." });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault();
