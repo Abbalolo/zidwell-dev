@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     const reference = `P2P_${Date.now()}`;
     const description = `P2P transfer to ${receiver.first_name || ""} ${receiver.last_name || ""}`;
 
-    // ✅ 1. Use RPC to deduct balance and create sender transaction
+    // ✅ 1. Use RPC to deduct balance and create sender transaction (status will be 'pending')
     const { data: rpcData, error: rpcError } = await supabase.rpc("deduct_wallet_balance", {
       user_id: userId,
       amt: amount,
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ 3. Record receiver transaction
+    // ✅ 3. Record receiver transaction with 'success' status
     await supabase.from("transactions").insert({
       user_id: receiver.id,
       type: "p2p_received",
@@ -106,6 +106,20 @@ export async function POST(req: Request) {
       narration: narration || "P2P Received",
       reference,
     });
+
+    // ✅ 4. CRITICAL FIX: Update sender transaction status from 'pending' to 'success'
+    const { error: updateStatusError } = await supabase
+      .from("transactions")
+      .update({ 
+        status: "success"
+      })
+      .eq("id", rpcResult.tx_id)
+      .eq("status", "pending"); // Only update if still pending
+
+    if (updateStatusError) {
+      console.error("Failed to update transaction status:", updateStatusError);
+      // Don't fail the transfer - log the error but continue
+    }
 
     return NextResponse.json({
       status: "success",

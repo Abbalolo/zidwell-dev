@@ -112,7 +112,7 @@ export default function TransactionHistory() {
         </div>
       </CardHeader>
 
-      <div className="space-y-4 p-3">
+      <div className="space-y-4 p-2">
         {/* ✅ Loading State */}
         {loading ? (
           <div className="flex justify-center items-center py-12">
@@ -143,8 +143,8 @@ export default function TransactionHistory() {
                 </div>
               </div>
 
-              <div className="flex items-center md:flex-col">
-                <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center flex-col">
+                <div className="flex items-center gap-2">
                   <div
                     className={`w-2 h-2 rounded-full ${
                       statusConfig[tx.status?.toLowerCase()]?.dotColor ||
@@ -162,7 +162,7 @@ export default function TransactionHistory() {
                 </div>
 
                 <div className="text-right">
-                  {/* ✅ UPDATED AMOUNT DISPLAY LOGIC */}
+                 
                   <p
                     className={`font-bold md:text-lg text-sm ${
                       isOutflow(tx.type) 

@@ -27,7 +27,7 @@ export default function RootLayout({
         <UserProvider>
           <SessionWatcher>
             {children}
-             <FloatingHelpButton />
+             {/* <FloatingHelpButton /> */}
              <NotificationToast />
           </SessionWatcher>
         </UserProvider>
