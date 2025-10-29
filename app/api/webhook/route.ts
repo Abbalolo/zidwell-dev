@@ -704,6 +704,8 @@
 //   }
 // }
 
+remove appfee when user deposit money using transfer only nomba fee for the virtual deposit 
+
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -1102,42 +1104,41 @@ export async function POST(req: NextRequest) {
         referenceToUse
       );
 
-      // ✅ DEPOSIT FEE CALCULATIONS - ONLY CHANGE: REMOVE APP FEES FOR ALL BANK TRANSFERS
+      // ✅ DEPOSIT FEE CALCULATIONS
       const amount = transactionAmount;
 
-      // Calculate fees based on payment method
+      // Calculate our app fee based on payment method
       let ourAppFee = 0;
-      let totalFees = 0;
-      let netCredit = 0;
-
       if (channel === "card" || txType === "card_deposit") {
-        // Card deposits: 1.6% app fee capped at ₦20,000 + Nomba fee
+        // Checkout: 1.6% capped at ₦20,000
         ourAppFee = amount * 0.016;
         ourAppFee = Math.min(ourAppFee, 20000);
-        totalFees = Number((nombaFee + ourAppFee).toFixed(2));
-        netCredit = Number((amount - totalFees).toFixed(2));
-        
-        console.log("💰 Card Deposit calculations (WITH APP FEES):");
-        console.log("   - Amount:", amount);
-        console.log("   - Nomba's fee:", nombaFee);
-        console.log("   - Our app fee:", ourAppFee);
-        console.log("   - Total fees:", totalFees);
-        console.log("   - Net credit to user:", netCredit);
+      } else if (
+        channel === "virtual_account" ||
+        txType === "virtual_account_deposit"
+      ) {
+        // Virtual Account: 0.5% (₦10 min, ₦2000 cap)
+        ourAppFee = amount * 0.005;
+        ourAppFee = amount * 0.005;
+        ourAppFee = Math.min(Math.max(ourAppFee, 10), 2000);
       } else {
-        // ALL BANK TRANSFERS & VIRTUAL ACCOUNTS: NO APP FEES - only Nomba fee
-        ourAppFee = 0;
-        totalFees = Number(nombaFee.toFixed(2));
-        netCredit = Number((amount - totalFees).toFixed(2));
-        
-        console.log("💰 Bank Transfer/Virtual Account Deposit calculations (NO APP FEES):");
-        console.log("   - Amount:", amount);
-        console.log("   - Nomba's fee:", nombaFee);
-        console.log("   - Our app fee:", ourAppFee);
-        console.log("   - Total fees:", totalFees);
-        console.log("   - Net credit to user:", netCredit);
+        // Bank transfer: 0.5% (₦20 min, ₦2000 cap)
+        ourAppFee = amount * 0.005;
+        ourAppFee = Math.min(Math.max(ourAppFee, 20), 2000);
       }
 
+      const finalOurAppFee = Number(ourAppFee.toFixed(2));
+      const totalFees = Number((nombaFee + finalOurAppFee).toFixed(2));
+      const netCredit = Number((amount - totalFees).toFixed(2));
       const total_deduction = amount; // Gross amount deposited
+
+      console.log("💰 Deposit calculations (WITH FEES):");
+      console.log("   - Amount:", amount);
+      console.log("   - Nomba's fee:", nombaFee);
+      console.log("   - Our app fee:", finalOurAppFee);
+      console.log("   - Total fees:", totalFees);
+      console.log("   - Our margin:", Number((finalOurAppFee - nombaFee).toFixed(2)));
+      console.log("   - Net credit to user:", netCredit);
 
       // Idempotency: check existing transaction by reference or merchant_tx_ref
       const { data: existingTx, error: existingErr } = await supabase
@@ -1174,9 +1175,9 @@ export async function POST(req: NextRequest) {
           ...payload,
           fee_breakdown: {
             nomba_fee: nombaFee,
-            app_fee: ourAppFee,
+            app_fee: finalOurAppFee,
             total_fee: totalFees,
-            profit_margin: Number((ourAppFee - nombaFee).toFixed(2)),
+            profit_margin: Number((finalOurAppFee - nombaFee).toFixed(2)),
           }
         };
 
@@ -1257,9 +1258,9 @@ export async function POST(req: NextRequest) {
         ...payload,
         fee_breakdown: {
           nomba_fee: nombaFee,
-          app_fee: ourAppFee,
+          app_fee: finalOurAppFee,
           total_fee: totalFees,
-          profit_margin: Number((ourAppFee - nombaFee).toFixed(2)),
+          profit_margin: Number((finalOurAppFee - nombaFee).toFixed(2)),
         }
       };
 
