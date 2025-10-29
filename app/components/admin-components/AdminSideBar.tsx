@@ -15,12 +15,14 @@ import {
   FileChartColumnIncreasing,
   Headphones,
   Bell,
+  Key,
 } from "lucide-react";
 import Image from "next/image";
 
 const navLinks = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Kyc Users", href: "/admin/kyc", icon: Key },
   { name: "Transactions", href: "/admin/transactions", icon:  FileChartColumnIncreasing },
   { name: "Receipts", href: "/admin/receipts", icon: Receipt },
   { name: "Invoices", href: "/admin/invoices", icon: FileSpreadsheet },

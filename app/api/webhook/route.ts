@@ -1118,8 +1118,9 @@ export async function POST(req: NextRequest) {
         txType === "virtual_account_deposit"
       ) {
         // Virtual Account: 0.5% (₦10 min, ₦2000 cap)
-        ourAppFee = amount * 0.005;
-        ourAppFee = Math.min(Math.max(ourAppFee, 10), 2000);
+        ourAppFee = amount;
+        // ourAppFee = amount * 0.005;
+        // ourAppFee = Math.min(Math.max(ourAppFee, 10), 2000);
       } else {
         // Bank transfer: 0.5% (₦20 min, ₦2000 cap)
         ourAppFee = amount * 0.005;

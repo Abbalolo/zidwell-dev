@@ -50,7 +50,7 @@ export default function UsersPage() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, roleFilter, activityFilter]);
 
-  // Process users data - DON'T format dates here to avoid hydration issues
+  // Process users data
   const users = React.useMemo(() => {
     if (!data) return [];
     return (data.users ?? data).map((user: any) => ({
@@ -72,7 +72,7 @@ export default function UsersPage() {
     if (hasRecentLogin) {
       const lastLogin = new Date(user.last_login_raw);
       const daysSinceLogin = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
-      return isActiveStatus && daysSinceLogin <= 30; // Active within last 30 days
+      return isActiveStatus && daysSinceLogin <= 30;
     }
     
     return isActiveStatus;
@@ -105,6 +105,7 @@ export default function UsersPage() {
   const activeToday = users.filter(isUserActiveToday);
   const activeThisWeek = users.filter(isUserActiveThisWeek);
   const inactiveUsers = users.filter(isUserInactive);
+  const pendingUsersCount = data?.stats?.pending || 0;
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user: any) => {
@@ -179,7 +180,7 @@ export default function UsersPage() {
 
     try {
       const body = { status: willBlock ? "blocked" : "active" };
-      const r = await fetch(`/api/admin/users/${user.id}`, {
+      const r = await fetch(`/api/admin-apis/users/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -453,7 +454,7 @@ export default function UsersPage() {
     }
     
     if (!isClient) {
-      return row.last_login_raw; // Return raw date during SSR
+      return row.last_login_raw;
     }
     
     try {
@@ -487,7 +488,7 @@ export default function UsersPage() {
     if (!row.created_at_raw) return "-";
     
     if (!isClient) {
-      return row.created_at_raw; // Return raw date during SSR
+      return row.created_at_raw;
     }
     
     try {
@@ -510,7 +511,7 @@ export default function UsersPage() {
     }
     
     if (!isClient) {
-      return row.last_logout_raw; // Return raw date during SSR
+      return row.last_logout_raw;
     }
     
     try {
@@ -542,7 +543,7 @@ export default function UsersPage() {
     { key: "full_name", label: "Name" },
     { key: "balance", label: "Balance", render: renderBalanceCell },
     { key: "role", label: "Role", render: renderRoleCell },
-    { key: "status", label: "Status", render: renderStatusCell },
+    // { key: "status", label: "Status", render: renderStatusCell },
     { key: "last_login", label: "Last Login", render: renderLastLoginCell },
     { key: "last_logout", label: "Last Logout", render: renderLastLogoutCell },
     { key: "created_at", label: "Created", render: renderCreatedAtCell },
@@ -594,8 +595,8 @@ export default function UsersPage() {
           </Button>
         </div>
 
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Enhanced Stats Cards - Added Pending Users Card */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="bg-white p-4 rounded-lg border shadow-sm">
             <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
             <p className="text-2xl font-semibold">{users.length}</p>
@@ -605,6 +606,13 @@ export default function UsersPage() {
             <p className="text-2xl font-semibold text-green-600">
               {activeUsers.length}
             </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
+            <h3 className="text-sm font-medium text-gray-500">Pending Users</h3>
+            <p className="text-2xl font-semibold text-yellow-600">
+              {pendingUsersCount}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
           </div>
           <div className="bg-white p-4 rounded-lg border shadow-sm">
             <h3 className="text-sm font-medium text-gray-500">Active Today</h3>

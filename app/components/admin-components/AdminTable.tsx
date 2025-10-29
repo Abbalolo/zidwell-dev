@@ -110,7 +110,7 @@ export default function AdminTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10 text-center">#</TableHead>
+            <TableHead className="w-10 text-center">S/N</TableHead>
             {columns.map((col) => (
               <TableHead key={col.key}>{col.label}</TableHead>
             ))}
