@@ -1102,7 +1102,7 @@ export async function POST(req: NextRequest) {
         referenceToUse
       );
 
-      // ✅ DEPOSIT FEE CALCULATIONS - UPDATED: NO APP FEES FOR ANY BANK TRANSFERS
+      // ✅ DEPOSIT FEE CALCULATIONS - ONLY CHANGE: REMOVE APP FEES FOR ALL BANK TRANSFERS
       const amount = transactionAmount;
 
       // Calculate fees based on payment method
