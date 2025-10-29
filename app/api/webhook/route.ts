@@ -1102,7 +1102,7 @@ export async function POST(req: NextRequest) {
         referenceToUse
       );
 
-      // ✅ DEPOSIT FEE CALCULATIONS - UPDATED: NO APP FEE FOR VIRTUAL ACCOUNT DEPOSITS
+      // ✅ DEPOSIT FEE CALCULATIONS - UPDATED: NO APP FEES FOR ANY BANK TRANSFERS
       const amount = transactionAmount;
 
       // Calculate fees based on payment method
@@ -1123,26 +1123,13 @@ export async function POST(req: NextRequest) {
         console.log("   - Our app fee:", ourAppFee);
         console.log("   - Total fees:", totalFees);
         console.log("   - Net credit to user:", netCredit);
-      } else if (channel === "virtual_account" || txType === "virtual_account_deposit") {
-        // Virtual Account deposits: NO APP FEE - only Nomba fee
+      } else {
+        // ALL BANK TRANSFERS & VIRTUAL ACCOUNTS: NO APP FEES - only Nomba fee
         ourAppFee = 0;
         totalFees = Number(nombaFee.toFixed(2));
         netCredit = Number((amount - totalFees).toFixed(2));
         
-        console.log("💰 Virtual Account Deposit calculations (NO APP FEES):");
-        console.log("   - Amount:", amount);
-        console.log("   - Nomba's fee:", nombaFee);
-        console.log("   - Our app fee:", ourAppFee);
-        console.log("   - Total fees:", totalFees);
-        console.log("   - Net credit to user:", netCredit);
-      } else {
-        // Bank transfer: 0.5% app fee (₦20 min, ₦2000 cap) + Nomba fee
-        ourAppFee = amount * 0.005;
-        ourAppFee = Math.min(Math.max(ourAppFee, 20), 2000);
-        totalFees = Number((nombaFee + ourAppFee).toFixed(2));
-        netCredit = Number((amount - totalFees).toFixed(2));
-        
-        console.log("💰 Bank Transfer Deposit calculations (WITH APP FEES):");
+        console.log("💰 Bank Transfer/Virtual Account Deposit calculations (NO APP FEES):");
         console.log("   - Amount:", amount);
         console.log("   - Nomba's fee:", nombaFee);
         console.log("   - Our app fee:", ourAppFee);
