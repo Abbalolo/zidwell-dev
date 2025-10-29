@@ -704,7 +704,6 @@
 //   }
 // }
 
-remove appfee when user deposit money using transfer only nomba fee for the virtual deposit 
 
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
