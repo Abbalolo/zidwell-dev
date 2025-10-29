@@ -83,6 +83,8 @@ export async function POST(req: Request) {
       );
     }
 
+
+
     if (user.wallet_balance < amount) {
       return NextResponse.json(
         { message: "Insufficient wallet balance (including fees)" },
@@ -145,48 +147,10 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-    console.log("transfer data", data);
+ console.log("transfer data", data)
+   
 
-    // Handle specific Nomba API errors
-    if (data?.code === "400") {
-      // Clean up the pending transaction since it failed
-      await supabase
-        .from("transactions")
-        .delete()
-        .eq("id", pendingTx.id);
-
-      return NextResponse.json(
-        { 
-          message: data.description,
-          status: false,
-          code: '400'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Handle other API errors
-    if (!res.ok || data?.status === false) {
-      // Update transaction status to failed
-      await supabase
-        .from("transactions")
-        .update({
-          external_response: JSON.stringify(data || {}),
-          status: "failed",
-          reference: data?.data?.reference || null,
-        })
-        .eq("id", pendingTx.id);
-
-      return NextResponse.json(
-        { 
-          message: data?.description || "Transfer failed", 
-          status: false,
-          code: data?.code || 'TRANSFER_FAILED'
-        },
-        { status: 400 }
-      );
-    }
-
+  
     // Save Nomba response and set status to processing
     await supabase
       .from("transactions")
@@ -197,20 +161,17 @@ export async function POST(req: Request) {
       })
       .eq("id", pendingTx.id);
 
+
     return NextResponse.json({
       message: "Withdrawal initiated (processing). Waiting for webhook confirmation.",
       merchantTxRef,
       transactionId: pendingTx.id,
       nombaResponse: data,
-      status: true
     });
   } catch (error: any) {
     console.error("Withdraw API error:", error);
     return NextResponse.json(
-      { 
-        error: "Server error: " + error.message || error.description,
-        status: false 
-      },
+      { error: "Server error: " + error.message || error.description },
       { status: 500 }
     );
   }
