@@ -1154,9 +1154,9 @@ console.log("   - Net credit to user:", netCredit);
           ...payload,
           fee_breakdown: {
             nomba_fee: nombaFee,
-            app_fee: finalOurAppFee,
+  
             total_fee: totalFees,
-            profit_margin: Number((finalOurAppFee - nombaFee).toFixed(2)),
+            profit_margin: Number((ourAppFee - nombaFee).toFixed(2)),
           }
         };
 
@@ -1237,9 +1237,9 @@ console.log("   - Net credit to user:", netCredit);
         ...payload,
         fee_breakdown: {
           nomba_fee: nombaFee,
-          app_fee: finalOurAppFee,
+          app_fee: ourAppFee,
           total_fee: totalFees,
-          profit_margin: Number((finalOurAppFee - nombaFee).toFixed(2)),
+          profit_margin: Number((ourAppFee - nombaFee).toFixed(2)),
         }
       };
 
