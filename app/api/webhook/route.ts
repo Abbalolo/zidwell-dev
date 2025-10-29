@@ -704,7 +704,6 @@
 //   }
 // }
 
-
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -841,17 +840,37 @@ export async function POST(req: NextRequest) {
     );
 
     // 🚫 CRITICAL: IGNORE ALL SERVICE PURCHASES COMPLETELY - FIXED VERSION
-    const serviceTypes = ["data", "airtime", "cable-tv", "electricity", "utility", "bill", "topup"];
-    const serviceRefPatterns = ["Data-", "Airtime-", "Cable-", "Electricity-", "Bill-", "Utility-", "Topup-", "AIRTIME-", "DATA-", "CABLE-", "ELECTRICITY-"];
+    const serviceTypes = [
+      "data",
+      "airtime",
+      "cable-tv",
+      "electricity",
+      "utility",
+      "bill",
+      "topup",
+    ];
+    const serviceRefPatterns = [
+      "Data-",
+      "Airtime-",
+      "Cable-",
+      "Electricity-",
+      "Bill-",
+      "Utility-",
+      "Topup-",
+      "AIRTIME-",
+      "DATA-",
+      "CABLE-",
+      "ELECTRICITY-",
+    ];
 
-    const isServicePurchase = serviceTypes.some(service => 
-      transactionType.includes(service)
-    ) || serviceRefPatterns.some(pattern => 
-      merchantTxRef?.includes(pattern)
-    );
+    const isServicePurchase =
+      serviceTypes.some((service) => transactionType.includes(service)) ||
+      serviceRefPatterns.some((pattern) => merchantTxRef?.includes(pattern));
 
     if (isServicePurchase) {
-      console.log("📱 Ignoring service purchase (data/airtime/cable/electricity/topup) - already handled by main API");
+      console.log(
+        "📱 Ignoring service purchase (data/airtime/cable/electricity/topup) - already handled by main API"
+      );
       return NextResponse.json(
         { message: "Service purchase ignored - already processed by main API" },
         { status: 200 }
@@ -859,14 +878,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Also ignore ALL payout_success events for service purchases regardless of detection
-    if (eventType.includes("payout_success") && 
-        (transactionType.includes("topup") || 
-         merchantTxRef?.includes("AIRTIME-") || 
-         merchantTxRef?.includes("DATA-") ||
-         merchantTxRef?.includes("Airtime-") ||
-         merchantTxRef?.includes("Data-") ||
-         transactionType.includes("airtime") ||
-         transactionType.includes("data"))) {
+    if (
+      eventType.includes("payout_success") &&
+      (transactionType.includes("topup") ||
+        merchantTxRef?.includes("AIRTIME-") ||
+        merchantTxRef?.includes("DATA-") ||
+        merchantTxRef?.includes("Airtime-") ||
+        merchantTxRef?.includes("Data-") ||
+        transactionType.includes("airtime") ||
+        transactionType.includes("data"))
+    ) {
       console.log("📱 Ignoring service purchase payout event");
       return NextResponse.json(
         { message: "Service purchase payout event ignored" },
@@ -890,10 +911,8 @@ export async function POST(req: NextRequest) {
       isVirtualAccountDeposit;
 
     const isPayoutOrTransfer =
-      (eventType?.toLowerCase()?.includes("payout") && 
-       !isServicePurchase) ||
-      (Boolean(merchantTxRef) && 
-       !isServicePurchase) ||
+      (eventType?.toLowerCase()?.includes("payout") && !isServicePurchase) ||
+      (Boolean(merchantTxRef) && !isServicePurchase) ||
       (tx.type &&
         tx.type.toLowerCase().includes("transfer") &&
         !tx.type.toLowerCase().includes("vact")); // Exclude virtual account transfers
@@ -1104,20 +1123,20 @@ export async function POST(req: NextRequest) {
       );
 
       // ✅ DEPOSIT FEE CALCULATIONS
-const amount = transactionAmount;
+      const amount = transactionAmount;
 
-// NO APP FEES FOR ANY PAYMENT METHOD
-let ourAppFee = 0;
-let totalFees = Number(nombaFee.toFixed(2));
-let netCredit = Number((amount - totalFees).toFixed(2));
-const total_deduction = amount; 
+      // NO APP FEES FOR ANY PAYMENT METHOD
+      let ourAppFee = 0;
+      let totalFees = Number(nombaFee.toFixed(2));
+      let netCredit = Number((amount - totalFees).toFixed(2));
+      const total_deduction = amount;
 
-console.log("💰 Deposit calculations (NO CHARGES):");
-console.log("   - Amount:", amount);
-console.log("   - Nomba's fee:", nombaFee);
-console.log("   - Our app fee:", ourAppFee);
-console.log("   - Total fees:", totalFees);
-console.log("   - Net credit to user:", netCredit);
+      console.log("💰 Deposit calculations (NO CHARGES):");
+      console.log("   - Amount:", amount);
+      console.log("   - Nomba's fee:", nombaFee);
+      console.log("   - Our app fee:", ourAppFee);
+      console.log("   - Total fees:", totalFees);
+      console.log("   - Net credit to user:", netCredit);
 
       // Idempotency: check existing transaction by reference or merchant_tx_ref
       const { data: existingTx, error: existingErr } = await supabase
@@ -1154,10 +1173,10 @@ console.log("   - Net credit to user:", netCredit);
           ...payload,
           fee_breakdown: {
             nomba_fee: nombaFee,
-  
+
             total_fee: totalFees,
             profit_margin: Number((ourAppFee - nombaFee).toFixed(2)),
-          }
+          },
         };
 
         const { error: updErr } = await supabase
@@ -1240,7 +1259,7 @@ console.log("   - Net credit to user:", netCredit);
           app_fee: ourAppFee,
           total_fee: totalFees,
           profit_margin: Number((ourAppFee - nombaFee).toFixed(2)),
-        }
+        },
       };
 
       const { error: insertErr } = await supabase.from("transactions").insert([
@@ -1326,6 +1345,7 @@ console.log("   - Net credit to user:", netCredit);
     } // end deposit handling
 
     // ---------- WITHDRAWAL / TRANSFER (OUTGOING) ----------
+    // ---------- WITHDRAWAL / TRANSFER (OUTGOING) ----------
     if (isPayoutOrTransfer) {
       console.log("➡️ Handling payout/transfer flow");
 
@@ -1344,30 +1364,46 @@ console.log("   - Net credit to user:", netCredit);
         .maybeSingle();
 
       if (pendingErr) {
-        console.error("❌ DB error while finding pending transaction:", pendingErr);
+        console.error(
+          "❌ DB error while finding pending transaction:",
+          pendingErr
+        );
         return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
 
       if (!pendingTx) {
-        console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
+        console.warn(
+          "⚠️ No matching pending withdrawal found for refs:",
+          refCandidates
+        );
         return NextResponse.json(
           { message: "No matching withdrawal transaction" },
           { status: 200 }
         );
       }
 
-      console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
+      console.log(
+        "📦 Found pending withdrawal:",
+        pendingTx.id,
+        "status:",
+        pendingTx.status
+      );
 
       // Idempotency - check if already processed
       if (["success", "failed"].includes(pendingTx.status)) {
         console.log(`⚠️ Withdrawal already ${pendingTx.status}. Skipping.`);
-        return NextResponse.json({ message: "Already processed" }, { status: 200 });
+        return NextResponse.json(
+          { message: "Already processed" },
+          { status: 200 }
+        );
       }
 
-      // Withdrawal fee logic
-      const withdrawalAmount = Number(pendingTx.amount ?? transactionAmount ?? 0);
-      
-      // Calculate app fee: 0.5% (₦20 min, ₦2000 cap)
+      // Withdrawal fee logic - KEEP WITHDRAWAL FEES
+      const withdrawalAmount = Number(
+        pendingTx.amount ?? transactionAmount ?? 0
+      );
+
+      // Calculate app fee: 0.5% (₦20 min, ₦2000 cap) - KEEP THIS
       let withdrawalAppFee = withdrawalAmount * 0.005;
       withdrawalAppFee = Math.max(withdrawalAppFee, 20);
       withdrawalAppFee = Math.min(withdrawalAppFee, 2000);
@@ -1385,7 +1421,9 @@ console.log("   - Net credit to user:", netCredit);
 
       // ✅ Success case - withdrawal completed successfully
       if (eventType === "payout_success" || txStatus === "success") {
-        console.log("✅ Payout success - updating transaction status to success");
+        console.log(
+          "✅ Payout success - updating transaction status to success"
+        );
 
         const updatedExternalResponse = {
           ...payload,
@@ -1395,7 +1433,7 @@ console.log("   - Net credit to user:", netCredit);
             app_fee: withdrawalAppFee,
             total_fee: totalFees,
             total_deduction: totalDeduction,
-          }
+          },
         };
 
         const { error: updateError } = await supabase
@@ -1423,7 +1461,9 @@ console.log("   - Net credit to user:", netCredit);
 
       // ❌ Failure case: payout_failed - REFUND the user
       if (eventType === "payout_failed" || txStatus === "failed") {
-        console.log("❌ Payout failed - refunding user and marking transaction failed");
+        console.log(
+          "❌ Payout failed - refunding user and marking transaction failed"
+        );
 
         const updatedExternalResponse = {
           ...payload,
@@ -1431,8 +1471,8 @@ console.log("   - Net credit to user:", netCredit);
             nomba_fee: nombaFee,
             app_fee: withdrawalAppFee,
             total_fee: totalFees,
-            failed: true
-          }
+            failed: true,
+          },
         };
 
         // Update transaction status first
@@ -1454,11 +1494,11 @@ console.log("   - Net credit to user:", netCredit);
         }
 
         // REFUND the user's wallet if balance was deducted
-        if (pendingTx.status === 'pending') {
+        if (pendingTx.status === "pending") {
           console.log("🔄 Refunding user wallet (balance was deducted)...");
           try {
             const refundAmount = withdrawalAmount; // Only refund the principal amount
-            
+
             const { data: user } = await supabase
               .from("users")
               .select("wallet_balance")
@@ -1479,10 +1519,15 @@ console.log("   - Net credit to user:", netCredit);
                   { status: 500 }
                 );
               }
-              console.log(`✅ Manual refund completed. New balance: ₦${newBal}`);
+              console.log(
+                `✅ Manual refund completed. New balance: ₦${newBal}`
+              );
             }
           } catch (rEx) {
-            console.warn("⚠️ Refund RPC threw error, attempted manual refund", rEx);
+            console.warn(
+              "⚠️ Refund RPC threw error, attempted manual refund",
+              rEx
+            );
           }
         } else {
           console.log("ℹ️ No refund needed - balance was not deducted");
@@ -1493,7 +1538,10 @@ console.log("   - Net credit to user:", netCredit);
       }
 
       console.log("ℹ️ Unhandled transfer event/status. Ignoring.");
-      return NextResponse.json({ message: "Ignored transfer event" }, { status: 200 });
+      return NextResponse.json(
+        { message: "Ignored transfer event" },
+        { status: 200 }
+      );
     }
 
     // If we reach here, event type not handled specifically
