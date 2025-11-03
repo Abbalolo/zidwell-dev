@@ -188,7 +188,7 @@ export async function POST(req: Request) {
     await supabase
       .from("transactions")
       .update({
-        external_response: JSON.stringify(data || {}),
+        external_response: data,
         status: "processing",
         reference: data?.data?.reference || null,
       })

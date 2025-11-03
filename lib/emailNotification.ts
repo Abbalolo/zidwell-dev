@@ -34,7 +34,7 @@ interface NotificationPayload {
 
 export async function sendEmailNotification(payload: NotificationPayload): Promise<boolean> {
   try {
-    const response = await fetch(`${baseUrl}/api/email-alert-notifications`, {
+    const response = await fetch(`/api/email-alert-notifications`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
