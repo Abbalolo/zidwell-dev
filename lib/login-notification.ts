@@ -68,7 +68,6 @@ export async function sendLoginNotificationWithDeviceInfo(
         location,
       }
     );
-    console.log("Client IP:", userProfile);
     console.log("Login notification sent successfully");
   } catch (error) {
     console.error("Failed to send login notification:", error);

@@ -29,7 +29,6 @@ interface EmailNotificationData {
   timestamp: string;
 }
 
-// Create Nodemailer transporter
 
 export async function POST(request: NextRequest) {
   try {

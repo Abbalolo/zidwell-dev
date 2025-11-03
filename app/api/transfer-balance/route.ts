@@ -189,7 +189,7 @@ export async function POST(req: Request) {
       .from("transactions")
       .update({
         external_response: JSON.stringify(data || {}),
-        status: "processing",
+        status: "pending",
         reference: data?.data?.reference || null,
       })
       .eq("id", pendingTx.id);
