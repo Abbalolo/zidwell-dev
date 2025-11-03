@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getNombaToken } from "@/lib/nomba";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
+// import { clearWalletBalanceCache } from "../wallet-balance/route";
+// import { clearTransactionsCache } from "../bill-transactions/route";
 
 export async function POST(req: Request) {
   const supabase = createClient(
@@ -88,34 +90,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Calculate fees upfront
-    const withdrawalAmount = Number(amount);
-    let withdrawalAppFee = withdrawalAmount * 0.01; // 1% fee
-    withdrawalAppFee = Math.max(withdrawalAppFee, 20); // ₦20 minimum
-    withdrawalAppFee = Math.min(withdrawalAppFee, 1000); // ₦1000 maximum
-    withdrawalAppFee = Number(withdrawalAppFee.toFixed(2));
-    
-    // Estimate Nomba fee (you might want to make this dynamic based on actual Nomba fees)
-    const estimatedNombaFee = 10; // Example: ₦10 flat fee
-    const totalFees = Number((estimatedNombaFee + withdrawalAppFee).toFixed(2));
-    const totalDeduction = withdrawalAmount + totalFees;
-
-    console.log("💰 Pre-check withdrawal calculations:");
-    console.log("   - Withdrawal amount:", withdrawalAmount);
-    console.log("   - Estimated Nomba fee:", estimatedNombaFee);
-    console.log("   - Our app fee:", withdrawalAppFee);
-    console.log("   - Total fees:", totalFees);
-    console.log("   - Total deduction:", totalDeduction);
-
-    // Check balance including fees
-    if (user.wallet_balance < totalDeduction) {
+    if (user.wallet_balance < amount) {
       return NextResponse.json(
-        { 
-          message: "Insufficient wallet balance (including fees)",
-          required: totalDeduction,
-          current: user.wallet_balance,
-          shortage: totalDeduction - user.wallet_balance
-        },
+        { message: "Insufficient wallet balance (including fees)" },
         { status: 400 }
       );
     }
@@ -129,7 +106,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Sender & Receiver details as objects
+    // 🧾 Sender & Receiver details as objects
     const senderDetails = {
       name: senderName,
       accountNumber: senderAccountNumber,
@@ -139,23 +116,37 @@ export async function POST(req: Request) {
     const receiverDetails = {
       name: accountName,
       accountNumber: accountNumber,
-      bankName: bankName, 
+      bankName: bankName,
     };
 
-    const merchantTxRef = `WD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const merchantTxRef = `WD_${Date.now()}`;
 
-    // Insert pending withdrawal transaction WITH fee information
+    // Check if a transaction with same merchantTxRef already exists
+    const { data: existingTx } = await supabase
+      .from("transactions")
+      .select("id, status")
+      .eq("merchant_tx_ref", merchantTxRef)
+      .maybeSingle();
+
+    if (existingTx) {
+      console.log("⚠️ Duplicate transaction prevented:", merchantTxRef);
+      return NextResponse.json({
+        message: "Transaction already created",
+        transactionId: existingTx.id,
+      });
+    }
+
+    // Insert pending withdrawal transaction
     const { data: pendingTx, error: txError } = await supabase
       .from("transactions")
       .insert({
         user_id: userId,
         type: "withdrawal",
-        sender: senderDetails,         
-        receiver: receiverDetails,    
-        amount: withdrawalAmount,
-        total_deduction: totalDeduction, // Store the total amount to deduct
-        fee: totalFees, // Store the total fees
-        status: "pending", // CRITICAL: Keep as pending until webhook confirms
+        sender: senderDetails,
+        receiver: receiverDetails,
+        amount,
+        total_deduction: amount,
+        status: "pending",
         description: `Withdrawal to ${receiverDetails.name} (${receiverDetails.accountNumber})`,
         narration: narration || "Withdrawal",
         merchant_tx_ref: merchantTxRef,
@@ -180,64 +171,43 @@ export async function POST(req: Request) {
         accountId: process.env.NOMBA_ACCOUNT_ID!,
       },
       body: JSON.stringify({
-        amount: withdrawalAmount,
+        amount,
         accountNumber,
         accountName,
         bankCode,
         senderName,
         merchantTxRef,
-        narration: narration || "Withdrawal",
+        narration: "Withdrawal",
       }),
     });
 
     const data = await res.json();
-    console.log("Nomba transfer response:", data);
+    console.log("transfer data", data);
 
-    // Check if Nomba API returned an error
-    if (!res.ok || !data.success) {
-      console.error("Nomba API error:", data);
-      
-      // Update transaction to failed immediately
-      await supabase
-        .from("transactions")
-        .update({
-          status: "failed",
-          external_response: data,
-        })
-        .eq("id", pendingTx.id);
-
-      return NextResponse.json(
-        { 
-          error: "Withdrawal failed",
-          message: data.message || "Failed to process withdrawal",
-          details: data
-        },
-        { status: 400 }
-      );
-    }
-
-    // Save Nomba response but KEEP STATUS AS PENDING
-    // Wait for webhook to confirm success/failure
+    // Save Nomba response and set status to processing
     await supabase
       .from("transactions")
       .update({
-        external_response: data,
+        external_response: JSON.stringify(data || {}),
+        status: "processing",
         reference: data?.data?.reference || null,
-        // Don't update status here - wait for webhook
       })
       .eq("id", pendingTx.id);
 
+    // clearWalletBalanceCache(userId);
+    // clearTransactionsCache(userId);
+
     return NextResponse.json({
-      message: "Withdrawal initiated successfully. Waiting for confirmation.",
+      message:
+        "Withdrawal initiated (processing). Waiting for webhook confirmation.",
       merchantTxRef,
       transactionId: pendingTx.id,
-      status: "pending",
-      note: "Your balance will be updated once the transaction is confirmed",
+      nombaResponse: data,
     });
   } catch (error: any) {
     console.error("Withdraw API error:", error);
     return NextResponse.json(
-      { error: "Server error: " + error.message },
+      { error: "Server error: " + error.message || error.description },
       { status: 500 }
     );
   }
