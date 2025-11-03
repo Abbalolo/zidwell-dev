@@ -1323,7 +1323,7 @@ export async function POST(req: NextRequest) {
     } // end deposit handling
 
     // ---------- WITHDRAWAL / TRANSFER (OUTGOING) ----------
-   if (isPayoutOrTransfer) {
+if (isPayoutOrTransfer) {
   console.log("➡️ Handling payout/transfer flow");
 
   const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
@@ -1459,25 +1459,72 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    // 🚨 FIX: Check if update was successful and log the result
+    // 🚨 FIX: Check if reference already exists to avoid unique constraint violation
+    let finalReference = nombaTransactionId;
+    
+    if (nombaTransactionId) {
+      // Check if this reference already exists in another transaction
+      const { data: existingRef } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("reference", nombaTransactionId)
+        .neq("id", pendingTx.id) // Exclude current transaction
+        .maybeSingle();
+      
+      if (existingRef) {
+        console.warn("⚠️ Reference already exists, generating unique one:", nombaTransactionId);
+        finalReference = `WD_${nombaTransactionId}_${Date.now()}`;
+      }
+    } else {
+      finalReference = crypto.randomUUID();
+    }
+
+    // Update transaction with payout reference and success status
     const { error: updateError } = await supabase
       .from("transactions")
       .update({
         status: "success",
-        reference,
+        reference: finalReference, // Use the safe reference
         external_response: updatedExternalResponse,
         total_deduction: totalDeduction,
         fee: totalFees,
       })
       .eq("id", pendingTx.id);
 
-    // 🚨 ADDED: Check if the update actually worked
+    // Check if the update actually worked
     if (updateError) {
       console.error("❌ FAILED to update transaction to success:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update transaction status" },
-        { status: 500 }
-      );
+      
+      // 🚨 FIX: Try update without reference if reference causes constraint violation
+      if (updateError.code === '23505') {
+        console.log("🔄 Retrying update without reference due to constraint violation...");
+        
+        const { error: retryError } = await supabase
+          .from("transactions")
+          .update({
+            status: "success",
+            external_response: updatedExternalResponse,
+            total_deduction: totalDeduction,
+            fee: totalFees,
+            // Don't set reference to avoid constraint
+          })
+          .eq("id", pendingTx.id);
+          
+        if (retryError) {
+          console.error("❌ Retry also failed:", retryError);
+          return NextResponse.json(
+            { error: "Failed to update transaction status" },
+            { status: 500 }
+          );
+        }
+        
+        console.log("✅ Update succeeded without reference");
+      } else {
+        return NextResponse.json(
+          { error: "Failed to update transaction status" },
+          { status: 500 }
+        );
+      }
     }
 
     console.log(
@@ -1511,22 +1558,52 @@ export async function POST(req: NextRequest) {
       },
     };
 
+    // 🚨 FIX: For failure case, also handle reference constraint
+    let finalReference = nombaTransactionId || pendingTx.reference;
+    
+    if (nombaTransactionId) {
+      const { data: existingRef } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("reference", nombaTransactionId)
+        .neq("id", pendingTx.id)
+        .maybeSingle();
+      
+      if (existingRef) {
+        console.warn("⚠️ Reference already exists for failure case:", nombaTransactionId);
+        finalReference = `FAILED_${nombaTransactionId}_${Date.now()}`;
+      }
+    }
+
     // Update transaction status first
     const { error: updateError } = await supabase
       .from("transactions")
       .update({
         status: "failed",
         external_response: updatedExternalResponse,
-        reference: nombaTransactionId || pendingTx.reference,
+        reference: finalReference,
       })
       .eq("id", pendingTx.id);
 
     if (updateError) {
       console.error("❌ Failed to update transaction status:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update transaction" },
-        { status: 500 }
-      );
+      
+      // Retry without reference if constraint violation
+      if (updateError.code === '23505') {
+        console.log("🔄 Retrying failure update without reference...");
+        await supabase
+          .from("transactions")
+          .update({
+            status: "failed",
+            external_response: updatedExternalResponse,
+          })
+          .eq("id", pendingTx.id);
+      } else {
+        return NextResponse.json(
+          { error: "Failed to update transaction" },
+          { status: 500 }
+        );
+      }
     }
 
     // REFUND the user's wallet if balance was deducted
