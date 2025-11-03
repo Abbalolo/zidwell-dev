@@ -46,6 +46,9 @@ const LoginForm = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+      if (loading) return;
+
     setLoading(true);
 
     try {
@@ -114,7 +117,7 @@ const LoginForm = () => {
         text: err.message || "Invalid email or password",
       });
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 3000);
     }
   };
 
