@@ -1338,6 +1338,7 @@ export async function POST(req: NextRequest) {
         .from("transactions")
         .select("*")
         .or(orExpr)
+        .in("status", ["pending", "processing"])
         .maybeSingle();
 
       if (pendingErr) {
