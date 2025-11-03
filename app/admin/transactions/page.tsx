@@ -2,7 +2,8 @@
 "use client";
 
 import useSWR from "swr";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import AdminTable from "@/app/components/admin-components/AdminTable";
@@ -22,7 +23,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function TransactionsPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -33,6 +52,9 @@ export default function TransactionsPage() {
   const [isClient, setIsClient] = useState(false);
   const itemsPerPage = 20;
 
+  // Debounce search term to prevent too many API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
   // Build API URL with all filters for server-side filtering
   const apiUrl = useMemo(() => {
     const params = new URLSearchParams({
@@ -41,14 +63,14 @@ export default function TransactionsPage() {
       range: dateRange,
     });
 
-    if (searchTerm) params.append('search', searchTerm);
+    if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
     if (typeFilter !== 'all') params.append('type', typeFilter);
     if (statusFilter !== 'all') params.append('status', statusFilter);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
 
     return `/api/admin-apis/transactions?${params.toString()}`;
-  }, [currentPage, dateRange, searchTerm, typeFilter, statusFilter, startDate, endDate, itemsPerPage]);
+  }, [currentPage, dateRange, debouncedSearchTerm, typeFilter, statusFilter, startDate, endDate, itemsPerPage]);
 
   const { data, error, isLoading, mutate } = useSWR(apiUrl, fetcher);
 
@@ -59,14 +81,14 @@ export default function TransactionsPage() {
       limit: '10000', // Get all for stats calculation
     });
 
-    if (searchTerm) params.append('search', searchTerm);
+    if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
     if (typeFilter !== 'all') params.append('type', typeFilter);
     if (statusFilter !== 'all') params.append('status', statusFilter);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
 
     return `/api/admin-apis/transactions?${params.toString()}`;
-  }, [dateRange, searchTerm, typeFilter, statusFilter, startDate, endDate]);
+  }, [dateRange, debouncedSearchTerm, typeFilter, statusFilter, startDate, endDate]);
 
   const { data: statsData } = useSWR(statsApiUrl, fetcher);
 
@@ -77,9 +99,9 @@ export default function TransactionsPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, typeFilter, statusFilter, dateRange, startDate, endDate]);
+  }, [debouncedSearchTerm, typeFilter, statusFilter, dateRange, startDate, endDate]);
 
-  // Memoize calculations - MUST BE BEFORE ANY CONDITIONAL RETURNS
+  // Memoize calculations
   const transactions = useMemo(() => data?.transactions || [], [data]);
   const totalTransactions = useMemo(() => data?.total || 0, [data]);
   const totalPages = useMemo(() => Math.ceil(totalTransactions / itemsPerPage), [totalTransactions, itemsPerPage]);
@@ -112,23 +134,12 @@ export default function TransactionsPage() {
     [allFilteredTransactions]
   );
 
-  // Now the conditional returns can happen after all hooks
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <Loader />
-        </div>
-      </AdminLayout>
-    );
-  }
-  if (error) return <p className="p-6 text-red-600">Failed to load transactions ❌</p>;
-  if (!data) return <p className="p-6">No data available.</p>;
-
-  // Debug: Log the API URL to see what's being requested
-  console.log('API URL:', apiUrl);
-  console.log('Transactions count:', transactions.length);
-  console.log('Total transactions:', totalTransactions);
+  // Handle user click to navigate to user-specific transactions
+  const handleUserClick = useCallback((userId: string, userEmail?: string) => {
+    if (userId) {
+      router.push(`/admin/transactions/user/${userId}?email=${encodeURIComponent(userEmail || '')}`);
+    }
+  }, [router]);
 
   // ---------- Export to CSV ----------
   const handleExportCSV = async () => {
@@ -139,7 +150,7 @@ export default function TransactionsPage() {
         limit: '10000', // Large limit to get all transactions
       });
 
-      if (searchTerm) exportParams.append('search', searchTerm);
+      if (debouncedSearchTerm) exportParams.append('search', debouncedSearchTerm);
       if (typeFilter !== 'all') exportParams.append('type', typeFilter);
       if (statusFilter !== 'all') exportParams.append('status', statusFilter);
       if (startDate) exportParams.append('startDate', startDate);
@@ -150,10 +161,12 @@ export default function TransactionsPage() {
       const exportTransactions = exportData.transactions || [];
 
       // Convert to CSV
-      const headers = ["ID", "User ID", "Type", "Amount", "Fee", "Total", "Status", "Reference", "Description", "Phone", "Network", "Channel", "Created At"];
+      const headers = ["ID", "User ID", "User Email", "User Name", "Type", "Amount", "Fee", "Total", "Status", "Reference", "Description", "Phone", "Network", "Channel", "Created At"];
       const csvData = exportTransactions.map((t: any) => [
         t.id,
         t.user_id || "",
+        t.user_email || "",
+        t.user_name || "",
         t.type,
         t.amount,
         t.fee || 0,
@@ -209,6 +222,16 @@ export default function TransactionsPage() {
           
           <div><strong>User ID:</strong></div>
           <div class="font-mono text-sm">${transaction.user_id || "N/A"}</div>
+          
+          ${transaction.user_email ? `
+            <div><strong>User Email:</strong></div>
+            <div>${transaction.user_email}</div>
+          ` : ''}
+          
+          ${transaction.user_name ? `
+            <div><strong>User Name:</strong></div>
+            <div>${transaction.user_name}</div>
+          ` : ''}
           
           <div><strong>Type:</strong></div>
           <div>${transaction.type}</div>
@@ -445,10 +468,21 @@ export default function TransactionsPage() {
     return <span className="font-mono text-sm">{value}</span>;
   };
 
+  const renderUserIdCell = (value: string, row: any) => (
+    <button
+      onClick={() => handleUserClick(value, row.user_email)}
+      className="text-blue-600 hover:text-blue-800 underline font-medium text-left"
+      title="View all transactions for this user"
+    >
+      {value}
+    </button>
+  );
+
   // Define columns with render functions
   const columns = [
     { key: "reference", label: "Reference", render: renderReferenceCell },
-    { key: "user_id", label: "User ID" },
+    { key: "user_id", label: "User ID", render: renderUserIdCell },
+    { key: "user_email", label: "User Email" },
     { key: "type", label: "Type", render: renderTypeCell },
     { key: "amount", label: "Amount", render: renderAmountCell },
     { key: "fee", label: "Fee" },
@@ -456,6 +490,18 @@ export default function TransactionsPage() {
     { key: "description", label: "Description" },
     { key: "created_at", label: "Created", render: renderDateCell },
   ];
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <Loader />
+        </div>
+      </AdminLayout>
+    );
+  }
+  if (error) return <p className="p-6 text-red-600">Failed to load transactions ❌</p>;
+  if (!data) return <p className="p-6">No data available.</p>;
 
   return (
     <AdminLayout>
@@ -509,10 +555,11 @@ export default function TransactionsPage() {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="md:col-span-2">
             <Input
-              placeholder="Search by reference, user ID, description..."
+              placeholder="Search by reference, user ID, email, name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <p className="text-xs text-gray-500 mt-1">Search across references, user IDs, emails, and names</p>
           </div>
           <div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -523,7 +570,6 @@ export default function TransactionsPage() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="deposit">Deposit</SelectItem>
                 <SelectItem value="withdrawal">Transfer</SelectItem>
-                {/* <SelectItem value="transfer">Transfer</SelectItem> */}
                 <SelectItem value="airtime">Airtime</SelectItem>
                 <SelectItem value="electricity">Electricity</SelectItem>
                 <SelectItem value="data">Data</SelectItem>
@@ -606,7 +652,7 @@ export default function TransactionsPage() {
         {/* Results Count */}
         <div className="text-sm text-gray-500">
           Showing {transactions.length} of {totalTransactions} transactions
-          {searchTerm && ` matching "${searchTerm}"`}
+          {debouncedSearchTerm && ` matching "${debouncedSearchTerm}"`}
           {typeFilter !== 'all' && ` | Type: ${typeFilter}`}
           {statusFilter !== 'all' && ` | Status: ${statusFilter}`}
           {dateRange !== "total" && ` | Date: ${dateRange}`}

@@ -3,7 +3,11 @@ import { v4 as uuidv4 } from "uuid";
 import { transporter } from "@/lib/node-mailer";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
+// import { clearAllReceiptsCache } from "../get-receipt-db/route";
+// import {
+//   clearWalletBalanceCache,
+// } from "../wallet-balance/route";
+// import { clearTransactionsCache } from "../bill-transactions/route";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -12,7 +16,7 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { data, initiatorEmail, initiatorName, receiptId } = body;
+    const { data, initiatorEmail, initiatorName, receiptId, userId } = body;
 
     if (!receiptId || !data || !initiatorEmail || !initiatorName) {
       return NextResponse.json(
@@ -89,6 +93,10 @@ export async function POST(req: Request) {
         </div>
       `,
     });
+
+    // clearAllReceiptsCache();
+    // clearWalletBalanceCache(userId);
+    // clearTransactionsCache(userId);
 
     return NextResponse.json({
       message: "Receipt signing request sent successfully.",

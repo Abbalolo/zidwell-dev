@@ -215,7 +215,7 @@ export default function ElectricityBills() {
       setSelectedPlan(null);
       setAmount(null);
       setUserInfo(null);
-      window.location.reload();
+      
     } catch (error: any) {
       Swal.fire({
         icon: "error",

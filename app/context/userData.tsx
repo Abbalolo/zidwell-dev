@@ -21,11 +21,24 @@ export type PodcastEpisode = {
   tags?: string[];
 };
 
-interface SupabaseUser {
+export interface SupabaseUser {
   id: string;
+  firstName: string;
+  lastName: string;
   email: string;
-}
+  phone: string;
+  currentLoginSession: string | null;
+  zidcoinBalance: number;
+  bvnVerification: string;
+  role: string;
+  referralCode: string;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  dateOfBirth: string;
+  profilePicture: string | null;
 
+}
 export interface UserData {
   id: string;
   firstName: string;
@@ -67,12 +80,12 @@ interface UserContextType {
   handleDarkModeToggle: () => void;
   
   // Notification-related state
-  notifications: Notification[];
-  unreadCount: number;
-  notificationsLoading: boolean;
-  fetchNotifications: () => Promise<void>;
-  markAsRead: (notificationId: string) => Promise<void>;
-  markAllAsRead: () => Promise<void>;
+  // notifications: Notification[];
+  // unreadCount: number;
+  // notificationsLoading: boolean;
+  // fetchNotifications: () => Promise<void>;
+  // markAsRead: (notificationId: string) => Promise<void>;
+  // markAllAsRead: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -103,104 +116,104 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setNotifications([]);
   };
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    if (!userData?.id) return;
+  // // Fetch notifications
+  // const fetchNotifications = async () => {
+  //   if (!userData?.id) return;
     
-    // Only fetch if it's been more than 30 seconds since last fetch
-    const now = Date.now();
-    if (now - lastFetchTime < 30000 && notifications.length > 0) {
-      return;
-    }
+  //   // Only fetch if it's been more than 30 seconds since last fetch
+  //   const now = Date.now();
+  //   if (now - lastFetchTime < 30000 && notifications.length > 0) {
+  //     return;
+  //   }
 
-    setNotificationsLoading(true);
-    try {
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userData, 
-          limit: 20 // Fetch more for the context
-        })
-      });
+  //   setNotificationsLoading(true);
+  //   try {
+  //     const response = await fetch('/api/notifications', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ 
+  //         userData, 
+  //         limit: 20 // Fetch more for the context
+  //       })
+  //     });
 
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-        setLastFetchTime(now);
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setNotificationsLoading(false);
-    }
-  };
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       setNotifications(data);
+  //       setLastFetchTime(now);
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to fetch notifications:', error);
+  //   } finally {
+  //     setNotificationsLoading(false);
+  //   }
+  // };
 
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    if (!userData?.id) return;
+  // // Mark notification as read
+  // const markAsRead = async (notificationId: string) => {
+  //   if (!userData?.id) return;
 
-    try {
-      // Optimistic update
-      setNotifications(prev => 
-        prev.map(n => 
-          n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
-        )
-      );
+  //   try {
+  //     // Optimistic update
+  //     setNotifications(prev => 
+  //       prev.map(n => 
+  //         n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
+  //       )
+  //     );
 
-      await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userData })
-      });
-    } catch (error) {
-      console.error('Failed to mark as read:', error);
-      // Revert optimistic update on error
-      fetchNotifications(); // Refetch to get correct state
-    }
-  };
+  //     await fetch(`/api/notifications/${notificationId}/read`, {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ userData })
+  //     });
+  //   } catch (error) {
+  //     console.error('Failed to mark as read:', error);
+  //     // Revert optimistic update on error
+  //     fetchNotifications(); // Refetch to get correct state
+  //   }
+  // };
 
-  // Mark all as read
-  const markAllAsRead = async () => {
-    if (!userData?.id) return;
+  // // Mark all as read
+  // const markAllAsRead = async () => {
+  //   if (!userData?.id) return;
 
-    try {
-      // Optimistic update
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, read_at: new Date().toISOString() }))
-      );
+  //   try {
+  //     // Optimistic update
+  //     setNotifications(prev => 
+  //       prev.map(n => ({ ...n, read_at: new Date().toISOString() }))
+  //     );
 
-      await fetch('/api/notifications/read-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userData })
-      });
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
-      fetchNotifications(); // Refetch to get correct state
-    }
-  };
+  //     await fetch('/api/notifications/read-all', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ userData })
+  //     });
+  //   } catch (error) {
+  //     console.error('Failed to mark all as read:', error);
+  //     fetchNotifications(); // Refetch to get correct state
+  //   }
+  // };
 
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read_at).length;
+  // // Calculate unread count
+  // const unreadCount = notifications.filter(n => !n.read_at).length;
 
-  // Auto-fetch notifications when user data changes
-  useEffect(() => {
-    if (userData?.id) {
-      fetchNotifications();
-    }
-  }, [userData?.id]);
+  // // Auto-fetch notifications when user data changes
+  // useEffect(() => {
+  //   if (userData?.id) {
+  //     fetchNotifications();
+  //   }
+  // }, [userData?.id]);
 
-  // Optional: Periodic refresh (every 2 minutes) when user is active
-  useEffect(() => {
-    if (!userData?.id) return;
+  // // Optional: Periodic refresh (every 2 minutes) when user is active
+  // useEffect(() => {
+  //   if (!userData?.id) return;
 
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 120000); // 2 minutes
+  //   const interval = setInterval(() => {
+  //     fetchNotifications();
+  //   }, 120000); // 2 minutes
 
-    return () => clearInterval(interval);
-  }, [userData?.id]);
+  //   return () => clearInterval(interval);
+  // }, [userData?.id]);
 
   // Your existing effects remain the same...
   useEffect(() => {
@@ -331,12 +344,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setSearchTerm,
         
         // Notification context
-        notifications,
-        unreadCount,
-        notificationsLoading,
-        fetchNotifications,
-        markAsRead,
-        markAllAsRead,
+        // notifications,
+        // // unreadCount,
+        // notificationsLoading,
+        // fetchNotifications,
+        // markAsRead,
+        // markAllAsRead,
       }}
     >
       {children}

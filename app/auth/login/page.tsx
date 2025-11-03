@@ -1,6 +1,6 @@
 "use client";
 import Swal from "sweetalert2";
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import logo from "@/public/logo.png";
@@ -19,10 +19,11 @@ import { Eye, EyeOff } from "lucide-react";
 import { UserData, useUserContextData } from "@/app/context/userData";
 
 import Carousel from "@/app/components/Carousel";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import supabase from "@/app/supabase/supabase";
+import { sendLoginNotificationWithDeviceInfo } from "@/lib/login-notification";
 
-const Page = () => {
+const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +32,10 @@ const Page = () => {
   const { setUserData } = useUserContextData();
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard";
+  const fromLogin = searchParams.get("fromLogin");
+  const scrollToPricing = searchParams.get("scrollToPricing");
 
   useEffect(() => {
     const checkScreenSize = () => setIsMobile(window.innerWidth < 768);
@@ -79,6 +84,8 @@ const Page = () => {
         path: "/",
       });
 
+      await sendLoginNotificationWithDeviceInfo(profile);
+
       // 4️⃣ Show success and redirect
       Swal.fire({
         icon: "success",
@@ -87,7 +94,18 @@ const Page = () => {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        router.push(isVerified ? "/dashboard" : "/onboarding");
+        if (fromLogin === "true") {
+          // User came from pricing component, redirect back with parameters
+          if (scrollToPricing === "true") {
+            // Redirect back to the original page with scroll parameters
+            router.push(`${returnUrl}?fromLogin=true&scrollToPricing=true`);
+          } else {
+            router.push(returnUrl);
+          }
+        } else {
+          // Normal login flow - go to onboarding or dashboard based on verification
+          router.push(isVerified ? "/dashboard" : "/onboarding");
+        }
       });
     } catch (err: any) {
       Swal.fire({
@@ -214,4 +232,10 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+// import { clearBusinessDataCache } from "../../get-business-account-details/route";
+// import { clearWalletBalanceCache } from "../../wallet-balance/route";
+// import { clearTransactionsCache } from "../../bill-transactions/route";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -21,7 +24,7 @@ export async function POST(req: NextRequest) {
       // bankCode,
       // accountNumber,
       // accountName,
-      cacFileBase64, // ✅ Added CAC file upload
+      cacFileBase64, 
     } = body;
 
     if (!userId) {
@@ -86,6 +89,8 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId);
+
+       
     } else {
       // ✅ Insert new business
       result = await supabase.from("businesses").insert([
@@ -109,6 +114,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (result.error) throw result.error;
+
+    //  clearBusinessDataCache(userId)
+    //   clearWalletBalanceCache(userId);
+    //       clearTransactionsCache(userId);
 
     return NextResponse.json({ success: true, cacFileUrl });
   } catch (error: any) {

@@ -3,6 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from "uuid";
 import { transporter } from "@/lib/node-mailer";
 import { getNombaToken } from "@/lib/nomba";
+// import { clearUserWalletCache } from "../get-wallet-account-details/route";
+// import { clearInvoicesCache } from "../get-invoices-db/route";
+// import { clearWalletBalanceCache } from "../wallet-balance/route";
+// import { clearTransactionsCache } from "../bill-transactions/route";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -192,6 +196,9 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+    //  clearInvoicesCache(initiator_email)
+    //   clearWalletBalanceCache(userId);
+    //        clearTransactionsCache(userId);
 
     return NextResponse.json(
       { message: "Invoice created and email sent", paymentLink },

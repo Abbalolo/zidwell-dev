@@ -1,11 +1,16 @@
 // app/api/summary/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getNombaToken } from "@/lib/nomba";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// SUMMARY DATA CACHE
+const summaryCache = new Map();
+const SUMMARY_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
 // Nomba caching (1 minute)
 let _cachedNomba = { ts: 0, value: 0 };
@@ -53,8 +58,6 @@ async function fetchNombaBalanceCached(
     return 0;
   }
 }
-
-import { getNombaToken } from "@/lib/nomba";
 
 function parseRangeToDates(range: string | null) {
   if (!range || range === "total") return null;
@@ -117,6 +120,339 @@ function buildMonthLabelsFromRange(
   return labels;
 }
 
+// Cache management functions - NOT EXPORTED
+function clearSummaryCache(range?: string) {
+  if (range) {
+    // Clear specific range cache
+    const cacheKey = `summary_${range}`;
+    const existed = summaryCache.delete(cacheKey);
+    if (existed) {
+      console.log(`🧹 Cleared summary cache for range: ${range}`);
+    }
+    return existed;
+  } else {
+    // Clear all summary cache
+    const count = summaryCache.size;
+    summaryCache.clear();
+    console.log(`🧹 Cleared all summary cache (${count} entries)`);
+    return count;
+  }
+}
+
+function clearSummaryCacheForEvents() {
+  // Clear all time ranges since events affect all time periods
+  clearSummaryCache();
+  console.log("🧹 Cleared summary cache due to system event");
+}
+
+// Optional: Periodic cache cleanup
+function cleanupExpiredSummaryCache() {
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  for (const [key, value] of summaryCache) {
+    if (now - value.timestamp > SUMMARY_CACHE_TTL) {
+      summaryCache.delete(key);
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`🧹 Cleaned ${cleanedCount} expired summary cache entries`);
+  }
+}
+
+// Run cleanup every 5 minutes
+setInterval(cleanupExpiredSummaryCache, 5 * 60 * 1000);
+
+async function getCachedSummaryData(rangeParam: string) {
+  const cacheKey = `summary_${rangeParam}`;
+  const cached = summaryCache.get(cacheKey);
+  
+  if (cached && (Date.now() - cached.timestamp) < SUMMARY_CACHE_TTL) {
+    console.log("✅ Using cached summary data");
+    return {
+      ...cached.data,
+      _fromCache: true
+    };
+  }
+  
+  console.log("🔄 Fetching fresh summary data from database");
+  
+  const rangeDates = parseRangeToDates(rangeParam);
+
+  // --- Transactions (apply range if provided) ---
+  let txQuery = supabaseAdmin
+    .from("transactions")
+    .select("id, amount, type, status, created_at")
+    .order("created_at", { ascending: false });
+  
+  if (rangeDates) {
+    txQuery = txQuery
+      .gte("created_at", rangeDates.start)
+      .lte("created_at", rangeDates.end);
+  }
+
+  const { data: transactions = [], error: txError } = await txQuery;
+  if (txError) {
+    console.error("[/api/summary] error fetching transactions:", txError);
+  } else {
+    console.log(
+      "[/api/summary] transactions fetched:",
+      (transactions as any[]).length,
+      "including all statuses"
+    );
+  }
+
+  // Transaction aggregates - now including all statuses
+  const INFLOW_TYPES = [
+    "deposit",
+    "card_deposit",
+    "referral",
+    "referral_reward",
+    "p2p_received",
+  ];
+
+  const OUTFLOW_TYPES = [
+    "withdrawal",
+    "airtime",
+    "electricity",
+    "cable",
+    "data",
+    "debit",
+  ];
+
+  const totalTransactions = (transactions ?? []).length;
+
+  // Calculate successful transactions only for specific metrics if needed
+  const successfulTransactions = (transactions ?? []).filter(
+    (t: any) => t.status === "success"
+  );
+  const failedTransactions = (transactions ?? []).filter(
+    (t: any) => t.status === "failed"
+  );
+  const pendingTransactions = (transactions ?? []).filter(
+    (t: any) => t.status === "pending"
+  );
+
+  // For financial calculations, you might still want only successful transactions
+  const totalInflow = successfulTransactions
+    .filter((t: any) =>
+      INFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
+    )
+    .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
+
+  const totalOutflow = successfulTransactions
+    .filter((t: any) =>
+      OUTFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
+    )
+    .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
+
+  // latestTransactions (last 5) - now includes all statuses
+  const latestTransactions = (transactions ?? [])
+    .slice(0, 5)
+    .map((t: any) => ({
+      id: t.id,
+      type: t.type,
+      amount: Number(t.amount ?? 0),
+      status: t.status,
+      created_at: t.created_at,
+    }));
+
+  // --- Users wallet balance (sum wallet_balance across users) ---
+  const { data: usersBalances = [], error: ubError } = await supabaseAdmin
+    .from("users")
+    .select("wallet_balance");
+  if (ubError)
+    console.error("[/api/summary] users wallet fetch error:", ubError);
+  const mainWalletBalance = (usersBalances ?? []).reduce(
+    (s: number, u: any) => s + Number(u.wallet_balance ?? 0),
+    0
+  );
+
+  // --- Users total count ---
+  const { count: totalUsersCount } = await supabaseAdmin
+    .from("users")
+    .select("*", { count: "exact", head: true });
+  const totalUsers = Number(totalUsersCount ?? 0);
+
+  // --- Contracts stats (apply range if provided) ---
+  let contractsQuery = supabaseAdmin
+    .from("contracts")
+    .select("id, status, created_at");
+  if (rangeDates) {
+    contractsQuery = contractsQuery
+      .gte("created_at", rangeDates.start)
+      .lte("created_at", rangeDates.end);
+  }
+  const { data: contractsData = [], error: contractsError } =
+    await contractsQuery;
+  if (contractsError)
+    console.error("[/api/summary] contracts fetch error:", contractsError);
+  const totalContractsIssued = (contractsData ?? []).length;
+
+  const pendingContracts = (contractsData ?? []).filter(
+    (c: any) => (c.status ?? "pending") === "pending"
+  ).length;
+  const signedContracts = (contractsData ?? []).filter(
+    (c: any) => (c.status ?? "").toLowerCase() === "signed"
+  ).length;
+
+  // monthlyContracts breakdown
+  const monthLabels = buildMonthLabelsFromRange(rangeDates);
+  const monthlyContractsMap: Record<string, number> = {};
+  (contractsData ?? []).forEach((c: any) => {
+    const d = new Date(c.created_at);
+    if (isNaN(d.getTime())) return;
+    const key = d.toLocaleString("default", {
+      month: "short",
+      year: "numeric",
+    });
+    monthlyContractsMap[key] = (monthlyContractsMap[key] ?? 0) + 1;
+  });
+  const monthlyContracts = monthLabels.map((m) => ({
+    month: m,
+    count: monthlyContractsMap[m] ?? 0,
+  }));
+
+  // --- Invoices stats (apply range if provided) ---
+  let invoicesQuery = supabaseAdmin
+    .from("invoices")
+    .select("id, status, created_at, paid_amount");
+  if (rangeDates) {
+    invoicesQuery = invoicesQuery
+      .gte("created_at", rangeDates.start)
+      .lte("created_at", rangeDates.end);
+  }
+  const { data: invoicesData = [], error: invoicesError } =
+    await invoicesQuery;
+  if (invoicesError)
+    console.error("[/api/summary] invoices fetch error:", invoicesError);
+  const totalInvoicesIssued = (invoicesData ?? []).length;
+  const paidInvoices = (invoicesData ?? []).filter(
+    (inv: any) => (inv.status ?? "").toLowerCase() === "paid"
+  ).length;
+  const unpaidInvoices = (invoicesData ?? []).filter(
+    (inv: any) => (inv.status ?? "").toLowerCase() === "unpaid"
+  ).length;
+  const totalInvoiceRevenue = (invoicesData ?? [])
+    .filter((inv: any) => (inv.status ?? "").toLowerCase() === "paid")
+    .reduce(
+      (s: number, inv: any) =>
+        s + Number(inv.paid_amount ?? inv.total_amount ?? 0),
+      0
+    );
+
+  // monthlyInvoices breakdown (count + revenue)
+  const monthlyInvoicesMap: Record<
+    string,
+    { count: number; revenue: number }
+  > = {};
+  (invoicesData ?? []).forEach((inv: any) => {
+    const d = new Date(inv.created_at);
+    if (isNaN(d.getTime())) return;
+    const key = d.toLocaleString("default", {
+      month: "short",
+      year: "numeric",
+    });
+    monthlyInvoicesMap[key] = monthlyInvoicesMap[key] ?? {
+      count: 0,
+      revenue: 0,
+    };
+    monthlyInvoicesMap[key].count += 1;
+    if ((inv.status ?? "").toLowerCase() === "paid") {
+      monthlyInvoicesMap[key].revenue += Number(
+        inv.paid_amount ?? inv.total_amount ?? 0
+      );
+    }
+  });
+  const monthlyInvoices = monthLabels.map((m) => ({
+    month: m,
+    count: monthlyInvoicesMap[m]?.count ?? 0,
+    revenue: monthlyInvoicesMap[m]?.revenue ?? 0,
+  }));
+
+  // --- Monthly transactions breakdown (sum amounts per month) ---
+  // For monthly breakdown, you might still want only successful transactions
+  const monthlyTransactionsMap: Record<string, number> = {};
+  successfulTransactions.forEach((t: any) => {
+    const d = new Date(t.created_at);
+    if (isNaN(d.getTime())) return;
+    const key = d.toLocaleString("default", {
+      month: "short",
+      year: "numeric",
+    });
+    monthlyTransactionsMap[key] =
+      (monthlyTransactionsMap[key] ?? 0) + Number(t.amount ?? 0);
+  });
+  const monthlyTransactions = monthLabels.map((m) => ({
+    month: m,
+    transactions: monthlyTransactionsMap[m] ?? 0,
+  }));
+
+  // --- Nomba balance (cached) ---
+  const nombaBalance = await fetchNombaBalanceCached(async () => {
+    try {
+      return await getNombaToken();
+    } catch (err) {
+      console.error("getNombaToken error:", err);
+      return null;
+    }
+  });
+
+  // --- final response with transaction status breakdown ---
+  const response = {
+    totalInflow,
+    totalOutflow,
+    mainWalletBalance,
+    nombaBalance,
+    totalTransactions,
+    totalUsers,
+    pendingInvoices: unpaidInvoices,
+    paidInvoices,
+    totalInvoicesIssued,
+    totalInvoiceRevenue,
+    pendingContracts,
+    signedContracts,
+    totalContractsIssued,
+    latestTransactions,
+    monthlyTransactions,
+    monthlyInvoices,
+    monthlyContracts,
+    range: rangeParam,
+    
+    // NEW: Transaction status breakdown
+    transactionStatus: {
+      success: successfulTransactions.length,
+      failed: failedTransactions.length,
+      pending: pendingTransactions.length,
+    },
+    
+    // NEW: Include all transactions count by status in the main response
+    successfulTransactions: successfulTransactions.length,
+    failedTransactions: failedTransactions.length,
+    pendingTransactions: pendingTransactions.length,
+    _fromCache: false
+  };
+
+  // Cache the successful response
+  summaryCache.set(cacheKey, {
+    data: response,
+    timestamp: Date.now()
+  });
+
+  console.log("[/api/summary] response built with all transactions");
+  console.log("[/api/summary] Transaction breakdown:", {
+    total: totalTransactions,
+    success: successfulTransactions.length,
+    failed: failedTransactions.length,
+    pending: pendingTransactions.length,
+  });
+
+  return response;
+}
+
+// Only export HTTP methods
 export async function GET(req: Request) {
   try {
     console.log("[/api/summary] incoming request");
@@ -128,271 +464,28 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const rangeParam = url.searchParams.get("range") ?? "total";
-    const rangeDates = parseRangeToDates(rangeParam);
+    const nocache = url.searchParams.get("nocache") === "true";
 
-    // --- Transactions (apply range if provided) ---
-    // REMOVED: .eq("status", "success") filter to include all transactions
-    let txQuery = supabaseAdmin
-      .from("transactions")
-      .select("id, amount, type, status, created_at")
-      .order("created_at", { ascending: false });
-    
-    if (rangeDates) {
-      txQuery = txQuery
-        .gte("created_at", rangeDates.start)
-        .lte("created_at", rangeDates.end);
+    // Clear cache if force refresh requested
+    if (nocache) {
+      clearSummaryCache(rangeParam);
+      console.log(`🔄 Force refreshing summary data for range: ${rangeParam}`);
     }
 
-    const { data: transactions = [], error: txError } = await txQuery;
-    if (txError) {
-      console.error("[/api/summary] error fetching transactions:", txError);
-    } else {
-      console.log(
-        "[/api/summary] transactions fetched:",
-        (transactions as any[]).length,
-        "including all statuses"
-      );
-    }
+    // USE CACHED SUMMARY DATA
+    const response = await getCachedSummaryData(rangeParam);
 
-    // Transaction aggregates - now including all statuses
-    const INFLOW_TYPES = [
-      "deposit",
-      "card_deposit",
-      "referral",
-      "referral_reward",
-      "p2p_received",
-    ];
+    // Remove cache flag from final response
+    const { _fromCache, ...cleanResponse } = response;
 
-    const OUTFLOW_TYPES = [
-      "withdrawal",
-      "airtime",
-      "electricity",
-      "cable",
-      "data",
-      "debit",
-    ];
-
-    const totalTransactions = (transactions ?? []).length;
-
-    // Calculate successful transactions only for specific metrics if needed
-    const successfulTransactions = (transactions ?? []).filter(
-      (t: any) => t.status === "success"
-    );
-    const failedTransactions = (transactions ?? []).filter(
-      (t: any) => t.status === "failed"
-    );
-    const pendingTransactions = (transactions ?? []).filter(
-      (t: any) => t.status === "pending"
-    );
-
-    // For financial calculations, you might still want only successful transactions
-    const totalInflow = successfulTransactions
-      .filter((t: any) =>
-        INFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
-      )
-      .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
-
-    const totalOutflow = successfulTransactions
-      .filter((t: any) =>
-        OUTFLOW_TYPES.includes((t.type ?? "").toString().toLowerCase())
-      )
-      .reduce((s: number, t: any) => s + Number(t.amount ?? 0), 0);
-
-    // latestTransactions (last 5) - now includes all statuses
-    const latestTransactions = (transactions ?? [])
-      .slice(0, 5)
-      .map((t: any) => ({
-        id: t.id,
-        type: t.type,
-        amount: Number(t.amount ?? 0),
-        status: t.status,
-        created_at: t.created_at,
-      }));
-
-    // --- Users wallet balance (sum wallet_balance across users) ---
-    const { data: usersBalances = [], error: ubError } = await supabaseAdmin
-      .from("users")
-      .select("wallet_balance");
-    if (ubError)
-      console.error("[/api/summary] users wallet fetch error:", ubError);
-    const mainWalletBalance = (usersBalances ?? []).reduce(
-      (s: number, u: any) => s + Number(u.wallet_balance ?? 0),
-      0
-    );
-
-    // --- Users total count ---
-    const { count: totalUsersCount } = await supabaseAdmin
-      .from("users")
-      .select("*", { count: "exact", head: true });
-    const totalUsers = Number(totalUsersCount ?? 0);
-
-    // --- Contracts stats (apply range if provided) ---
-    let contractsQuery = supabaseAdmin
-      .from("contracts")
-      .select("id, status, created_at");
-    if (rangeDates) {
-      contractsQuery = contractsQuery
-        .gte("created_at", rangeDates.start)
-        .lte("created_at", rangeDates.end);
-    }
-    const { data: contractsData = [], error: contractsError } =
-      await contractsQuery;
-    if (contractsError)
-      console.error("[/api/summary] contracts fetch error:", contractsError);
-    const totalContractsIssued = (contractsData ?? []).length;
-
-    const pendingContracts = (contractsData ?? []).filter(
-      (c: any) => (c.status ?? "pending") === "pending"
-    ).length;
-    const signedContracts = (contractsData ?? []).filter(
-      (c: any) => (c.status ?? "").toLowerCase() === "signed"
-    ).length;
-
-    // monthlyContracts breakdown
-    const monthLabels = buildMonthLabelsFromRange(rangeDates);
-    const monthlyContractsMap: Record<string, number> = {};
-    (contractsData ?? []).forEach((c: any) => {
-      const d = new Date(c.created_at);
-      if (isNaN(d.getTime())) return;
-      const key = d.toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-      monthlyContractsMap[key] = (monthlyContractsMap[key] ?? 0) + 1;
-    });
-    const monthlyContracts = monthLabels.map((m) => ({
-      month: m,
-      count: monthlyContractsMap[m] ?? 0,
-    }));
-
-    // --- Invoices stats (apply range if provided) ---
-    let invoicesQuery = supabaseAdmin
-      .from("invoices")
-      .select("id, status, created_at, paid_amount");
-    if (rangeDates) {
-      invoicesQuery = invoicesQuery
-        .gte("created_at", rangeDates.start)
-        .lte("created_at", rangeDates.end);
-    }
-    const { data: invoicesData = [], error: invoicesError } =
-      await invoicesQuery;
-    if (invoicesError)
-      console.error("[/api/summary] invoices fetch error:", invoicesError);
-    const totalInvoicesIssued = (invoicesData ?? []).length;
-    const paidInvoices = (invoicesData ?? []).filter(
-      (inv: any) => (inv.status ?? "").toLowerCase() === "paid"
-    ).length;
-    const unpaidInvoices = (invoicesData ?? []).filter(
-      (inv: any) => (inv.status ?? "").toLowerCase() === "unpaid"
-    ).length;
-    const totalInvoiceRevenue = (invoicesData ?? [])
-      .filter((inv: any) => (inv.status ?? "").toLowerCase() === "paid")
-      .reduce(
-        (s: number, inv: any) =>
-          s + Number(inv.paid_amount ?? inv.total_amount ?? 0),
-        0
-      );
-
-    // monthlyInvoices breakdown (count + revenue)
-    const monthlyInvoicesMap: Record<
-      string,
-      { count: number; revenue: number }
-    > = {};
-    (invoicesData ?? []).forEach((inv: any) => {
-      const d = new Date(inv.created_at);
-      if (isNaN(d.getTime())) return;
-      const key = d.toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-      monthlyInvoicesMap[key] = monthlyInvoicesMap[key] ?? {
-        count: 0,
-        revenue: 0,
-      };
-      monthlyInvoicesMap[key].count += 1;
-      if ((inv.status ?? "").toLowerCase() === "paid") {
-        monthlyInvoicesMap[key].revenue += Number(
-          inv.paid_amount ?? inv.total_amount ?? 0
-        );
+    return NextResponse.json({
+      ...cleanResponse,
+      _cache: {
+        cached: _fromCache,
+        timestamp: Date.now(),
+        range: rangeParam
       }
     });
-    const monthlyInvoices = monthLabels.map((m) => ({
-      month: m,
-      count: monthlyInvoicesMap[m]?.count ?? 0,
-      revenue: monthlyInvoicesMap[m]?.revenue ?? 0,
-    }));
-
-    // --- Monthly transactions breakdown (sum amounts per month) ---
-    // For monthly breakdown, you might still want only successful transactions
-    const monthlyTransactionsMap: Record<string, number> = {};
-    successfulTransactions.forEach((t: any) => {
-      const d = new Date(t.created_at);
-      if (isNaN(d.getTime())) return;
-      const key = d.toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-      monthlyTransactionsMap[key] =
-        (monthlyTransactionsMap[key] ?? 0) + Number(t.amount ?? 0);
-    });
-    const monthlyTransactions = monthLabels.map((m) => ({
-      month: m,
-      transactions: monthlyTransactionsMap[m] ?? 0,
-    }));
-
-    // --- Nomba balance (cached) ---
-    const nombaBalance = await fetchNombaBalanceCached(async () => {
-      try {
-        return await getNombaToken();
-      } catch (err) {
-        console.error("getNombaToken error:", err);
-        return null;
-      }
-    });
-
-    // --- final response with transaction status breakdown ---
-    const response = {
-      totalInflow,
-      totalOutflow,
-      mainWalletBalance,
-      nombaBalance,
-      totalTransactions,
-      totalUsers,
-      pendingInvoices: unpaidInvoices,
-      paidInvoices,
-      totalInvoicesIssued,
-      totalInvoiceRevenue,
-      pendingContracts,
-      signedContracts,
-      totalContractsIssued,
-      latestTransactions,
-      monthlyTransactions,
-      monthlyInvoices,
-      monthlyContracts,
-      range: rangeParam,
-      
-      // NEW: Transaction status breakdown
-      transactionStatus: {
-        success: successfulTransactions.length,
-        failed: failedTransactions.length,
-        pending: pendingTransactions.length,
-      },
-      
-      // NEW: Include all transactions count by status in the main response
-      successfulTransactions: successfulTransactions.length,
-      failedTransactions: failedTransactions.length,
-      pendingTransactions: pendingTransactions.length,
-    };
-
-    console.log("[/api/summary] response built with all transactions");
-    console.log("[/api/summary] Transaction breakdown:", {
-      total: totalTransactions,
-      success: successfulTransactions.length,
-      failed: failedTransactions.length,
-      pending: pendingTransactions.length,
-    });
-
-    return NextResponse.json(response);
   } catch (err) {
     console.error("[/api/summary] Unhandled error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

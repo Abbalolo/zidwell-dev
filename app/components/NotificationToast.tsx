@@ -19,45 +19,45 @@ export default function NotificationToast() {
   const { userData } = useUserContextData();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  useEffect(() => {
-    if (!userData) return;
+  // useEffect(() => {
+  //   if (!userData) return;
 
-    // Poll for new notifications instead of using EventSource
-    const pollForNotifications = async () => {
-      try {
-        const response = await fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            userData, 
-            filter: 'unread',
-            limit: 5 
-          })
-        });
+  //   // Poll for new notifications instead of using EventSource
+  //   const pollForNotifications = async () => {
+  //     try {
+  //       const response = await fetch('/api/notifications', {
+  //         method: 'POST',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ 
+  //           userData, 
+  //           filter: 'unread',
+  //           limit: 5 
+  //         })
+  //       });
         
-        if (response.ok) {
-          const newNotifications = await response.json();
+  //       if (response.ok) {
+  //         const newNotifications = await response.json();
           
-          // Check for truly new notifications (not already in state)
-          setNotifications(prev => {
-            const existingIds = new Set(prev.map(n => n.id));
-            const trulyNew = newNotifications.filter((n: Notification) => !existingIds.has(n.id));
-            return [...trulyNew, ...prev].slice(0, 5); // Keep only 5 most recent
-          });
-        }
-      } catch (error) {
-        console.error('Error polling notifications:', error);
-      }
-    };
+  //         // Check for truly new notifications (not already in state)
+  //         setNotifications(prev => {
+  //           const existingIds = new Set(prev.map(n => n.id));
+  //           const trulyNew = newNotifications.filter((n: Notification) => !existingIds.has(n.id));
+  //           return [...trulyNew, ...prev].slice(0, 5); // Keep only 5 most recent
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('Error polling notifications:', error);
+  //     }
+  //   };
 
-    // Poll immediately
-    pollForNotifications();
+  //   // Poll immediately
+  //   pollForNotifications();
 
-    // Then poll every 30 seconds
-    const interval = setInterval(pollForNotifications, 30000);
+  //   // Then poll every 30 seconds
+  //   const interval = setInterval(pollForNotifications, 30000);
 
-    return () => clearInterval(interval);
-  }, [userData]);
+  //   return () => clearInterval(interval);
+  // }, [userData]);
 
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));

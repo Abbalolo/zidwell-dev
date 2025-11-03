@@ -184,7 +184,6 @@ export default function DataBundlePurchase() {
       setPhoneNumber("");
       setSelectedProvider(null);
       setSelectedPlan(null);
-      window.location.reload();
     } catch (error: any) {
       Swal.fire({
         icon: "error",
@@ -511,7 +510,7 @@ export default function DataBundlePurchase() {
                     setIsOpen(true);
                   }
                 }}
-                disabled={!phoneNumber || !selectedPlan}
+                disabled={!phoneNumber || !selectedPlan || loading2}
                 className="w-full bg-[#C29307] hover:bg-[#C29307] text-white py-3 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 {loading2 ? (

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
+// import { clearWalletBalanceCache } from "../wallet-balance/route";
+// import { clearTransactionsCache } from "../bill-transactions/route";
 
 export async function POST(req: Request) {
   const supabase = createClient(
@@ -120,6 +122,9 @@ export async function POST(req: Request) {
       console.error("Failed to update transaction status:", updateStatusError);
       // Don't fail the transfer - log the error but continue
     }
+
+    //  clearWalletBalanceCache(userId);
+    //       clearTransactionsCache(userId);
 
     return NextResponse.json({
       status: "success",

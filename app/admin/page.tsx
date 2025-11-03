@@ -82,17 +82,25 @@ export default function AdminDashboard() {
   const [page, setPage] = useState<number>(1);
   const PAGE_LIMIT = 50;
 
-  const [range, setRange] = useState<RangeOption>(() => {
-    if (typeof window === "undefined") return "total";
-    return (
-      (localStorage.getItem("admin_dashboard_range") as RangeOption) || "total"
-    );
-  });
+  // Fix hydration issue by using useEffect for localStorage
+  const [range, setRange] = useState<RangeOption>("total");
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("admin_dashboard_range", range);
+    setIsClient(true);
+    // Only access localStorage after component mounts on client
+    const savedRange = localStorage.getItem("admin_dashboard_range") as RangeOption;
+    if (savedRange) {
+      setRange(savedRange);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem("admin_dashboard_range", range);
+    }
     setPage(1);
-  }, [range]);
+  }, [range, isClient]);
 
   const { data: summaryData, error: summaryError } = useSWR<any>(
     `/api/admin-apis/dashboard/summary?range=${range}`,
@@ -195,6 +203,16 @@ export default function AdminDashboard() {
   const formatCurrency = (value: number | string) => {
     const n = Number(value || 0);
     return n.toLocaleString("en-NG", { style: "currency", currency: "NGN" });
+  };
+
+  // Format date safely for client-side only
+  const formatDateSafely = (dateString: string) => {
+    if (!isClient) return dateString;
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return dateString;
+    }
   };
 
   if (loading) {
@@ -367,38 +385,6 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
-
-          {/* Invoices Pie Chart */}
-          {/* <div className="bg-white p-6 rounded-2xl shadow-sm border">
-            <div className="text-sm text-gray-500 mb-2">Invoice Status</div>
-            <div className="h-32">
-              {invoicesPieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={invoicesPieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={60}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {invoicesPieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [value, "Count"]} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-400">
-                  No data
-                </div>
-              )}
-            </div>
-          </div> */}
         </div>
 
         {/* Charts Section */}
@@ -453,7 +439,7 @@ export default function AdminDashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }:any) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -598,7 +584,7 @@ export default function AdminDashboard() {
                         {tx.type || "—"}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(tx.created_at).toLocaleString()}
+                        {formatDateSafely(tx.created_at)}
                       </td>
                     </tr>
                   ))

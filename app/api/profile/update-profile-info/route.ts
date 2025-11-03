@@ -1,18 +1,33 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
+// import { clearWalletBalanceCache } from "../../wallet-balance/route";
+// import { clearUserWalletCache } from "../../get-wallet-account-details/route";
+// import { clearTransactionsCache } from "../../bill-transactions/route";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-  
 );
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const { userId, firstName, lastName, phone, dob, address, city, state, country,pBankName,pBankCode,pAccountNumber, pAccountName  } = body;
+    const {
+      userId,
+      firstName,
+      lastName,
+      phone,
+      dob,
+      address,
+      city,
+      state,
+      country,
+      pBankName,
+      pBankCode,
+      pAccountNumber,
+      pAccountName,
+    } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -40,12 +55,23 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Update error:", error);
-      return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to update profile" },
+        { status: 500 }
+      );
     }
+
+    // clearTransactionsCache(userId);
+
+    // clearWalletBalanceCache(userId);
+    // clearUserWalletCache(userId);
 
     return NextResponse.json({ success: true, data });
   } catch (err) {
     console.error("Server error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

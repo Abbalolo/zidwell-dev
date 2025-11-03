@@ -23,13 +23,13 @@ const navLinks = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Kyc Users", href: "/admin/kyc", icon: Key },
-  { name: "Transactions", href: "/admin/transactions", icon:  FileChartColumnIncreasing },
+  { name: "Transactions", href: "/admin/transactions", icon: FileChartColumnIncreasing },
   { name: "Receipts", href: "/admin/receipts", icon: Receipt },
   { name: "Invoices", href: "/admin/invoices", icon: FileSpreadsheet },
   { name: "Contracts", href: "/admin/contracts", icon: FileText },
   { name: "Tax Filings", href: "/admin/tax-filings", icon: ClipboardList },
-  { name: "Support & disputes", href: "/admin/disputes-supports", icon: Headphones },
-  { name: "Notications", href: "/admin/notifications", icon:  Bell },
+  { name: "Support & Disputes", href: "/admin/disputes-supports", icon: Headphones },
+  { name: "Notifications", href: "/admin/notifications", icon: Bell },
 ];
 
 export default function AdminSidebar() {
@@ -37,14 +37,8 @@ export default function AdminSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.classList.add("overflow-hidden");
-    } else {
-      document.body.classList.remove("overflow-hidden");
-    }
-    return () => {
-      document.body.classList.remove("overflow-hidden");
-    };
+    document.body.classList.toggle("overflow-hidden", isMobileMenuOpen);
+    return () => document.body.classList.remove("overflow-hidden");
   }, [isMobileMenuOpen]);
 
   const NavItem = ({
@@ -72,52 +66,42 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* 📱 Mobile toggle button */}
+      {/* 📱 Mobile Toggle */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className={`lg:hidden fixed top-4 left-4 z-50 p-2 bg-black text-white rounded-lg`}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-black text-white rounded-lg"
       >
-        {isMobileMenuOpen ? (
-          <X className="w-6 h-6" />
-        ) : (
-          <Menu className="w-6 h-6" />
-        )}
+        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* 🧭 Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r shadow-sm transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r shadow-sm transform transition-transform duration-300 ease-in-out lg:translate-x-0 h-full flex flex-col overflow-y-auto ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* 🔝 Logo */}
-        <div className="p-5 border-b flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={32}
-            height={32}
-            className="rounded"
-          />
+        <div className="p-5 border-b flex items-center gap-3 shrink-0">
+          <Image src="/logo.png" alt="Logo" width={32} height={32} className="rounded" />
           <h1 className="text-lg font-bold">Admin Panel</h1>
         </div>
 
-        {/* 📂 Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        {/* 📂 Navigation (scrollable) */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navLinks.map((link) => (
             <NavItem key={link.href} {...link} />
           ))}
         </nav>
 
-        {/* 🚪 Footer actions */}
-        <div className="p-4 border-t">
+        {/* 🚪 Footer */}
+        <div className="p-4 border-t shrink-0">
           <button className="w-full text-sm text-red-600 hover:underline text-left">
             Logout
           </button>
         </div>
       </div>
 
-      {/* 📱 Mobile overlay */}
+      {/* 📱 Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 z-30 bg-black bg-opacity-40 lg:hidden"

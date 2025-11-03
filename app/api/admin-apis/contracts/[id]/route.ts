@@ -16,7 +16,7 @@ export async function GET(
     params: Promise<{ id: string }>;
   }
 ) {
-  const { id } = await params; 
+  const id = (await params).id;
 
   try {
     // ✅ Verify Supabase session cookie

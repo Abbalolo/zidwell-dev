@@ -120,6 +120,7 @@ const Page = () => {
           initiatorEmail: userData?.email,
           contractTitle,
           status,
+           userId: userData?.id,
         }),
       });
 
@@ -168,7 +169,7 @@ const Page = () => {
     return new Promise((resolve) => {
       Swal.fire({
         title: "Confirm Deduction",
-        text: "₦100 will be deducted from your wallet for generating this Contract.",
+        text: "₦20 will be deducted from your wallet for generating this Contract.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -191,7 +192,7 @@ const Page = () => {
               body: JSON.stringify({
                 userId: userData?.id,
                 pin,
-                amount: 100,
+                amount: 20,
                 description: "Contract successfully generated",
               }),
             })
@@ -227,14 +228,14 @@ const Page = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: userData?.id,
-          amount: 100,
+          amount: 20,
           description: "Refund for failed contract generation",
         }),
       });
       Swal.fire({
         icon: "info",
         title: "Refund Processed",
-        text: "₦100 has been refunded to your wallet due to failed contract sending.",
+        text: "₦20 has been refunded to your wallet due to failed contract sending.",
       });
     } catch (err) {
       console.error("Refund failed:", err);

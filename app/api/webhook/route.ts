@@ -927,114 +927,94 @@ export async function POST(req: NextRequest) {
       console.log("💰 Processing DEPOSIT transaction...");
 
       // -------------------- SUBSCRIPTION HANDLING --------------------
-      try {
-        if (isCardPayment && orderReference?.includes("SUB-")) {
-          // Extract email, full name, plan, and amount from payload
-          const subEmail =
-            payload.data?.order?.customerEmail ||
-            payload.data?.customer?.customerEmail ||
-            null;
+      const isSubscription =
+        orderReference?.includes("SUB-") ||
+        payload?.data?.order?.metadata?.type === "subscription";
 
-          const subFullName =
-            payload.data?.order?.fullName ||
-            payload.data?.customer?.fullName ||
-            "Subscriber";
+      if (isSubscription) {
+        console.log("💰 Processing subscription payment...");
 
-          const subPlanId =
-            payload.data?.order?.metadata?.planId ||
-            payload.data?.meta?.planId ||
-            "basic";
+        const subscriptionId =
+          payload?.data?.order?.metadata?.subscriptionId ||
+          orderReference?.split("-")[1];
 
-          const subAmount =
-            safeNum(payload.data?.transaction?.transactionAmount) ||
-            safeNum(payload.data?.order?.amount) ||
-            0;
+        if (eventType === "payment_success" || txStatus === "success") {
+          // Update subscription status to active
+          const { error: updateError } = await supabase
+            .from("user_subscriptions")
+            .update({
+              status: "active",
+            })
+            .eq("id", subscriptionId);
 
-          const paymentReference = orderReference;
+          if (!updateError) {
+            console.log(`✅ Subscription activated: ${subscriptionId}`);
 
-          if (subEmail && subPlanId && paymentReference) {
-            // Idempotent: check existing subscriber
-            const { data: existingSub } = await supabase
-              .from("subscribers")
-              .select("*")
-              .or(
-                `payment_reference.eq.${paymentReference},(email.eq.${subEmail},plan_id.eq.${subPlanId})`
-              )
-              .maybeSingle();
+            // Update user's subscription tier
+            const planName = payload?.data?.order?.metadata?.planName;
+            const userId = payload?.data?.order?.metadata?.userId;
 
-            const now = new Date();
-            const expiresAt = new Date(
-              now.getTime() + 30 * 24 * 60 * 60 * 1000
-            ); // 30 days
-
-            if (existingSub) {
+            if (planName && userId) {
               await supabase
-                .from("subscribers")
+                .from("users")
                 .update({
-                  payment_status: "success",
-                  subscription_expires_at: expiresAt.toISOString(),
+                  subscription_tier: planName
+                    .toLowerCase()
+                    .replace(/\s+/g, "_"),
+                  subscription_expires_at: new Date(
+                    new Date().getTime() + 30 * 24 * 60 * 60 * 1000
+                  ).toISOString(),
                 })
-                .eq("id", existingSub.id);
+                .eq("id", userId);
 
-              console.log(
-                `⚠️ Subscriber exists, updated expiry for ${subEmail}`
-              );
-            } else {
-              await supabase.from("subscribers").insert([
-                {
-                  email: subEmail,
-                  full_name: subFullName,
-                  plan_id: subPlanId,
-                  amount: subAmount,
-                  payment_reference: paymentReference,
-                  payment_status: "success",
-                  subscription_expires_at: expiresAt.toISOString(),
-                  created_at: now.toISOString(),
-                },
-              ]);
-
-              console.log(
-                `✅ Subscriber created: ${subEmail}, expiresAt: ${expiresAt.toDateString()}`
-              );
+              console.log(`✅ User ${userId} updated to ${planName} tier`);
             }
 
-            // Send subscription confirmation email
-            try {
-              await fetch(`${baseUrl}/api/send-subscription-email`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  to: subEmail,
-                  subject: "Subscription Payment Successful ✅",
-                  message: `
-          <p>Hello ${subFullName},</p>
-          <p>We received your payment of <strong>₦${subAmount}</strong> for your subscription.</p>
-          <p>Your subscription is now active and will expire on <strong>${expiresAt.toDateString()}</strong>.</p>
-          <p>Reference: <strong>${paymentReference}</strong></p>
-          <p>Thank you 🎉</p>
-        `,
-                }),
-              });
-              console.log(
-                `📨 Subscription confirmation email sent to ${subEmail}`
-              );
-            } catch (emailErr) {
-              console.error("❌ Failed sending subscription email:", emailErr);
+            // Send confirmation email
+            const userEmail = payload?.data?.order?.customerEmail;
+            if (userEmail) {
+              try {
+                await fetch(`${baseUrl}/api/send-email`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    to: userEmail,
+                    subject: `🎉 Welcome to Zidwell ${planName}!`,
+                    message: `
+                <h2>Welcome to Zidwell ${planName}!</h2>
+                <p>Your subscription has been successfully activated and you now have access to all premium features.</p>
+                <p><strong>Plan:</strong> ${planName}</p>
+                <p><strong>Status:</strong> Active</p>
+                <p>Thank you for choosing Zidwell. We're excited to help you grow your business!</p>
+                <br>
+                <p>Best regards,<br>The Zidwell Team</p>
+              `,
+                  }),
+                });
+                console.log(
+                  `📧 Subscription confirmation email sent to ${userEmail}`
+                );
+              } catch (emailError) {
+                console.error("Failed to send subscription email:", emailError);
+              }
             }
-
-            // ✅ IMPORTANT: stop further processing for subscription
-            return NextResponse.json(
-              { success: true, message: "Subscription processed" },
-              { status: 200 }
-            );
           } else {
-            console.warn(
-              "⚠️ Subscription metadata incomplete — skipping insert/update/email"
-            );
+            console.error("Failed to update subscription:", updateError);
           }
+        } else if (eventType === "payment_failed" || txStatus === "failed") {
+          // Update subscription status to failed
+          await supabase
+            .from("user_subscriptions")
+            .update({
+              status: "failed",
+            })
+            .eq("id", subscriptionId);
+
+          console.log(`❌ Subscription payment failed: ${subscriptionId}`);
         }
-      } catch (subErr) {
-        console.error("❌ Subscription handling error:", subErr);
+
+        // Return early since subscription is handled
+        return NextResponse.json({ success: true }, { status: 200 });
       }
       // -------------------- END SUBSCRIPTION HANDLING --------------------
 
@@ -1400,10 +1380,10 @@ export async function POST(req: NextRequest) {
         pendingTx.amount ?? transactionAmount ?? 0
       );
 
-      // Calculate app fee: 0.5% (₦20 min, ₦2000 cap) - KEEP THIS
-      let withdrawalAppFee = withdrawalAmount * 0.005;
+      // Calculate app fee: 0.5% (₦20 min, ₦1000 cap) - KEEP THIS
+      let withdrawalAppFee = withdrawalAmount * 0.01;
       withdrawalAppFee = Math.max(withdrawalAppFee, 20);
-      withdrawalAppFee = Math.min(withdrawalAppFee, 2000);
+      withdrawalAppFee = Math.min(withdrawalAppFee, 1000);
       withdrawalAppFee = Number(withdrawalAppFee.toFixed(2));
 
       const totalFees = Number((nombaFee + withdrawalAppFee).toFixed(2));
@@ -1436,7 +1416,10 @@ export async function POST(req: NextRequest) {
         );
 
         if (rpcError) {
-          console.error("❌ RPC deduct_wallet_balance failed:", rpcError.message);
+          console.error(
+            "❌ RPC deduct_wallet_balance failed:",
+            rpcError.message
+          );
           // Mark transaction failed
           await supabase
             .from("transactions")
@@ -1448,7 +1431,8 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        const rpcResult = Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
+        const rpcResult =
+          Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
 
         if (!rpcResult || rpcResult.status !== "OK") {
           console.error("⚠️ RPC returned non-OK:", rpcResult);

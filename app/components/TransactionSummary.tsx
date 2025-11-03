@@ -12,7 +12,6 @@ interface TransactionSummaryProps {
   recipientBank: string;
   purpose: string;
   amount: number | string;
-  fee: number;
   confirmTransaction: boolean;
   onBack: () => void;
   onConfirm: () => void;
@@ -27,7 +26,6 @@ export default function TransactionSummary({
   recipientBank,
   purpose,
   amount,
-  fee,
   confirmTransaction,
   onBack,
   onConfirm,

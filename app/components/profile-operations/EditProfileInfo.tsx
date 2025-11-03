@@ -102,10 +102,10 @@ export default function EditProfileInfo() {
         if (data) {
           setProfile((prev: any) => ({
             ...prev,
-            bankName: data.p_bank_name || prev.bankName,
-            bankCode: data.p_bank_code || prev.bankCode,
-            accountNumber: data.p_account_number || prev.accountNumber,
-            accountName: data.p_account_name || prev.accountName,
+            bankName: data.payment_details.p_bank_name || prev.bankName,
+            bankCode: data.payment_details.p_bank_code || prev.bankCode,
+            accountNumber: data.payment_details.p_account_number || prev.accountNumber,
+            accountName: data.payment_details.p_account_name || prev.accountName,
           }));
         }
       } catch (err) {
@@ -178,10 +178,10 @@ export default function EditProfileInfo() {
           city: profile.city,
           state: profile.state,
           country: profile.country,
-          pBankName: profile.bankName || details?.data.p_bank_name,
-          pBankCode: profile.bankCode || details?.p_bank_code,
-          pAccountNumber: profile.accountNumber || details?.p_account_number,
-          pAccountName: profile.accountName || details?.p_account_name,
+          pBankName: profile.bankName || details?.data?.payment_details.p_bank_name,
+          pBankCode: profile.bankCode || details?.data?.payment_details.p_bank_code,
+          pAccountNumber: profile.accountNumber || details?.data?.payment_details.p_account_number,
+          pAccountName: profile.accountName || details?.data?.payment_details.p_account_name,
         }),
       });
 

@@ -153,6 +153,7 @@ function CreateReceipt() {
 
       const payload = {
         data: form,
+        userId: userData?.id,
         pin,
         initiatorName: userData
           ? `${userData.firstName} ${userData.lastName}`

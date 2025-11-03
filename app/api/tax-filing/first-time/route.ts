@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+// import { clearTaxFilingsCache } from "../../get-taxs/route";
+// import { clearTransactionsCache } from "../../bill-transactions/route";
+// import { clearAllWalletBalanceCache, clearWalletBalanceCache } from "../../wallet-balance/route";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -68,6 +71,10 @@ export async function POST(req: Request) {
     });
 
     if (dbError) throw dbError;
+
+    // clearTaxFilingsCache(userId);
+    // clearTransactionsCache(userId);
+    // clearWalletBalanceCache(userId);
 
     return NextResponse.json({ success: true, message: "First-time filing submitted!" });
   } catch (err: any) {

@@ -188,7 +188,7 @@ export default function FundAccountMethods() {
             <CardTitle className="text-base md:text-lg font-medium">
               Your Account Number
               <div className="font-semibold text-black flex items-center gap-4 mt-1">
-                {details?.bank_account_number}
+                {details?.bank_details.bank_account_number}
                 <button
                   className="text-sm border px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100 transition"
                   onClick={handleCopyReferral}
@@ -196,7 +196,7 @@ export default function FundAccountMethods() {
                   {copyText ? "Copied" : <CopyIcon className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-sm text-gray-500">{details?.bank_name}</p>
+              <p className="text-sm text-gray-500">{details?.bank_details.bank_name}</p>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">

@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getNombaToken } from "@/lib/nomba";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
+// import { clearWalletBalanceCache } from "../wallet-balance/route";
+// import { clearTransactionsCache } from "../bill-transactions/route";
 
 export async function POST(req: Request) {
   const supabase = createClient(
@@ -10,13 +12,17 @@ export async function POST(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+
   try {
     const {
       userId,
       senderName,
+      senderAccountNumber,
+      senderBankName,
       amount,
       accountNumber,
       accountName,
+      bankName,
       bankCode,
       narration,
       pin,
@@ -30,7 +36,8 @@ export async function POST(req: Request) {
       amount < 100 ||
       !accountNumber ||
       !accountName ||
-      !bankCode
+      !bankCode ||
+      !bankName
     ) {
       return NextResponse.json(
         {
@@ -41,6 +48,7 @@ export async function POST(req: Request) {
             "accountNumber",
             "accountName",
             "bankCode",
+            "bankName",
             "pin",
           ],
         },
@@ -101,23 +109,42 @@ export async function POST(req: Request) {
       );
     }
 
+
+   
+
+    // 🧾 Sender & Receiver details as objects
+const senderDetails = {
+  name: senderName,
+  accountNumber: senderAccountNumber,
+  bankName: senderBankName,
+};
+
+const receiverDetails = {
+  name: accountName,
+  accountNumber: accountNumber,
+  bankName: bankName, 
+};
+
     const merchantTxRef = `WD_${Date.now()}`;
 
     // Insert pending withdrawal transaction
-    const { data: pendingTx, error: txError } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        type: "withdrawal",
-        amount,
-        total_deduction: amount,
-        status: "pending",
-        description: `Withdrawal to ${accountName} (${accountNumber})`,
-        narration: narration || "Withdrawal",
-        merchant_tx_ref: merchantTxRef,
-      })
-      .select("*")
-      .single();
+ const { data: pendingTx, error: txError } = await supabase
+  .from("transactions")
+  .insert({
+    user_id: userId,
+    type: "withdrawal",
+    sender: senderDetails,         
+    receiver: receiverDetails,    
+    amount,
+    total_deduction: amount,
+    status: "pending",
+    description: `Withdrawal to ${receiverDetails.name} (${receiverDetails.accountNumber})`,
+    narration: narration || "Withdrawal",
+    merchant_tx_ref: merchantTxRef,
+  })
+  .select("*")
+  .single();
+
 
     if (txError || !pendingTx) {
       console.error("Could not create transaction record:", txError);
@@ -160,6 +187,9 @@ export async function POST(req: Request) {
         reference: data?.data?.reference || null,
       })
       .eq("id", pendingTx.id);
+
+      // clearWalletBalanceCache(userId);
+      // clearTransactionsCache(userId);
 
 
     return NextResponse.json({

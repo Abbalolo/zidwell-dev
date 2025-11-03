@@ -18,7 +18,7 @@ import {
   CommandGroup,
   CommandItem,
 } from "./ui/command";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -38,6 +38,15 @@ interface Bank {
 interface P2PDetails {
   name: string;
   id: string;
+}
+
+interface SavedAccount {
+  id: string;
+  account_number: string;
+  account_name: string;
+  bank_name: string;
+  bank_code: string;
+  is_default: boolean;
 }
 
 type PaymentMethod = "checkout" | "virtual_account" | "bank_transfer";
@@ -64,12 +73,17 @@ export default function Transfer() {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { userData } = useUserContextData();
-  const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
   const [pin, setPin] = useState(Array(inputCount).fill(""));
   // Popover state for searchable bank select
   const [open, setOpen] = useState(false);
   const [confirmTransaction, setConfirmTransaction] = useState(false);
   const [search, setSearch] = useState("");
+  
+  // New states for saved accounts
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [saveAccount, setSaveAccount] = useState(false);
+  const [selectedSavedAccount, setSelectedSavedAccount] = useState<SavedAccount | null>(null);
+  const [showSavedAccounts, setShowSavedAccounts] = useState(false);
 
   // Filter banks dynamically
   const filteredBanks = banks.filter((bank) =>
@@ -84,22 +98,6 @@ export default function Transfer() {
     setSearch("");
   };
 
-  // Fetch monthly volume
-  useEffect(() => {
-    if (!userData?.id) return;
-    const fetchVolumes = async () => {
-      try {
-        const res = await fetch(
-          `/api/get-monthly-volumes?userId=${userData.id}`
-        );
-        const data = await res.json();
-        setMonthlyVolume(data.monthlyVolume || 0);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchVolumes();
-  }, [userData?.id]);
 
   // Fetch user & bank details
   useEffect(() => {
@@ -108,24 +106,29 @@ export default function Transfer() {
     const fetchDetails = async () => {
       setLoading2(true);
       try {
-        const [accountRes, banksRes] = await Promise.all([
+        const [accountRes, banksRes, savedAccountsRes] = await Promise.all([
           fetch("/api/get-wallet-account-details", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: userData.id }),
           }),
           fetch("/api/banks"),
+          fetch(`/api/saved-accounts?userId=${userData.id}`),
         ]);
 
         const accountData = accountRes.ok ? await accountRes.json() : {};
         const banksData = banksRes.ok ? await banksRes.json() : {};
+        const savedAccountsData = savedAccountsRes.ok ? await savedAccountsRes.json() : {};
+        
         setUserDetails(accountData || {});
         setBanks(banksData?.data || []);
+        setSavedAccounts(savedAccountsData.accounts || []);
       } catch (err) {
         console.error("Error fetching details:", err);
         setUserDetails(null);
         setWalletDetails(null);
         setBanks([]);
+        setSavedAccounts([]);
       } finally {
         setLoading2(false);
       }
@@ -224,27 +227,105 @@ export default function Transfer() {
     return () => clearTimeout(timeout);
   }, [recepientAcc, transferType]);
 
+  // Handle saved account selection
+  const handleSelectSavedAccount = (account: SavedAccount) => {
+    setSelectedSavedAccount(account);
+    setAccountNumber(account.account_number);
+    setAccountName(account.account_name);
+    setBankCode(account.bank_code);
+    setBankName(account.bank_name);
+    setShowSavedAccounts(false);
+    setSaveAccount(false); // Don't save an already saved account
+  };
+
+  // Reset form when user starts typing new account
+  const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setAccountNumber(newValue);
+    
+    // If user starts typing and a saved account was selected, clear it
+    if (selectedSavedAccount && newValue !== selectedSavedAccount.account_number) {
+      setSelectedSavedAccount(null);
+      setAccountName("");
+      setBankCode("");
+      setBankName("");
+    }
+  };
+
+  // Save account function
+  const saveAccountToProfile = async () => {
+    if (!userData?.id || !accountNumber || !accountName || !bankCode || !bankName) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/saved-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userData.id,
+          accountNumber,
+          accountName,
+          bankCode,
+          bankName,
+          isDefault: false
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state
+        setSavedAccounts(prev => [...prev, data.account]);
+        Swal.fire({
+          icon: 'success',
+          title: 'Account Saved!',
+          text: 'This account has been saved to your profile for future transfers.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to Save',
+          text: data.message || 'Could not save account',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save account:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to save account. Please try again.',
+      });
+    }
+  };
+
   // 1. Actual transfer logic
   const performTransfer = async () => {
     setLoading(true);
     try {
       const payload: any = {
         userId: userData?.id,
-        senderName: `${userData?.firstName} ${userData?.lastName}`,
+        senderName: userDetails.bank_details.bank_account_name,
+        senderAccountNumber: userDetails.bank_details.bank_account_number,
+        senderBankName: userDetails.bank_details.bank_name,
         amount: Number(amount),
         narration,
         type: transferType,
-        pin, // include the collected PIN
+        pin, 
       };
 
       if (transferType === "my-account") {
-        payload.bankCode = userDetails.p_bank_code;
-        payload.accountNumber = userDetails.p_account_number;
-        payload.accountName = userDetails.p_account_name;
+        payload.bankCode = userDetails.payment_details.p_bank_code;
+        payload.bankName = userDetails.payment_details.p_bank_name;
+        payload.accountNumber = userDetails.payment_details.p_account_number;
+        payload.accountName = userDetails.payment_details.p_account_name;
       }
 
       if (transferType === "other-bank") {
         payload.bankCode = bankCode;
+        payload.bankName = bankName;
         payload.accountNumber = accountNumber;
         payload.accountName = accountName;
       }
@@ -265,13 +346,16 @@ export default function Transfer() {
       const data = await res.json();
 
       if (res.ok) {
+        // Save account if toggle is enabled and it's a new account
+        if (saveAccount && !selectedSavedAccount && transferType === "other-bank") {
+          await saveAccountToProfile();
+        }
+
         Swal.fire({
           icon: "success",
           title: "Transfer Successful",
           text: "Your transaction has been processed successfully.",
-        }).then(() => {
-          window.location.reload();
-        });
+        })
 
         // Reset form
         setAmount("");
@@ -283,6 +367,8 @@ export default function Transfer() {
         setBankName("");
         setPin(Array(inputCount).fill(""));
         setErrors({});
+        setSaveAccount(false);
+        setSelectedSavedAccount(null);
       } else {
         Swal.fire({
           icon: "error",
@@ -316,7 +402,7 @@ export default function Transfer() {
 
     if (
       transferType === "my-account" &&
-      (!userDetails?.p_account_number || !userDetails?.p_account_name)
+      (!userDetails.payment_details.p_account_number || !userDetails.payment_details.p_account_name)
     ) {
       newErrors.myAccount = "Your bank details are incomplete.";
     }
@@ -356,7 +442,7 @@ export default function Transfer() {
     !amount ||
     !narration ||
     Number(amount) <= 0 ||
-    (transferType === "my-account" && !userDetails?.p_account_number) ||
+    (transferType === "my-account" && !userDetails.payment_details.p_account_number) ||
     (transferType === "other-bank" &&
       (!bankCode || !accountNumber || !accountName)) ||
     (transferType === "p2p" && (!recepientAcc || !p2pDetails?.id));
@@ -408,9 +494,11 @@ export default function Transfer() {
               <Label>Transfer Type</Label>
               <Select
                 value={transferType}
-                onValueChange={(value) =>
-                  setTransferType(value as "my-account" | "other-bank" | "p2p")
-                }
+                onValueChange={(value) => {
+                  setTransferType(value as "my-account" | "other-bank" | "p2p");
+                  setSelectedSavedAccount(null);
+                  setSaveAccount(false);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select transfer type" />
@@ -451,19 +539,19 @@ export default function Transfer() {
                   <div className="bg-gray-50 p-3 rounded-lg border text-sm text-gray-600 animate-pulse">
                     Loading your bank details...
                   </div>
-                ) : userDetails?.p_account_number &&
-                  userDetails?.p_account_name ? (
+                ) : userDetails?.payment_details.p_account_number &&
+                  userDetails?.payment_details.p_account_name ? (
                   <div className="bg-gray-50 p-3 rounded-lg border space-y-1 text-sm">
                     <p>
-                      <strong>Bank:</strong> {userDetails.p_bank_name}
+                      <strong>Bank:</strong> {userDetails.payment_details.p_bank_name}
                     </p>
                     <p>
                       <strong>Account Number:</strong>{" "}
-                      {userDetails.p_account_number}
+                      {userDetails.payment_details.p_account_number}
                     </p>
                     <p>
                       <strong>Account Name:</strong>{" "}
-                      {userDetails.p_account_name}
+                      {userDetails.payment_details.p_account_name}
                     </p>
                   </div>
                 ) : (
@@ -487,6 +575,57 @@ export default function Transfer() {
             {/* Other Bank */}
             {transferType === "other-bank" && (
               <>
+                {/* Saved Accounts Dropdown */}
+                {savedAccounts.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Saved Accounts</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSavedAccounts(!showSavedAccounts)}
+                        className="flex items-center gap-1"
+                      >
+                        <Bookmark className="h-4 w-4" />
+                        {showSavedAccounts ? 'Hide' : 'Show'} Saved
+                      </Button>
+                    </div>
+                    
+                    {showSavedAccounts && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
+                        {savedAccounts.map((account) => (
+                          <div
+                            key={account.id}
+                            onClick={() => handleSelectSavedAccount(account)}
+                            className={`p-2 rounded cursor-pointer transition-colors ${
+                              selectedSavedAccount?.id === account.id 
+                                ? 'bg-blue-100 border border-blue-300' 
+                                : 'bg-white hover:bg-gray-50 border'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900 text-sm">
+                                  {account.account_name}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {account.account_number} • {account.bank_name}
+                                </p>
+                              </div>
+                              {account.is_default && (
+                                <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full ml-2">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-1">
                   <Label>Select Bank Name</Label>
 
@@ -546,7 +685,7 @@ export default function Transfer() {
                     type="number"
                     maxLength={10}
                     value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
+                    onChange={handleAccountNumberChange}
                     placeholder="10-digit account number"
                   />
                   {errors.accountNumber && (
@@ -562,9 +701,34 @@ export default function Transfer() {
                   </p>
                 )}
                 {accountName && !errors.accountNumber && (
-                  <p className="text-green-600 text-sm font-semibold">
-                    Account Name: {accountName}
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-green-600 text-sm font-semibold">
+                      Account Name: {accountName}
+                    </p>
+                    
+                    {/* Save Account Toggle - Only show for new accounts */}
+                    {!selectedSavedAccount && accountNumber.length === 10 && accountName && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                        <span className="text-sm font-medium text-gray-700">
+                          Save this account
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={saveAccount}
+                            onChange={(e) => setSaveAccount(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
+                            peer-checked:after:translate-x-full peer-checked:after:border-white 
+                            after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
+                            after:bg-white after:border-gray-300 after:border after:rounded-full 
+                            after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500">
+                          </div>
+                        </label>
+                      </div>
+                    )}
+                  </div>
                 )}
               </>
             )}
@@ -626,12 +790,11 @@ export default function Transfer() {
       <TransactionSummary
         senderName={`${userData?.firstName} ${userData?.lastName}`}
         senderAccount={`Nomba ${userData?.firstName}`}
-        recipientName={accountName || p2pDetails?.name || userDetails?.p_account_name}
-        recipientAccount={accountNumber || userDetails?.p_account_number || recepientAcc}
-        recipientBank={bankName || userDetails?.p_bank_name || "Zidwell"}
+        recipientName={accountName || p2pDetails?.name || userDetails?.payment_details?.p_account_name}
+        recipientAccount={accountNumber || userDetails?.payment_details?.p_account_number || recepientAcc}
+        recipientBank={bankName || userDetails?.payment_details?.p_bank_name || "Zidwell"}
         purpose={narration}
         amount={amount}
-        fee={monthlyVolume}
         confirmTransaction={confirmTransaction}
         onBack={() => setConfirmTransaction(false)}
         onConfirm={() => {
