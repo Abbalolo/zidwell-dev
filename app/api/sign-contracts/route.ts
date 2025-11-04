@@ -31,7 +31,7 @@ function generateContractHTML(contract: any, signeeName: string): string {
             line-height: 1.6;
             color: #333;
             background: #ffffff;
-            padding: 40px 30px;
+            padding: 20px;
             max-width: 800px;
             margin: 0 auto;
         }
@@ -44,21 +44,21 @@ function generateContractHTML(contract: any, signeeName: string): string {
         }
         
         .company-name {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 700;
             color: #C29307;
             margin-bottom: 5px;
         }
         
         .document-title {
-            font-size: 28px;
+            font-size: 16px;
             font-weight: 600;
             color: #1a365d;
             margin: 20px 0 10px 0;
         }
         
         .subtitle {
-            font-size: 16px;
+            font-size: 14px;
             color: #666;
             font-weight: 400;
         }

@@ -390,6 +390,8 @@ export default function TransactionDetailsPage() {
                 </Card>
 
                 {/* Recipient Account Info */}
+
+                {transaction?.receiver && (
                 <Card>
                   <CardHeader className="flex flex-row items-center gap-2 pb-3">
                     <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
@@ -426,10 +428,10 @@ export default function TransactionDetailsPage() {
                     </div>
                   </CardContent>
                 </Card>
-
+)}
                 {/* Recipient Information (if available) */}
-                {(transaction.recipient_name ||
-                  transaction.recipient_account) && (
+                {(transaction?.recipient_name ||
+                  transaction?.recipient_account) && (
                   <Card>
                     <CardHeader className="flex flex-row items-center gap-2 pb-3">
                       <Building className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />

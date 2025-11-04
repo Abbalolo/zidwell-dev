@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import path from "path";
 import fs from "fs";
 
@@ -64,7 +65,7 @@ function generateContractHTML(
             line-height: 1.6;
             white-space: pre-wrap;
           }
-            .signatures {
+          .signatures {
             margin-top: 10px;  
             display: flex;
             gap: 20px;
@@ -90,13 +91,12 @@ function generateContractHTML(
           )}</div>
 
           <div class="signatures">
-          <p class="">Signee Signature:  ${
-            contract.signee_name || "Contract Signature"
-          }</p>
-       <p class="">
-  Signee Date: ${new Date(contract.signed_at).toLocaleDateString()}
-</
-
+            <p class="">Signee Signature:  ${
+              contract.signee_name || "Contract Signature"
+            }</p>
+            <p class="">
+              Signee Date: ${new Date(contract.signed_at).toLocaleDateString()}
+            </p>
           </div>
           <footer>
             Zidwell Contracts &copy; ${new Date().getFullYear()} – Confidential
@@ -108,22 +108,74 @@ function generateContractHTML(
 }
 
 async function generatePdfBufferFromHtml(html: string): Promise<Buffer> {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
-  const pdf = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "0", bottom: "0", left: "0", right: "0" },
-  });
-  await browser.close();
-  return Buffer.from(pdf);
+  let browser = null;
+  
+  try {
+    let executablePath: string;
+    let browserArgs: string[];
+
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      // Use @sparticuz/chromium for production (Vercel)
+      console.log('Using @sparticuz/chromium for production PDF generation');
+      executablePath = await chromium.executablePath();
+      browserArgs = [...chromium.args, '--hide-scrollbars', '--disable-web-security'];
+    } else {
+      // Use local Chrome for development
+      console.log('Using local Chrome for development PDF generation');
+      executablePath = process.env.CHROME_PATH || 
+        (process.platform === 'win32' 
+          ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+          : process.platform === 'darwin'
+          ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+          : '/usr/bin/google-chrome');
+      
+      browserArgs = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ];
+    }
+
+    console.log('Launching browser for PDF generation with executable path:', executablePath);
+
+    browser = await puppeteer.launch({
+      executablePath,
+      args: browserArgs,
+      headless: true,
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "0", bottom: "0", left: "0", right: "0" },
+    });
+
+    console.log('PDF generated successfully, size:', pdf.length, 'bytes');
+    return Buffer.from(pdf);
+
+  } catch (error) {
+    console.error('Error generating PDF with puppeteer:', error);
+    throw error;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const contract = await request.json();
-    // console.log(contract);
+    console.log("Generating PDF for contract:", contract.contract_title);
+    
     const base64Logo = getLogoBase64();
     const base64Watermark = getWatermarkBase64();
 

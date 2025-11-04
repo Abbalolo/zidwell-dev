@@ -67,9 +67,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // RPC returns tx_id, new_balance, status
-    const result =
-      Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
+    // ✅ FIX: RPC returns an ARRAY, extract the first item
+    const result = Array.isArray(rpcData) && rpcData.length > 0 ? rpcData[0] : rpcData;
+    console.log("🔍 RPC Result:", result);
 
     if (!result || result.status !== "OK") {
       return NextResponse.json(
@@ -78,12 +78,43 @@ export async function POST(req: Request) {
       );
     }
 
+    const { error: updateError } = await supabase
+      .from("transactions")
+      .update({
+        status: "success"
+        // removed updated_at since column doesn't exist
+      })
+      .eq("id", result.tx_id);
+
+    if (updateError) {
+      console.error("❌ Failed to update transaction status:", updateError.message);
+
+    } else {
+      console.log("✅ Transaction status updated to success");
+    }
+
+    // ✅ FIX: Remove updated_at from users table update too
+    const { error: balanceUpdateError } = await supabase
+      .from("users")
+      .update({
+        wallet_balance: result.new_balance
+      })
+      .eq("id", userId);
+
+    if (balanceUpdateError) {
+      console.error("❌ Failed to update user wallet balance:", balanceUpdateError.message);
+      // Log but don't fail the request
+    } else {
+      console.log("✅ User balance updated to:");
+    }
+
     return NextResponse.json({
       success: true,
       message: "Funds deducted successfully",
       reference,
       transactionId: result.tx_id,
-      newWalletBalance: result.balance || result.new_balance,
+      newWalletBalance: result.new_balance,
+      status: "success"
     });
   } catch (err: any) {
     console.error("❌ Deduct Funds Error:", err.message);

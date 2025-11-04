@@ -161,7 +161,7 @@ export async function POST(req: Request) {
       const refundReference = `refund_${merchantTxRef}`;
       const { error: refundErr } = await supabase.rpc("deduct_wallet_balance", {
         user_id: user.id,
-        amt: -totalDeduction, // credit back
+        amt: -totalDeduction, 
         transaction_type: "credit",
         reference: refundReference,
         description: `Refund for failed withdrawal of ₦${amount} (fee ₦${fee})`,
