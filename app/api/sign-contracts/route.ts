@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { transporter } from "@/lib/node-mailer";
 
 const supabase = createClient(
@@ -187,7 +188,7 @@ function generateContractHTML(contract: any, signeeName: string): string {
         <div class="contract-text">${contract.contract_text || 'No contract terms specified.'}</div>
     </div>
     
-    
+ 
     
     <div class="footer">
         <p>This document was generated electronically by Zidwell Contracts and is legally binding.</p>
@@ -197,51 +198,59 @@ function generateContractHTML(contract: any, signeeName: string): string {
 </html>`;
 }
 
-// <div class="signature-section">
-//         <div class="signature-title">IN WITNESS WHEREOF, the parties have executed this agreement:</div>
+
+  //  <div class="signature-section">
+  //       <div class="signature-title">IN WITNESS WHEREOF, the parties have executed this agreement:</div>
         
-//         <div class="signature-grid">
-//             <div class="signature-box">
-//                 <div class="signature-line"></div>
-//                 <div class="signature-label">Signee Signature</div>
-//                 <div class="signature-name">${signeeName}</div>
-//                 <div class="signature-date">${currentDate}</div>
-//             </div>
+  //       <div class="signature-grid">
+  //           <div class="signature-box">
+  //               <div class="signature-line"></div>
+  //               <div class="signature-label">Signee Signature</div>
+  //               <div class="signature-name">${signeeName}</div>
+  //               <div class="signature-date">${currentDate}</div>
+  //           </div>
             
-//             <div class="signature-box">
-//                 <div class="signature-line"></div>
-//                 <div class="signature-label">Company Representative</div>
-//                 <div class="signature-name">${contract.initiator_name || 'Zidwell Contracts'}</div>
-//                 <div class="signature-date">${currentDate}</div>
-//             </div>
-//         </div>
+  //           <div class="signature-box">
+  //               <div class="signature-line"></div>
+  //               <div class="signature-label">Company Representative</div>
+  //               <div class="signature-name">${contract.initiator_name || 'Zidwell Contracts'}</div>
+  //               <div class="signature-date">${currentDate}</div>
+  //           </div>
+  //       </div>
         
-//         <div style="text-align: center; margin-top: 20px;">
-//             <div style="font-size: 12px; color: #C29307; font-weight: 600;">
-//                 Electronically signed via Zidwell Contracts Platform
-//             </div>
-//             <div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">
-//                 Document ID: ${contract.token || 'N/A'}
-//             </div>
-//         </div>
-//     </div>
+  //       <div style="text-align: center; margin-top: 20px;">
+  //           <div style="font-size: 12px; color: #C29307; font-weight: 600;">
+  //               Electronically signed via Zidwell Contracts Platform
+  //           </div>
+  //           <div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">
+  //               Document ID: ${contract.token || 'N/A'}
+  //           </div>
+  //       </div>
+  //   </div>
 
 async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buffer> {
   let browser = null;
   
   try {
-    // For production (Vercel), use a Chrome executable
-    // For development, use locally installed Chrome
-    const executablePath = process.env.CHROME_PATH || 
-      (process.platform === 'win32' 
-        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-        : process.platform === 'darwin'
-        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-        : '/usr/bin/google-chrome');
+    let executablePath: string;
+    let browserArgs: string[];
 
-    browser = await puppeteer.launch({
-      executablePath,
-      args: [
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      // Use @sparticuz/chromium for production (Vercel)
+      console.log('Using @sparticuz/chromium for production');
+      executablePath = await chromium.executablePath();
+      browserArgs = chromium.args;
+    } else {
+      // Use local Chrome for development
+      console.log('Using local Chrome for development');
+      executablePath = process.env.CHROME_PATH || 
+        (process.platform === 'win32' 
+          ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+          : process.platform === 'darwin'
+          ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+          : '/usr/bin/google-chrome');
+      
+      browserArgs = [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -250,8 +259,15 @@ async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buf
         '--no-zygote',
         '--single-process',
         '--disable-gpu'
-      ],
-      headless: true
+      ];
+    }
+
+    console.log('Launching browser with executable path:', executablePath);
+
+    browser = await puppeteer.launch({
+      executablePath,
+      args: browserArgs,
+      headless: chromium.headless ?? true,
     });
 
     const page = await browser.newPage();
@@ -276,15 +292,56 @@ async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buf
       }
     });
 
+    console.log('PDF generated successfully, size:', pdf.length, 'bytes');
+
     return Buffer.from(pdf);
 
   } catch (error) {
     console.error('Error generating PDF with puppeteer:', error);
-    throw error;
+    
+    // Fallback to external PDF service if puppeteer fails
+    try {
+      console.log('Trying external PDF service as fallback...');
+      return await generatePdfWithExternalService(contract, signeeName);
+    } catch (fallbackError) {
+      console.error('External PDF service also failed:', fallbackError);
+      throw new Error('PDF generation failed: ' + error.message);
+    }
   } finally {
     if (browser) {
       await browser.close();
     }
+  }
+}
+
+// Fallback PDF generation using external service
+async function generatePdfWithExternalService(contract: any, signeeName: string): Promise<Buffer> {
+  const htmlContent = generateContractHTML(contract, signeeName);
+  
+  try {
+    // Try HTML2PDF.app (free tier available)
+    const response = await fetch('https://api.html2pdf.app/v1/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        html: htmlContent,
+        apiKey: process.env.HTML2PDF_API_KEY || 'demo',
+      }),
+    });
+
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer();
+      console.log('PDF generated successfully with external service');
+      return Buffer.from(arrayBuffer);
+    } else {
+      throw new Error(`External service returned ${response.status}`);
+    }
+  } catch (error) {
+    console.error('External PDF service failed:', error);
+    // Ultimate fallback - return HTML as text
+    return Buffer.from(htmlContent);
   }
 }
 
@@ -349,6 +406,11 @@ export async function POST(request: Request) {
     // Generate PDF
     const pdfBuffer = await generatePdfBuffer(contract, signeeName);
 
+    // Determine file type and name
+    const isPdf = pdfBuffer.toString('utf8', 0, 4) === '%PDF';
+    const fileExtension = isPdf ? 'pdf' : 'html';
+    const fileName = `signed-contract-${contract.contract_title ? contract.contract_title.replace(/[^a-z0-9]/gi, '-').toLowerCase() : 'contract'}.${fileExtension}`;
+
     // Send email with the signed contract
     await transporter.sendMail({
       from: `Zidwell Contracts <${process.env.EMAIL_USER}>`,
@@ -386,7 +448,7 @@ export async function POST(request: Request) {
             
             <div style="background: #f0fff4; padding: 15px; border-radius: 8px; border-left: 4px solid #38a169;">
               <p style="margin: 0; color: #2f855a; font-weight: 500;">
-                📎 The signed contract PDF is attached to this email. Please keep it for your records.
+                📎 The signed contract ${isPdf ? 'PDF' : 'document'} is attached to this email. Please keep it for your records.
               </p>
             </div>
           </div>
@@ -403,9 +465,9 @@ export async function POST(request: Request) {
       `,
       attachments: [
         {
-          filename: `signed-contract-${contract.contract_title ? contract.contract_title.replace(/[^a-z0-9]/gi, '-').toLowerCase() : 'contract'}.pdf`,
+          filename: fileName,
           content: pdfBuffer,
-          contentType: "application/pdf",
+          contentType: isPdf ? "application/pdf" : "text/html",
         },
       ],
     });
@@ -418,7 +480,8 @@ export async function POST(request: Request) {
           contractTitle: contract.contract_title,
           signeeName: signeeName,
           signedAt: new Date().toISOString(),
-          contractId: contract.token
+          contractId: contract.token,
+          documentType: isPdf ? 'PDF' : 'HTML'
         }
       },
       { status: 200 }
