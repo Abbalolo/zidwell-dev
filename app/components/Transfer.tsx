@@ -318,7 +318,10 @@ export default function Transfer() {
 
   // 1. Actual transfer logic
   const performTransfer = async () => {
+    
     setLoading(true);
+
+   
     try {
       const payload: any = {
         userId: userData?.id,
@@ -416,8 +419,8 @@ export default function Transfer() {
     const newErrors: { [key: string]: string } = {};
 
     // Validate amount, narration, recipient fields BEFORE PIN
-    if (!amount || Number(amount) <= 0)
-      newErrors.amount = "Enter a valid amount.";
+    if (!amount || Number(amount) < 100)
+      newErrors.amount = "Amount must be at least ₦100.";
     if (!narration) newErrors.narration = "Narration is required.";
     if (narration.length > 100) newErrors.narration = "Narration too long.";
 
@@ -479,7 +482,7 @@ export default function Transfer() {
   };
 
 
-  console.log("Calculated Fee:", calculatedFee, "Total Debit:", totalDebit);
+  // console.log("Calculated Fee:", calculatedFee, "Total Debit:", totalDebit);
 
   return (
     <>
@@ -542,6 +545,7 @@ export default function Transfer() {
               <Label>Amount (₦)</Label>
               <Input
                 type="number"
+               
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 5000"

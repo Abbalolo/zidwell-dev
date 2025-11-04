@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       bankCode,
       narration,
       pin,
-      fee = 0, 
+      fee, 
       totalDebit,
     } = await req.json();
 
