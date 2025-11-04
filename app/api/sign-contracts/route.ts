@@ -1,92 +1,46 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
-import puppeteer from "puppeteer";
+import PDFDocument from 'pdfkit';
 import fs from "fs";
 import path from "path";
-// import supabase from "@/app/supabase/supabase";
-import { transporter } from "@/lib/node-mailer";
 import { createClient } from "@supabase/supabase-js";
+import { transporter } from "@/lib/node-mailer";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! 
 );
-function getLogoBase64() {
-  try {
-    const logoPath = path.join(process.cwd(), "public", "logo.png");
-    const imageBuffer = fs.readFileSync(logoPath);
-    return `data:image/png;base64,${imageBuffer.toString("base64")}`;
-  } catch (error) {
-    console.error("Error loading logo:", error);
-    return "";
-  }
-}
 
-function getWatermarkBase64() {
-  try {
-    const watermarkPath = path.join(
-      process.cwd(),
-      "public",
-      "zidwell-watermark.png"
-    );
-    const imageBuffer = fs.readFileSync(watermarkPath);
-    return `data:image/png;base64,${imageBuffer.toString("base64")}`;
-  } catch (error) {
-    console.error("Error loading watermark:", error);
-    return "";
-  }
-}
+async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+    const chunks: Buffer[] = [];
 
-function generateContractHTML(
-  contract: any,
-  logo: string,
-  watermark: string,
-  signeeName: string
-) {
-  return `
-    <html>
-      <head>
-        <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 12pt;
-            color: #333;
-            padding: 20px;
-            background-image: url('${watermark}');
-            background-size: cover;
-          }
-          .logo { max-width: 70px; margin-bottom: 30px; }
-          .signatures { margin-top: 10px; display: flex; gap: 20px; }
-          footer { font-size: 10pt; color: #999; margin-top: 50px; }
-        </style>
-      </head>
-      <body>
-        <img class="logo" src="${logo}" alt="Logo" />
-        <h1>${contract.contract_title || "Contract Agreement"}</h1>
-        <div>${(contract.contract_text || "").replace(/\n/g, "<br>")}</div>
-        <div class="signatures">
-          <p>Signee: ${signeeName}</p>
-          <p>Date: ${new Date().toLocaleDateString()}</p>
-        </div>
-        <footer>Zidwell Contracts &copy; ${new Date().getFullYear()}</footer>
-      </body>
-    </html>
-  `;
-}
+    doc.on('data', (chunk:any) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
 
-async function generatePdfBufferFromHtml(html: string): Promise<Buffer> {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
-  const pdf = await page.pdf({ format: "A4", printBackground: true });
-  await browser.close();
-  return Buffer.from(pdf);
+    // Add content with basic styling
+    doc.fontSize(20).font('Helvetica-Bold')
+       .text(contract.contract_title || 'Contract Agreement', 100, 100);
+    
+    doc.fontSize(12).font('Helvetica')
+       .text(contract.contract_text || '', 100, 150, {
+         width: 400,
+         align: 'left'
+       });
+    
+    // Add signature section
+    const signatureY = doc.y + 30;
+    doc.text(`Signee: ${signeeName}`, 100, signatureY);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 100, signatureY + 20);
+
+    doc.end();
+  });
 }
 
 export async function POST(request: Request) {
   try {
-    const { token, signeeEmail, signeeName, verificationCode } =
-      await request.json();
+    const { token, signeeEmail, signeeName, verificationCode } = await request.json();
 
     if (!token || !signeeEmail || !verificationCode) {
       return NextResponse.json(
@@ -95,16 +49,12 @@ export async function POST(request: Request) {
       );
     }
 
-
-
     // Get contract from Supabase
     const { data: contract, error } = await supabase
       .from("contracts")
       .select("*")
       .eq("token", token)
       .single();
-
-      // console.log("contracts", contract)
 
     if (error || !contract) {
       return NextResponse.json(
@@ -137,10 +87,9 @@ export async function POST(request: Request) {
       })
       .eq("token", token);
 
-    const logo = getLogoBase64();
-    const watermark = getWatermarkBase64();
-    const html = generateContractHTML(contract, logo, watermark, signeeName);
-    const pdfBuffer = await generatePdfBufferFromHtml(html);
+    // Generate PDF
+    const pdfBuffer = await generatePdfBuffer(contract, signeeName);
+
 
     await transporter.sendMail({
       from: `Zidwell Contracts <${process.env.EMAIL_USER}>`,
@@ -149,7 +98,7 @@ export async function POST(request: Request) {
       html: `<p>The contract has been signed.</p><p>See attached PDF.</p>`,
       attachments: [
         {
-          filename: `${contract.contractTitle || "contract"}.pdf`,
+          filename: `${contract.contract_title || "contract"}.pdf`,
           content: pdfBuffer,
           contentType: "application/pdf",
         },

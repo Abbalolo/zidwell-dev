@@ -142,7 +142,7 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-    console.log("transfer data", data);
+    // console.log("transfer data", data);
 
     // ✅ Handle failure immediately
     if (data.code === "400") {
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
         );
       }
 
-      
+
 
       return NextResponse.json(
         {
