@@ -318,10 +318,8 @@ export default function Transfer() {
 
   // 1. Actual transfer logic
   const performTransfer = async () => {
-    
     setLoading(true);
 
-   
     try {
       const payload: any = {
         userId: userData?.id,
@@ -332,8 +330,8 @@ export default function Transfer() {
         narration,
         type: transferType,
         pin,
-        fee: calculatedFee, 
-        totalDebit, 
+        fee: calculatedFee,
+        totalDebit,
       };
 
       if (transferType === "my-account") {
@@ -397,18 +395,18 @@ export default function Transfer() {
         Swal.fire({
           icon: "error",
           title: "Transfer Failed",
-          text: data?.message,
+          text: data?.reason || data?.message || "Transfer failed.",
         });
-        setErrors({ form: data?.message || "Transfer failed." });
+
+        setErrors({
+          form: data?.reason || data?.message || "Transfer failed.",
+        });
       }
     } catch (err: any) {
-
-      console.error("Transfer error:", err?.reason);
-      console.error("Transfer error:", err);
       Swal.fire({
         icon: "error",
-        title: err?.reason || "Something went wrong",
-        text: err?.message  || "Please try again later.",
+        title: "Something went wrong",
+        text: err?.message || "Please try again later.",
       });
       setErrors({ form: err?.message || "Something went wrong." });
     } finally {
@@ -484,7 +482,6 @@ export default function Transfer() {
     return "bank_transfer"; // Default for P2P as well
   };
 
-
   // console.log("Calculated Fee:", calculatedFee, "Total Debit:", totalDebit);
 
   return (
@@ -548,7 +545,6 @@ export default function Transfer() {
               <Label>Amount (₦)</Label>
               <Input
                 type="number"
-               
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 5000"
