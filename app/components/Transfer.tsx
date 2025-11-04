@@ -402,6 +402,9 @@ export default function Transfer() {
         setErrors({ form: data?.message || "Transfer failed." });
       }
     } catch (err: any) {
+
+      console.error("Transfer error:", err?.reason);
+      console.error("Transfer error:", err);
       Swal.fire({
         icon: "error",
         title: err?.reason || "Something went wrong",
