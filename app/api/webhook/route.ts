@@ -1335,26 +1335,25 @@ export async function POST(req: NextRequest) {
     .concat(refCandidates.map((r) => `reference.eq.${r}`));
   const orExpr = orExprParts.join(",");
 
-  const { data: pendingTx, error: pendingErr } = await supabase
-    .from("transactions")
-    .select("*")
-    .or(orExpr)
-    .in("status", ["pending", "processing"])
-    .maybeSingle();
+const { data: pendingTxList, error: pendingErr } = await supabase
+  .from("transactions")
+  .select("*")
+  .or(orExpr)
+  .in("status", ["pending", "processing"])
+  .order("created_at", { ascending: false })
+  .limit(1);
 
-  if (pendingErr) {
-    console.error("❌ DB error while finding pending transaction:", pendingErr);
-    return NextResponse.json({ error: "DB error" }, { status: 500 });
-  }
+if (pendingErr) {
+  console.error("❌ DB error while finding pending transaction:", pendingErr);
+  return NextResponse.json({ error: "DB error" }, { status: 500 });
+}
 
-  if (!pendingTx) {
-    console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
-    return NextResponse.json(
-      { message: "No matching withdrawal transaction" },
-      { status: 200 }
-    );
-  }
+const pendingTx = pendingTxList?.[0];
 
+if (!pendingTx) {
+  console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
+  return NextResponse.json({ message: "No matching withdrawal transaction" }, { status: 200 });
+}
   console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
 
   // Idempotency - check if already processed
