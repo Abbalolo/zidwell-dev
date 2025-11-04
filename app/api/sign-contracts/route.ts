@@ -188,7 +188,34 @@ function generateContractHTML(contract: any, signeeName: string): string {
         <div class="contract-text">${contract.contract_text || 'No contract terms specified.'}</div>
     </div>
     
- 
+    <div class="signature-section">
+        <div class="signature-title">IN WITNESS WHEREOF, the parties have executed this agreement:</div>
+        
+        <div class="signature-grid">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">Signee Signature</div>
+                <div class="signature-name">${signeeName}</div>
+                <div class="signature-date">${currentDate}</div>
+            </div>
+            
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">Company Representative</div>
+                <div class="signature-name">${contract.initiator_name || 'Zidwell Contracts'}</div>
+                <div class="signature-date">${currentDate}</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <div style="font-size: 12px; color: #C29307; font-weight: 600;">
+                Electronically signed via Zidwell Contracts Platform
+            </div>
+            <div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">
+                Document ID: ${contract.token || 'N/A'}
+            </div>
+        </div>
+    </div>
     
     <div class="footer">
         <p>This document was generated electronically by Zidwell Contracts and is legally binding.</p>
@@ -197,36 +224,6 @@ function generateContractHTML(contract: any, signeeName: string): string {
 </body>
 </html>`;
 }
-
-
-  //  <div class="signature-section">
-  //       <div class="signature-title">IN WITNESS WHEREOF, the parties have executed this agreement:</div>
-        
-  //       <div class="signature-grid">
-  //           <div class="signature-box">
-  //               <div class="signature-line"></div>
-  //               <div class="signature-label">Signee Signature</div>
-  //               <div class="signature-name">${signeeName}</div>
-  //               <div class="signature-date">${currentDate}</div>
-  //           </div>
-            
-  //           <div class="signature-box">
-  //               <div class="signature-line"></div>
-  //               <div class="signature-label">Company Representative</div>
-  //               <div class="signature-name">${contract.initiator_name || 'Zidwell Contracts'}</div>
-  //               <div class="signature-date">${currentDate}</div>
-  //           </div>
-  //       </div>
-        
-  //       <div style="text-align: center; margin-top: 20px;">
-  //           <div style="font-size: 12px; color: #C29307; font-weight: 600;">
-  //               Electronically signed via Zidwell Contracts Platform
-  //           </div>
-  //           <div style="font-size: 11px; color: #a0aec0; margin-top: 5px;">
-  //               Document ID: ${contract.token || 'N/A'}
-  //           </div>
-  //       </div>
-  //   </div>
 
 async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buffer> {
   let browser = null;
@@ -239,7 +236,7 @@ async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buf
       // Use @sparticuz/chromium for production (Vercel)
       console.log('Using @sparticuz/chromium for production');
       executablePath = await chromium.executablePath();
-      browserArgs = chromium.args;
+      browserArgs = [...chromium.args, '--hide-scrollbars', '--disable-web-security'];
     } else {
       // Use local Chrome for development
       console.log('Using local Chrome for development');
@@ -267,7 +264,7 @@ async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buf
     browser = await puppeteer.launch({
       executablePath,
       args: browserArgs,
-      headless: chromium.headless ?? true,
+      headless: true, // Always use headless mode
     });
 
     const page = await browser.newPage();
@@ -305,7 +302,7 @@ async function generatePdfBuffer(contract: any, signeeName: string): Promise<Buf
       return await generatePdfWithExternalService(contract, signeeName);
     } catch (fallbackError) {
       console.error('External PDF service also failed:', fallbackError);
-      throw new Error('PDF generation failed: ' + error.message);
+      throw new Error('PDF generation failed: ' + (error as Error).message);
     }
   } finally {
     if (browser) {
