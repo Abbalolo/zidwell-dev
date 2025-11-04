@@ -703,6 +703,9 @@
 //     );
 //   }
 // }
+
+
+
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -744,6 +747,8 @@ export async function POST(req: NextRequest) {
       "🟢 Parsed payload.event_type:",
       payload?.event_type || payload?.eventType
     );
+
+    
 
     // 2) Signature verification (HMAC SHA256 -> Base64)
     const timestamp = req.headers.get("nomba-timestamp");

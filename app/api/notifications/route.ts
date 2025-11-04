@@ -21,6 +21,9 @@ interface NotificationLog {
   }>;
 }
 
+// Cache store
+const cache = new Map();
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -28,6 +31,22 @@ export async function POST(req: Request) {
 
     if (!userData) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Create cache key based on request parameters
+    const cacheKey = JSON.stringify({
+      userId: userData.id,
+      limit,
+      filter
+    });
+
+    // Check cache
+    const cached = cache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp < 3 * 60 * 1000)) { // 3 minutes
+      console.log('Returning cached notifications for user:', userData.id);
+      return NextResponse.json(cached.data);
     }
 
     console.log('Fetching notifications for user:', userData.id);
@@ -85,6 +104,19 @@ export async function POST(req: Request) {
     }).filter(notification => notification.title !== 'Notification') || [];
 
     console.log(`Found ${notifications.length} notifications for user ${userData.id}`);
+
+    // Cache the result
+    cache.set(cacheKey, {
+      data: notifications,
+      timestamp: now
+    });
+
+    // Optional: Clean up old cache entries (older than 10 minutes)
+    for (const [key, value] of cache.entries()) {
+      if (now - value.timestamp > 10 * 60 * 1000) {
+        cache.delete(key);
+      }
+    }
 
     return NextResponse.json(notifications);
   } catch (err: any) {
