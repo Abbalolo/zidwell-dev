@@ -404,8 +404,8 @@ export default function Transfer() {
     } catch (err: any) {
       Swal.fire({
         icon: "error",
-        title: "Something went wrong",
-        text: err?.message || err?.reason || "Please try again later.",
+        title: err?.reason || "Something went wrong",
+        text: err?.message  || "Please try again later.",
       });
       setErrors({ form: err?.message || "Something went wrong." });
     } finally {
