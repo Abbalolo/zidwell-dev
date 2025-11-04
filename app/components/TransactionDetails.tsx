@@ -283,7 +283,7 @@ export default function TransactionDetailsPage() {
     );
   }
 
-  console.log("transaction details", transaction);
+  // console.log("transaction details", transaction);
 
   if (!transaction) {
     return (

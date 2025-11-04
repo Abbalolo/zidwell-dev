@@ -438,7 +438,7 @@ const RecieptList: React.FC<Props> = ({ receipts, loading }) => {
                   >
                     <Edit className="w-4 h-4 mr-1" /> Edit
                   </Button>
-                  <Button
+                  {/* <Button
                     onClick={() => sendrecieptEmail(reciept)}
                     variant="outline"
                     size="sm"
@@ -450,7 +450,7 @@ const RecieptList: React.FC<Props> = ({ receipts, loading }) => {
                       <Send className="w-4 h-4 mr-1" />
                     )}
                     Send
-                  </Button>
+                  </Button> */}
                   <Button
                     onClick={() => downloadPdf(reciept)} 
                     variant="outline"
