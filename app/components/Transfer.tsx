@@ -478,6 +478,9 @@ export default function Transfer() {
     return "bank_transfer"; // Default for P2P as well
   };
 
+
+  console.log("Calculated Fee:", calculatedFee, "Total Debit:", totalDebit);
+
   return (
     <>
       <PinPopOver

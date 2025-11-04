@@ -1324,198 +1324,166 @@ export async function POST(req: NextRequest) {
     } // end deposit handling
 
     // ---------- WITHDRAWAL / TRANSFER (OUTGOING) ----------
-    if (isPayoutOrTransfer) {
-      console.log("➡️ Handling payout/transfer flow");
+   if (isPayoutOrTransfer) {
+  console.log("➡️ Handling payout/transfer flow");
 
-      const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
-      console.log("🔎 Searching transaction by candidates:", refCandidates);
+  const refCandidates = [merchantTxRef, nombaTransactionId].filter(Boolean);
+  console.log("🔎 Searching transaction by candidates:", refCandidates);
 
-      const orExprParts = refCandidates
-        .map((r) => `merchant_tx_ref.eq.${r}`)
-        .concat(refCandidates.map((r) => `reference.eq.${r}`));
-      const orExpr = orExprParts.join(",");
+  const orExprParts = refCandidates
+    .map((r) => `merchant_tx_ref.eq.${r}`)
+    .concat(refCandidates.map((r) => `reference.eq.${r}`));
+  const orExpr = orExprParts.join(",");
 
-      const { data: pendingTx, error: pendingErr } = await supabase
-        .from("transactions")
-        .select("*")
-        .or(orExpr)
-        .in("status", ["pending", "processing"])
-        .maybeSingle();
+  const { data: pendingTx, error: pendingErr } = await supabase
+    .from("transactions")
+    .select("*")
+    .or(orExpr)
+    .in("status", ["pending", "processing"])
+    .maybeSingle();
 
-      if (pendingErr) {
-        console.error(
-          "❌ DB error while finding pending transaction:",
-          pendingErr
-        );
-        return NextResponse.json({ error: "DB error" }, { status: 500 });
-      }
+  if (pendingErr) {
+    console.error("❌ DB error while finding pending transaction:", pendingErr);
+    return NextResponse.json({ error: "DB error" }, { status: 500 });
+  }
 
-      if (!pendingTx) {
-        console.warn(
-          "⚠️ No matching pending withdrawal found for refs:",
-          refCandidates
-        );
-        return NextResponse.json(
-          { message: "No matching withdrawal transaction" },
-          { status: 200 }
-        );
-      }
+  if (!pendingTx) {
+    console.warn("⚠️ No matching pending withdrawal found for refs:", refCandidates);
+    return NextResponse.json(
+      { message: "No matching withdrawal transaction" },
+      { status: 200 }
+    );
+  }
 
-      console.log(
-        "📦 Found pending withdrawal:",
-        pendingTx.id,
-        "status:",
-        pendingTx.status
-      );
+  console.log("📦 Found pending withdrawal:", pendingTx.id, "status:", pendingTx.status);
 
-      // Idempotency - check if already processed
-      if (["success", "failed"].includes(pendingTx.status)) {
-        console.log(`⚠️ Withdrawal already ${pendingTx.status}. Skipping.`);
-        return NextResponse.json(
-          { message: "Already processed" },
-          { status: 200 }
-        );
-      }
+  // Idempotency - check if already processed
+  if (["success", "failed"].includes(pendingTx.status)) {
+    console.log(`⚠️ Withdrawal already ${pendingTx.status}. Skipping.`);
+    return NextResponse.json({ message: "Already processed" }, { status: 200 });
+  }
 
-      // Withdrawal fee logic
-      const withdrawalAmount = Number(
-        pendingTx.amount ?? transactionAmount ?? 0
-      );
+  // Withdrawal fee logic
+  const withdrawalAmount = Number(pendingTx.amount ?? transactionAmount ?? 0);
 
-      // Calculate app fee: 1% (₦20 min, ₦1000 cap)
-      let withdrawalAppFee = withdrawalAmount * 0.01;
-      withdrawalAppFee = Math.max(withdrawalAppFee, 20);
-      withdrawalAppFee = Math.min(withdrawalAppFee, 1000);
-      withdrawalAppFee = Number(withdrawalAppFee.toFixed(2));
+  // Calculate app fee: 1% (₦20 min, ₦1000 cap)
+  let withdrawalAppFee = withdrawalAmount * 0.01;
+  withdrawalAppFee = Math.max(withdrawalAppFee, 20);
+  withdrawalAppFee = Math.min(withdrawalAppFee, 1000);
+  withdrawalAppFee = Number(withdrawalAppFee.toFixed(2));
 
-      const totalFees = Number((nombaFee + withdrawalAppFee).toFixed(2));
-      const totalDeduction = withdrawalAmount + totalFees;
+  const totalFees = Number((nombaFee + withdrawalAppFee).toFixed(2));
+  const totalDeduction = withdrawalAmount + totalFees;
 
-      console.log("💰 Withdrawal calculations:");
-      console.log("   - Withdrawal amount:", withdrawalAmount);
-      console.log("   - Nomba fee:", nombaFee);
-      console.log("   - Our app fee:", withdrawalAppFee);
-      console.log("   - Total fees:", totalFees);
-      console.log("   - Total deduction:", totalDeduction);
+  console.log("💰 Withdrawal calculations:");
+  console.log("   - Withdrawal amount:", withdrawalAmount);
+  console.log("   - Nomba fee:", nombaFee);
+  console.log("   - Our app fee:", withdrawalAppFee);
+  console.log("   - Total fees:", totalFees);
+  console.log("   - Total deduction:", totalDeduction);
 
-      // ✅ SUCCESS CASE
-      if (eventType === "payout_success" || txStatus === "success") {
-        console.log("✅ Payout success - marking transaction as success");
+  // ✅ SUCCESS CASE
+  if (eventType === "payout_success" || txStatus === "success") {
+    console.log("✅ Payout success - marking transaction as success");
 
-        const reference = nombaTransactionId || crypto.randomUUID();
+    const reference = nombaTransactionId || crypto.randomUUID();
 
-        // Build updated external response with fee info
-        const updatedExternalResponse = {
-          ...payload,
-          fee_breakdown: {
-            withdrawal_amount: withdrawalAmount,
-            nomba_fee: nombaFee,
-            app_fee: withdrawalAppFee,
-            total_fee: totalFees,
-            total_deduction: totalDeduction,
-          },
-        };
+    // Build updated external response with fee info
+    const updatedExternalResponse = {
+      ...payload,
+      fee_breakdown: {
+        withdrawal_amount: withdrawalAmount,
+        nomba_fee: nombaFee,
+        app_fee: withdrawalAppFee,
+        total_fee: totalFees,
+        total_deduction: totalDeduction,
+      },
+    };
 
-        // 🟩 No second deduction here — we already deducted at initiation
-        const { error: updateErr } = await supabase
-          .from("transactions")
-          .update({
-            status: "success",
-            reference,
-            external_response: updatedExternalResponse,
-            total_deduction: totalDeduction,
-            fee: totalFees,
-          })
-          .eq("id", pendingTx.id);
+    // 🟩 No second deduction here — we already deducted at initiation
+    const { error: updateErr } = await supabase
+      .from("transactions")
+      .update({
+        status: "success",
+        reference,
+        external_response: updatedExternalResponse,
+        total_deduction: totalDeduction,
+        fee: totalFees,
+      })
+      .eq("id", pendingTx.id);
 
-        if (updateErr) {
-          console.error("❌ Failed to update transaction:", updateErr);
-          return NextResponse.json({ error: "Update failed" }, { status: 500 });
-        }
+    if (updateErr) {
+      console.error("❌ Failed to update transaction:", updateErr);
+      return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    }
 
-        console.log(
-          `✅ Withdrawal marked success. User ${pendingTx.user_id} was already charged ₦${totalDeduction} during initiation.`
-        );
+    console.log(`✅ Withdrawal marked success. User ${pendingTx.user_id} was already charged ₦${totalDeduction} during initiation.`);
 
-        return NextResponse.json(
-          {
-            success: true,
-            message: "Withdrawal processed successfully",
-          },
-          { status: 200 }
-        );
-      }
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Withdrawal processed successfully",
+      },
+      { status: 200 }
+    );
+  }
 
-      // ❌ FAILURE CASE — REFUND USER
-      if (eventType === "payout_failed" || txStatus === "failed") {
-        console.log(
-          "❌ Payout failed - refunding user and marking transaction failed"
-        );
+  // ❌ FAILURE CASE — REFUND USER
+  if (eventType === "payout_failed" || txStatus === "failed") {
+    console.log("❌ Payout failed - refunding user and marking transaction failed");
 
-        const updatedExternalResponse = {
-          ...payload,
-          fee_breakdown: {
-            nomba_fee: nombaFee,
-            app_fee: withdrawalAppFee,
-            total_fee: totalFees,
-            failed: true,
-          },
-        };
+    const updatedExternalResponse = {
+      ...payload,
+      fee_breakdown: {
+        nomba_fee: nombaFee,
+        app_fee: withdrawalAppFee,
+        total_fee: totalFees,
+        failed: true,
+      },
+    };
 
-        // Update transaction to failed
-        const { error: updateError } = await supabase
-          .from("transactions")
-          .update({
-            status: "failed",
-            external_response: updatedExternalResponse,
-            reference: nombaTransactionId || pendingTx.reference,
-          })
-          .eq("id", pendingTx.id);
+    // Update transaction to failed
+    const { error: updateError } = await supabase
+      .from("transactions")
+      .update({
+        status: "failed",
+        external_response: updatedExternalResponse,
+        reference: nombaTransactionId || pendingTx.reference,
+      })
+      .eq("id", pendingTx.id);
 
-        if (updateError) {
-          console.error("❌ Failed to update transaction status:", updateError);
-          return NextResponse.json(
-            { error: "Failed to update transaction" },
-            { status: 500 }
-          );
-        }
+    if (updateError) {
+      console.error("❌ Failed to update transaction status:", updateError);
+      return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
+    }
 
-        // Refund wallet via RPC since we deducted earlier
-        console.log("🔄 Refunding user wallet...");
-        const refundReference = `refund_${
-          nombaTransactionId || crypto.randomUUID()
-        }`;
-        const { error: refundErr } = await supabase.rpc(
-          "deduct_wallet_balance",
-          {
-            user_id: pendingTx.user_id,
-            amt: -totalDeduction, // negative = credit back
-            transaction_type: "credit",
-            reference: refundReference,
-            description: `Refund for failed withdrawal of ₦${withdrawalAmount} (including ₦${totalFees} fee)`,
-          }
-        );
+    // Refund wallet via RPC since we deducted earlier
+    console.log("🔄 Refunding user wallet...");
+    const refundReference = `refund_${nombaTransactionId || crypto.randomUUID()}`;
+    const { error: refundErr } = await supabase.rpc("deduct_wallet_balance", {
+      user_id: pendingTx.user_id,
+      amt: -totalDeduction, // negative = credit back
+      transaction_type: "credit",
+      reference: refundReference,
+      description: `Refund for failed withdrawal of ₦${withdrawalAmount} (including ₦${totalFees} fee)`,
+    });
 
-        if (refundErr) {
-          console.error("❌ Refund RPC failed:", refundErr.message);
-          return NextResponse.json(
-            { error: "Failed to refund wallet via RPC" },
-            { status: 500 }
-          );
-        }
-
-        console.log(
-          `✅ Refund completed successfully for user ${pendingTx.user_id}`
-        );
-        return NextResponse.json({ refunded: true }, { status: 200 });
-      }
-
-      console.log("ℹ️ Unhandled transfer event/status. Ignoring.");
+    if (refundErr) {
+      console.error("❌ Refund RPC failed:", refundErr.message);
       return NextResponse.json(
-        { message: "Ignored transfer event" },
-        { status: 200 }
+        { error: "Failed to refund wallet via RPC" },
+        { status: 500 }
       );
     }
+
+    console.log(`✅ Refund completed successfully for user ${pendingTx.user_id}`);
+    return NextResponse.json({ refunded: true }, { status: 200 });
+  }
+
+  console.log("ℹ️ Unhandled transfer event/status. Ignoring.");
+  return NextResponse.json({ message: "Ignored transfer event" }, { status: 200 });
+}
+
 
     // If we reach here, event type not handled specifically
     console.log("ℹ️ Event type not matched. Ignoring.");

@@ -22,8 +22,8 @@ export async function POST(req: Request) {
       bankCode,
       narration,
       pin,
-      fee = 0, // ✅ fee from client
-      totalDebit, // ✅ total amount (amount + fee)
+      fee = 0, 
+      totalDebit,
     } = await req.json();
 
     // 🧩 Validate required fields
