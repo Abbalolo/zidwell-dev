@@ -130,7 +130,9 @@ const Page = () => {
           icon: "success",
           title: "Success!",
           text: "Contract sent for signature successfully!",
-        });
+        }).then(() => {
+        router.refresh();
+      });
 
         // if (result.newWalletBalance !== undefined) {
         //   setUserData((prev: any) => {
@@ -141,7 +143,7 @@ const Page = () => {
         // }
 
         setLoading(false);
-        window.location.reload();
+       
       } else {
         const errorData = await res.json();
         await handleRefund();

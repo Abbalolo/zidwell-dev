@@ -192,6 +192,8 @@ function CreateReceipt() {
         title: "Receipt Saved!",
         text: "Your receipt was successfully saved.",
         confirmButtonColor: "#3085d6",
+      }).then(() => {
+        router.refresh();
       });
     } catch (err) {
       Swal.fire({
@@ -225,7 +227,6 @@ function CreateReceipt() {
 
     setLoading(false);
     setIsOpen(false);
-    window.location.reload();
   };
 
   const handleDeduct = async (): Promise<boolean> => {

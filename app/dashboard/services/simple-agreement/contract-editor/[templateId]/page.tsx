@@ -228,10 +228,12 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
           icon: "success",
           title: "Success!",
           text: "Contract sent for signature successfully!",
-        });
+        }).then(() => {
+        router.refresh();
+      });
 
         setLoading(false);
-        window.location.reload();
+       
       } else {
         const errorData = await res.json();
         await handleRefund();
