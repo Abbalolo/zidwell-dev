@@ -145,7 +145,7 @@ export async function POST(req: Request) {
     console.log("transfer data", data);
 
     // ✅ Handle failure immediately
-    if (data.status === false || data.code === "400") {
+    if (data.code === "400") {
       console.log("❌ Nomba transfer failed:", data.description);
 
       // Update transaction to failed
