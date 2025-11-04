@@ -1364,7 +1364,9 @@ export async function POST(req: NextRequest) {
         "📦 Found pending withdrawal:",
         pendingTx.id,
         "status:",
-        pendingTx.status
+        pendingTx.status,
+        "pending",
+        pendingTx
       );
 
       // Idempotency - check if already processed

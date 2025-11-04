@@ -84,7 +84,7 @@ export default function DashboardHeader() {
           </Button>
 
         </div>
-             {/* <NotificationBell /> */}
+             <NotificationBell />
       </div>
     </header>
   );

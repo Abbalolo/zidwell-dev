@@ -83,7 +83,8 @@ export default function AdminSidebar() {
         {/* 🔝 Logo */}
         <div className="p-5 border-b flex items-center gap-3 shrink-0">
           <Image src="/logo.png" alt="Logo" width={32} height={32} className="rounded" />
-          <h1 className="text-lg font-bold">Admin Panel</h1>
+          <Link href="/dashboard" className="text-lg font-bold">Admin Panel</Link>
+         
         </div>
 
         {/* 📂 Navigation (scrollable) */}
