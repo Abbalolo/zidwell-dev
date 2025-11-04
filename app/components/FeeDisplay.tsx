@@ -1,56 +1,35 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { calculateFees, formatNaira } from "@/lib/fee";
 
 type Props = {
   type: "transfer" | "deposit" | "card";
   amount?: number;
   paymentMethod?: "checkout" | "virtual_account" | "bank_transfer";
+  onFeeCalculated?: (fee: number, total: number) => void; // ✅ new prop
 };
 
-export default function FeeDisplay({ type, amount, paymentMethod = "checkout" }: Props) {
-  // Get fee details if amount is provided
+export default function FeeDisplay({
+  type,
+  amount,
+  paymentMethod = "checkout",
+  onFeeCalculated,
+}: Props) {
   const feeDetails = amount
     ? calculateFees(amount, type, paymentMethod)
     : undefined;
 
-  // Generate description based on payment method
-  const getFeeDescription = () => {
-    switch (paymentMethod) {
-      case "checkout":
-        return "Card payment: 1.4% fee + ₦1,800";
-      case "virtual_account":
-        return "Virtual Account: 0.5% fee (₦10 min, ₦100 max)";
-      case "bank_transfer":
-        return "Bank Transfer: 0.5% fee (₦20 min, ₦100 max)";
-      default:
-        return "Transaction fee";
+  // ✅ Pass calculated fee up to parent when amount changes
+  useEffect(() => {
+    if (feeDetails && onFeeCalculated) {
+      onFeeCalculated(feeDetails.totalFee, feeDetails.totalDebit);
     }
-  };
-
-  // Add transfer fee description if applicable
-  const getTransferFeeNote = () => {
-    if (type === "transfer") {
-      return " + 1% transfer fee (₦20 min, ₦1000 max)";
-    }
-    return "";
-  };
+  }, [amount, feeDetails, onFeeCalculated]);
 
   return (
     <div className="text-sm text-gray-700">
-      {/* {!amount && (
-        <p className="text-xs text-gray-500">
-          {getFeeDescription()}
-          {getTransferFeeNote()}
-        </p>
-      )} */}
-
       {feeDetails && (
         <div className="text-sm text-gray-800 space-y-1">
-          {/* <p className="text-xs text-gray-600">
-            {getFeeDescription()}
-            {getTransferFeeNote()}
-          </p> */}
           <div className="border-t pt-1 mt-1">
             <p className="font-semibold">
               Total fee: <span>{formatNaira(feeDetails.totalFee)}</span>

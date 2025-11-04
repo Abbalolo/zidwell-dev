@@ -1,10 +1,7 @@
-// app/api/withdraw/route.ts
 import { NextResponse } from "next/server";
 import { getNombaToken } from "@/lib/nomba";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
-// import { clearWalletBalanceCache } from "../wallet-balance/route";
-// import { clearTransactionsCache } from "../bill-transactions/route";
 
 export async function POST(req: Request) {
   const supabase = createClient(
@@ -25,9 +22,11 @@ export async function POST(req: Request) {
       bankCode,
       narration,
       pin,
+      fee = 0, // ✅ fee from client
+      totalDebit, // ✅ total amount (amount + fee)
     } = await req.json();
 
-    // Basic validation
+    // 🧩 Validate required fields
     if (
       !userId ||
       !pin ||
@@ -69,7 +68,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch user with PIN + wallet balance
+    // 🔍 Fetch user and verify PIN
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, transaction_pin, wallet_balance")
@@ -80,9 +79,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // ✅ Verify transaction PIN
     const plainPin = Array.isArray(pin) ? pin.join("") : pin;
     const isValid = await bcrypt.compare(plainPin, user.transaction_pin);
+
     if (!isValid) {
       return NextResponse.json(
         { message: "Invalid transaction PIN" },
@@ -90,14 +89,16 @@ export async function POST(req: Request) {
       );
     }
 
-    if (user.wallet_balance < amount) {
+    // 🧾 Ensure user has enough balance (including fees)
+    const totalDeduction = totalDebit || amount + fee;
+    if (user.wallet_balance < totalDeduction) {
       return NextResponse.json(
         { message: "Insufficient wallet balance (including fees)" },
         { status: 400 }
       );
     }
 
-    // Get Nomba token
+    // 🔐 Get Nomba token
     const token = await getNombaToken();
     if (!token) {
       return NextResponse.json(
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧾 Sender & Receiver details as objects
+    // 🧾 Details
     const senderDetails = {
       name: senderName,
       accountNumber: senderAccountNumber,
@@ -115,13 +116,13 @@ export async function POST(req: Request) {
 
     const receiverDetails = {
       name: accountName,
-      accountNumber: accountNumber,
-      bankName: bankName,
+      accountNumber,
+      bankName,
     };
 
     const merchantTxRef = `WD_${Date.now()}`;
 
-    // Check if a transaction with same merchantTxRef already exists
+    // 🧩 Prevent duplicate
     const { data: existingTx } = await supabase
       .from("transactions")
       .select("id, status")
@@ -131,12 +132,12 @@ export async function POST(req: Request) {
     if (existingTx) {
       console.log("⚠️ Duplicate transaction prevented:", merchantTxRef);
       return NextResponse.json({
-        message: "Transaction already created",
+        message: "Transaction already exists",
         transactionId: existingTx.id,
       });
     }
 
-    // Insert pending withdrawal transaction
+    // 📝 Insert pending transaction (with fee)
     const { data: pendingTx, error: txError } = await supabase
       .from("transactions")
       .insert({
@@ -145,7 +146,8 @@ export async function POST(req: Request) {
         sender: senderDetails,
         receiver: receiverDetails,
         amount,
-        total_deduction: amount,
+        fee, // ✅ include fee
+        total_deduction: totalDeduction, // ✅ amount + fee
         status: "pending",
         description: `Withdrawal to ${receiverDetails.name} (${receiverDetails.accountNumber})`,
         narration: narration || "Withdrawal",
@@ -162,7 +164,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // Send transfer to Nomba
+    // 🔁 Deduct balance via RPC
+    const reference = pendingTx.merchant_tx_ref;
+    const withdrawalAmount = amount;
+    const totalFees = fee;
+
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "deduct_wallet_balance",
+      {
+        user_id: pendingTx.user_id,
+        amt: totalDeduction,
+        transaction_type: "debit",
+        reference,
+        description: `Withdrawal of ₦${withdrawalAmount} (including ₦${totalFees} fee)`,
+      }
+    );
+
+    if (rpcError) {
+      console.error("RPC error:", rpcError);
+      return NextResponse.json(
+        { error: "Failed to deduct wallet balance" },
+        { status: 500 }
+      );
+    }
+
+    // 🚀 Send transfer request to Nomba
     const res = await fetch(`${process.env.NOMBA_URL}/v1/transfers/bank`, {
       method: "POST",
       headers: {
@@ -184,7 +210,7 @@ export async function POST(req: Request) {
     const data = await res.json();
     console.log("transfer data", data);
 
-    // Save Nomba response and set status to processing
+    // 🗂️ Update transaction with Nomba response
     await supabase
       .from("transactions")
       .update({
@@ -193,9 +219,6 @@ export async function POST(req: Request) {
         reference: data?.data?.reference || null,
       })
       .eq("id", pendingTx.id);
-
-    // clearWalletBalanceCache(userId);
-    // clearTransactionsCache(userId);
 
     return NextResponse.json({
       message:
@@ -207,7 +230,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Withdraw API error:", error);
     return NextResponse.json(
-      { error: "Server error: " + error.message || error.description },
+      { error: "Server error: " + (error.message || error.description) },
       { status: 500 }
     );
   }
