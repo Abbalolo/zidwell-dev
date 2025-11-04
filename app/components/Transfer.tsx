@@ -405,7 +405,7 @@ export default function Transfer() {
       Swal.fire({
         icon: "error",
         title: "Something went wrong",
-        text: err?.message || "Please try again later.",
+        text: err?.message || err?.reason || "Please try again later.",
       });
       setErrors({ form: err?.message || "Something went wrong." });
     } finally {
