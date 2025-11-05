@@ -5,7 +5,6 @@ import { createClient } from "@supabase/supabase-js";
 // import { clearTransactionsCache } from "../bill-transactions/route";
 // import { clearWalletBalanceCache } from "../wallet-balance/route";
 // import { clearContractsCache } from "../get-contracts-db/route";
-import { clear } from "console";
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -88,9 +87,6 @@ export async function POST(req: Request) {
       `,
     });
 
-  // clearContractsCache(initiatorEmail);
-  //       clearTransactionsCache(userId);
-  //       clearWalletBalanceCache(userId);
 
     return new Response(JSON.stringify({ message: "Email sent" }), {
       status: 200,

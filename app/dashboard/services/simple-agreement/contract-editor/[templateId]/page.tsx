@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Send, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Download,
+  Send,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
@@ -27,9 +34,8 @@ import ContractsPreview from "@/app/components/previews/ContractsPreview";
 
 const Page = () => {
   const { templateId } = useParams();
-  const router = useRouter();
   const inputCount = 4;
-
+  const router = useRouter();
   const [pin, setPin] = useState(Array(inputCount).fill(""));
   const [isOpen, setIsOpen] = useState(false);
   const [template, setTemplate] = useState<ContractTemplateType | null>(null);
@@ -38,9 +44,7 @@ const Page = () => {
   const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("draft");
-  const [showPreview, setShowPreview] = useState(false);
-  const { userData } = useUserContextData();
-
+  const { userData, setUserData } = useUserContextData();
   const [errors, setErrors] = useState({
     contractTitle: "",
     signeeEmail: "",
@@ -55,14 +59,18 @@ const Page = () => {
     day: "2-digit",
   });
 
-  // Generate default contract content based on template
+  type ContractTemplateType = {
+    id: string;
+    title: string;
+  };
+
   const getTemplateContent = (
     template: ContractTemplateType,
     user: any,
     currentDate: string = new Date().toLocaleDateString()
   ): string => {
     if (!user.firstName || !user.lastName) {
-      return "Error: Missing user data.";
+      return "Error: Missing user email.";
     }
 
     const templateContent = {
@@ -142,7 +150,6 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     );
   };
 
-  // Load selected template and auto-fill content
   useEffect(() => {
     if (templateId && typeof templateId === "string" && userData) {
       const foundTemplate = contractTemplates.find((t) => t.id === templateId);
@@ -154,7 +161,6 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     }
   }, [templateId, userData]);
 
-  // Input validation
   const validateInputs = () => {
     const newErrors = {
       contractTitle: "",
@@ -166,8 +172,10 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
 
     if (!contractTitle.trim())
       newErrors.contractTitle = "Contract title is required.";
-    if (signeeEmail.trim() === userData?.email)
-      newErrors.signeeEmail = "Signee email cannot be the same as your email.";
+    if (signeeEmail.trim() === userData?.email) {
+      newErrors.signeeEmail =
+        "Sorry, the signee email address cannot be the same as the initiator's email address.";
+    }
     if (!signeeEmail.trim())
       newErrors.signeeEmail = "Signee email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signeeEmail))
@@ -176,13 +184,79 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
       newErrors.contractContent = "Contract content cannot be empty.";
     if (!status) newErrors.status = "Please select a status.";
 
-    if (pin.join("").length !== 4) newErrors.pin = "Pin must be 4 digits";
+    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
+    if (!pin) newErrors.pin = "Please enter transaction pin";
 
     setErrors(newErrors);
     return !Object.values(newErrors).some((error) => error);
   };
 
-  // Deduct ₦20 before sending contract
+  const handleSubmit = async () => {
+    if (!validateInputs()) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Failed",
+        text: "Please correct the errors before sending the contract.",
+      });
+      return;
+    }
+    Swal.fire({
+      title: "Sending contract...",
+      text: "Please wait while we send your contract for signature.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/send-contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signeeEmail,
+          contractText: contractContent,
+          initiatorEmail: userData?.email,
+          contractTitle,
+          status,
+          userId: userData?.id,
+        }),
+      });
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: "Contract sent for signature successfully!",
+        }).then(() => {
+        router.refresh();
+      });
+
+        setLoading(false);
+       
+      } else {
+        const errorData = await res.json();
+        await handleRefund();
+        Swal.fire({
+          icon: "error",
+          title: "Failed to send",
+          text: errorData.message || "Unknown error",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      await handleRefund();
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while sending the contract.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeduct = async (): Promise<boolean> => {
     setLoading(true);
     return new Promise((resolve) => {
@@ -200,9 +274,11 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
           return resolve(false);
         }
 
+        // ✅ Wait until PIN is entered
         const checkPinInterval = setInterval(() => {
           if (pin.join("").length === 4) {
             clearInterval(checkPinInterval);
+
             fetch("/api/pay-app-service", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -238,7 +314,6 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     });
   };
 
-  // Refund if sending fails
   const handleRefund = async () => {
     try {
       await fetch("/api/refund-service", {
@@ -265,276 +340,231 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     }
   };
 
-  // Handle contract submission
-  const handleSubmit = async () => {
-    if (!validateInputs()) {
-      Swal.fire({
-        icon: "error",
-        title: "Validation Failed",
-        text: "Please correct the errors before sending the contract.",
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: "Sending contract...",
-      text: "Please wait while we send your contract for signature.",
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-
-    try {
-      setLoading(true);
-      const res = await fetch("/api/send-contracts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          signeeEmail,
-          contractText: contractContent,
-          initiatorEmail: userData?.email,
-          contractTitle,
-          status,
-          userId: userData?.id,
-        }),
-      });
-
-      if (res.ok) {
-        Swal.fire({
-          icon: "success",
-          title: "Success!",
-          text: "Contract sent for signature successfully!",
-        }).then(() => router.refresh());
-      } else {
-        const errorData = await res.json();
-        await handleRefund();
-        Swal.fire({
-          icon: "error",
-          title: "Failed to send",
-          text: errorData.message || "Unknown error",
-        });
-      }
-    } catch (err) {
-      console.error(err);
-      await handleRefund();
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "An error occurred while sending the contract.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ FIX: Define `form` object for preview
-  const form = {
-    contractTitle,
-    signeeEmail,
-    contractContent,
-    status,
-    initiatorEmail: userData?.email,
-    initiatorName: `${userData?.firstName || ""} ${
-      userData?.lastName || ""
-    }`.trim(),
-    date: CurrentDate,
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 fade-in">
-      <DashboardSidebar />
-      <div className="lg:ml-64">
-        <DashboardHeader />
+    <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50 fade-in">
+        <DashboardSidebar />
+        <div className="lg:ml-64">
+          <DashboardHeader />
 
-        <PinPopOver
-          setIsOpen={setIsOpen}
-          isOpen={isOpen}
-          pin={pin}
-          setPin={setPin}
-          inputCount={inputCount}
-          onConfirm={async () => {
-            const paid = await handleDeduct();
-            if (paid) {
-              await handleSubmit();
-            }
-          }}
-        />
-
-        <div className="border-b bg-card">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <Button
-                  variant="ghost"
-                  onClick={() => router.back()}
-                  className="flex text-[#C29307] items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-                    Contract Editor{" "}
-                    <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md">
-                      ₦1,000
-                    </span>
-                  </h1>
-                  <p className="text-muted-foreground">
-                    Based on: <strong>{template?.title}</strong>
-                  </p>
+          {/* Header */}
+          <PinPopOver
+            setIsOpen={setIsOpen}
+            isOpen={isOpen}
+            pin={pin}
+            setPin={setPin}
+            inputCount={inputCount}
+            onConfirm={async () => {
+              const paid = await handleDeduct();
+              if (paid) {
+                await handleSubmit();
+              }
+            }}
+          />
+          <div className="border-b bg-card">
+            <div className="container mx-auto px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => router.back()}
+                    className="flex text-[#C29307]  items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-3" >
+                      Contract Editor{" "}
+                      <button
+                        disabled
+                        className="pointer-events-none text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md"
+                      >
+                        ₦1,000 
+                      </button>
+                    </h1>
+                    <p className="text-muted-foreground">
+                      Based on: <strong>{template?.title}</strong>
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowPreview(true)}
-                >
-                  Preview
-                </Button>
+                <div className="flex items-center gap-3">
+                  {/* <Button variant="outline" onClick={handleSave}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Draft
+                  </Button> */}
 
-                <Button
-                  disabled={loading}
-                  className={`hidden md:flex items-center text-white transition ${
-                    loading
-                      ? "bg-gray-500 cursor-not-allowed"
-                      : "bg-[#C29307] hover:bg-[#b28a06]"
-                  }`}
-                  onClick={() => {
-                    if (validateInputs()) setIsOpen(true);
-                  }}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send for Signature
-                    </>
-                  )}
-                </Button>
+                  <Button
+                    disabled={loading}
+                    className={`md:flex items-center text-white transition hidden  ${
+                      loading
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-[#C29307] hover:bg-[#b28a06]"
+                    }`}
+                    onClick={() => {
+                      if (validateInputs()) {
+                        setIsOpen(true);
+                      }
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send for Signature
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="container mx-auto px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contract Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Contract Title</Label>
-                    <Input
-                      id="title"
-                      value={contractTitle}
-                      onChange={(e) => setContractTitle(e.target.value)}
-                      placeholder="Enter contract title"
+          {/* Main Content */}
+          <div className="container mx-auto px-6 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Contract Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="title">Contract Title</Label>
+                      <Input
+                        id="title"
+                        value={contractTitle}
+                        onChange={(e) => setContractTitle(e.target.value)}
+                        placeholder="Enter contract title"
+                      />
+                      {errors.contractTitle && (
+                        <p className="text-red-500 text-sm">
+                          {errors.contractTitle}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="signeeEmail">Client Email</Label>
+                      <Input
+                        id="signeeEmail"
+                        value={signeeEmail}
+                        onChange={(e) => setSigneeEmail(e.target.value)}
+                        placeholder="Enter signee email"
+                      />
+                      {errors.signeeEmail && (
+                        <p className="text-red-500 text-sm">
+                          {errors.signeeEmail}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <select
+                        id="status"
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="w-full p-2 border rounded-md bg-background"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="pending">
+                          Pending Review for Signature
+                        </option>
+                      </select>
+                      {errors.status && (
+                        <p className="text-red-500 text-sm">{errors.status}</p>
+                      )}
+                    </div>
+
+                    {/* <div className="border-t pt-4">
+                      <Label htmlFor="pin">Transaction Pin</Label>
+
+                      <Input
+                        id="pin"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="\d*"
+                        placeholder="Enter Pin here.."
+                        value={pin}
+                        maxLength={4}
+                        onChange={(e) => setPin(e.target.value)}
+                        className={` ${errors.pin ? "border-red-500" : ""}`}
+                      />
+                    </div>
+
+                    {errors.pin && (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm">{errors.pin}</span>
+                      </div>
+                    )} */}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Contract Content */}
+              <div className="lg:col-span-2">
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle>Contract Content</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={contractContent}
+                      onChange={(e) => setContractContent(e.target.value)}
+                      placeholder="Enter your contract content here..."
+                      className="min-h-[600px] font-mono text-sm"
                     />
-                    {errors.contractTitle && (
-                      <p className="text-red-500 text-sm">
-                        {errors.contractTitle}
-                      </p>
-                    )}
-                  </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                  <div>
-                    <Label htmlFor="signeeEmail">Client Email</Label>
-                    <Input
-                      id="signeeEmail"
-                      value={signeeEmail}
-                      onChange={(e) => setSigneeEmail(e.target.value)}
-                      placeholder="Enter signee email"
-                    />
-                    {errors.signeeEmail && (
-                      <p className="text-red-500 text-sm">
-                        {errors.signeeEmail}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="status">Status</Label>
-                    <select
-                      id="status"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full p-2 border rounded-md bg-background"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="pending">
-                        Pending Review for Signature
-                      </option>
-                    </select>
-                    {errors.status && (
-                      <p className="text-red-500 text-sm">{errors.status}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <Button
+                disabled={loading}
+                className={`flex items-center text-white transition md:hidden ${
+                  loading
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-[#C29307] hover:bg-[#b28a06]"
+                }`}
+                onClick={() => {
+                  if (validateInputs()) {
+                    setIsOpen(true);
+                  }
+                }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send for Signature
+                  </>
+                )}
+              </Button>
+              {/* <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setShowPreview(true)}
+                            >
+                              Preview
+                            </Button> */}
             </div>
-
-            {/* Contract Content */}
-            <div className="lg:col-span-2">
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle>Contract Content</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={contractContent}
-                    onChange={(e) => setContractContent(e.target.value)}
-                    placeholder="Enter your contract content here..."
-                    className="min-h-[600px] font-mono text-sm"
-                  />
-                </CardContent>
-              </Card>
-            </div>
-
-            <Button
-              disabled={loading}
-              className={`flex items-center text-white transition md:hidden ${
-                loading
-                  ? "bg-gray-500 cursor-not-allowed"
-                  : "bg-[#C29307] hover:bg-[#b28a06]"
-              }`}
-              onClick={() => {
-                if (validateInputs()) setIsOpen(true);
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send for Signature
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </div>
 
-      {showPreview && (
-        <ContractsPreview
-          isOpen={showPreview}
-          contract={{
-            contract_title: form.contractTitle,
-            contract_text: form.contractContent,
-            description: "Preview of the drafted contract",
-          }}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
+       {/* {showPreview && (
+                <ContractsPreview form={form} onClose={() => setShowPreview(false)} />
+              )} */}
     </div>
   );
 };
