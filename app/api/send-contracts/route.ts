@@ -12,7 +12,7 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, signeeEmail, contractText, contractTitle, initiatorEmail, status } =
+    const { userId, initiatorName, signeeEmail, contractText, contractTitle, initiatorEmail, status } =
       body;
 
     if (
@@ -20,7 +20,8 @@ export async function POST(req: Request) {
       !contractText ||
       !contractTitle ||
       !initiatorEmail ||
-      !status
+      !status || 
+      !initiatorName
     ) {
       return new Response(JSON.stringify({ message: "Missing fields" }), {
         status: 400,
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
       token,
       signee_email: signeeEmail,
       initiator_email: initiatorEmail,
+      initiator_name: initiatorName,
       contract_text: contractText,
       contract_title: contractTitle,
       signing_link: signingLink,

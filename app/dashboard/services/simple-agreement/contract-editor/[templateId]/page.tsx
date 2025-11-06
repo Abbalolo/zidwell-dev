@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  ArrowLeft,
-  Send,
-  Loader2,
-  Eye,
-} from "lucide-react";
+import { ArrowLeft, Send, Loader2, Eye } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
@@ -196,6 +191,8 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
     return !Object.values(newErrors).some((error) => error);
   };
 
+
+
   const handleSubmit = async () => {
     try {
       const res = await fetch("/api/send-contracts", {
@@ -205,6 +202,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
           signeeEmail,
           contractText: contractContent,
           initiatorEmail: userData?.email,
+          initiatorName: `${userData?.firstName} ${userData?.lastName}`,
           contractTitle,
           status,
           userId: userData?.id,
@@ -245,7 +243,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
   const handleDeduct = async (): Promise<boolean> => {
     return new Promise((resolve) => {
       const pinString = pin.join("");
-      
+
       fetch("/api/pay-app-service", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -259,11 +257,7 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
         .then(async (res) => {
           const data = await res.json();
           if (!res.ok) {
-            Swal.fire(
-              "Error",
-              data.error || "Something went wrong",
-              "error"
-            );
+            Swal.fire("Error", data.error || "Something went wrong", "error");
             resolve(false);
           } else {
             resolve(true);
@@ -305,11 +299,11 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
   // Function to process payment and submit contract
   const processPaymentAndSubmit = async () => {
     setLoading(true);
-    
+
     try {
       // First process payment
       const paymentSuccess = await handleDeduct();
-      
+
       if (paymentSuccess) {
         // If payment successful, send contract
         await handleSubmit();
@@ -358,16 +352,17 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
             setPin={setPin}
             inputCount={inputCount}
             onConfirm={processPaymentAndSubmit}
-     
           />
 
           {/* Contract Summary Modal */}
           <ContractSummary
             contractTitle={contractTitle}
             contractContent={contractContent}
-            initiatorName={`${userData?.firstName || ''} ${userData?.lastName || ''}`}
-            initiatorEmail={userData?.email || ''}
-            signeeName={signeeEmail.split('@')[0]} // Extract name from email
+            initiatorName={`${userData?.firstName || ""} ${
+              userData?.lastName || ""
+            }`}
+            initiatorEmail={userData?.email || ""}
+            signeeName={signeeEmail.split("@")[0]} // Extract name from email
             signeeEmail={signeeEmail}
             status={status}
             amount={20}
@@ -391,13 +386,13 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                     Back
                   </Button>
                   <div>
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-3" >
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
                       Contract Editor{" "}
                       <button
                         disabled
                         className="pointer-events-none text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md"
                       >
-                        ₦1,000 
+                        ₦1,000
                       </button>
                     </h1>
                     <p className="text-muted-foreground">
@@ -410,8 +405,8 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
                   {/* Action Buttons Group */}
                   <div className="flex items-center gap-2">
                     {/* Preview Button */}
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => setShowPreview(true)}
                       className="flex items-center gap-2"
                     >
@@ -531,15 +526,15 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
 
               {/* Mobile Action Buttons */}
               <div className="flex flex-col gap-3 md:hidden">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowPreview(true)}
                   className="flex items-center gap-2"
                 >
                   <Eye className="h-4 w-4" />
                   Preview Contract
                 </Button>
-                
+
                 <Button
                   disabled={loading}
                   className={`flex items-center text-white transition ${
@@ -568,10 +563,10 @@ Signature: ${user.firstName} ${user.lastName}      Date: ${currentDate}
       </div>
 
       {/* Preview Modal */}
-      <ContractsPreview 
-        isOpen={showPreview} 
-        contract={form.contract} 
-        onClose={() => setShowPreview(false)} 
+      <ContractsPreview
+        isOpen={showPreview}
+        contract={form.contract}
+        onClose={() => setShowPreview(false)}
       />
     </div>
   );

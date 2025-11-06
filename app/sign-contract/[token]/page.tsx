@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-
 import SignContractForm from "@/app/components/SignContractForm";
 import { createClient } from "@supabase/supabase-js";
 import { Textarea } from "@/app/components/ui/textarea";
@@ -25,11 +24,19 @@ export default async function page({
   // console.log(contractData, error)
   if (error || !contractData) return notFound();
 
-  console.log("contract data", contractData);
-
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-xl font-bold mb-4">{contractData.contract_title}</h1>
+      <div className="">
+        <h1 className="text-2xl font-bold text-foreground flex gap-3 items-center mb-3">
+          {contractData.contract_title}
+          <button
+            disabled
+            className="pointer-events-none text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-md"
+          >
+            {contractData.initiator_name}
+          </button>
+        </h1>
+      </div>
 
       {contractData.status === "signed" && (
         <div className="mb-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">

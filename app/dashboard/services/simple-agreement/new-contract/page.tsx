@@ -95,6 +95,7 @@ const Page = () => {
           signeeEmail,
           contractText: contractContent,
           initiatorEmail: userData?.email,
+          initiatorName: `${userData?.firstName} ${userData?.lastName}`,
           contractTitle,
           status,
           userId: userData?.id,
