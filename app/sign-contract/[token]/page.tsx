@@ -25,6 +25,8 @@ export default async function page({
   // console.log(contractData, error)
   if (error || !contractData) return notFound();
 
+  console.log("contract data", contractData);
+
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <h1 className="text-xl font-bold mb-4">{contractData.contract_title}</h1>

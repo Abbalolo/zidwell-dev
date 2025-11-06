@@ -2,11 +2,9 @@
 import { useState } from "react";
 import {
   ArrowLeft,
-  Save,
-  Download,
   Send,
   Loader2,
-  AlertCircle,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import {
@@ -24,12 +22,16 @@ import { useRouter } from "next/navigation";
 import { useUserContextData } from "@/app/context/userData";
 import Swal from "sweetalert2";
 import PinPopOver from "@/app/components/PinPopOver";
+import ContractsPreview from "@/app/components/previews/ContractsPreview";
+import ContractSummary from "@/app/components/ContractSummary"; // Import the new component
 
 const Page = () => {
   const inputCount = 4;
   const [contractTitle, setContractTitle] = useState("Untitled Contract");
   const [pin, setPin] = useState(Array(inputCount).fill(""));
   const [isOpen, setIsOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showContractSummary, setShowContractSummary] = useState(false); // New state for summary
   const [signeeEmail, setSigneeEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [contractContent, setContractContent] = useState("");
@@ -42,7 +44,17 @@ const Page = () => {
     pin: "",
   });
   const router = useRouter();
-  const { userData, setUserData } = useUserContextData();
+  const { userData } = useUserContextData();
+
+  const form = {
+    isOpen: showPreview,
+    contract: {
+      contract_title: contractTitle,
+      contract_text: contractContent,
+      description: "",
+    },
+    onClose: () => setShowPreview(false),
+  };
 
   // Basic validation function
   const validateInputs = () => {
@@ -67,49 +79,14 @@ const Page = () => {
     if (!contractContent.trim())
       newErrors.contractContent = "Contract content cannot be empty.";
     if (status === "") newErrors.status = "Please select a status.";
-    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
-    if (!pin) newErrors.pin = "Please enter transaction pin";
     setErrors(newErrors);
 
     // Return true if there are no errors, otherwise return false
     return !Object.values(newErrors).some((error) => error);
   };
 
-  const handleSave = () => {
-    console.log({
-      title: contractTitle,
-      content: contractContent,
-      message: "Contract saved as draft.",
-    });
-  };
-
-  // const handleDownload = () => {
-  //   console.log({
-  //     title: contractTitle,
-  //     message: "Downloading contract as PDF...",
-  //   });
-  // };
-
   const handleSubmit = async () => {
-    if (!validateInputs()) {
-      Swal.fire({
-        icon: "error",
-        title: "Validation Failed",
-        text: "Please correct the errors before sending the contract.",
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: "Sending contract...",
-      text: "Please wait while we send your contract for signature.",
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-    });
-
     try {
       const res = await fetch("/api/send-contracts", {
         method: "POST",
@@ -120,7 +97,7 @@ const Page = () => {
           initiatorEmail: userData?.email,
           contractTitle,
           status,
-           userId: userData?.id,
+          userId: userData?.id,
         }),
       });
 
@@ -131,28 +108,17 @@ const Page = () => {
           title: "Success!",
           text: "Contract sent for signature successfully!",
         }).then(() => {
-        router.refresh();
-      });
-
-        // if (result.newWalletBalance !== undefined) {
-        //   setUserData((prev: any) => {
-        //     const updated = { ...prev, walletBalance: result.result };
-        //     localStorage.setItem("userData", JSON.stringify(updated));
-        //     return updated;
-        //   });
-        // }
-
-        setLoading(false);
-       
+          router.refresh();
+        });
+        return true;
       } else {
-        const errorData = await res.json();
         await handleRefund();
         Swal.fire({
           icon: "error",
           title: "Failed to send",
-          text: errorData.message || "Unknown error",
+          text: result.message || "Unknown error",
         });
-        setLoading(false);
+        return false;
       }
     } catch (err) {
       console.error(err);
@@ -162,64 +128,41 @@ const Page = () => {
         title: "Error",
         text: "An error occurred while sending the contract.",
       });
-      setLoading(false);
+      return false;
     }
   };
 
   const handleDeduct = async (): Promise<boolean> => {
-    setLoading(true);
     return new Promise((resolve) => {
-      Swal.fire({
-        title: "Confirm Deduction",
-        text: "₦20 will be deducted from your wallet for generating this Contract.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Yes, proceed",
-      }).then((result) => {
-        if (!result.isConfirmed) {
-          setLoading(false);
-          return resolve(false);
-        }
-
-        // ✅ Wait until PIN is entered
-        const checkPinInterval = setInterval(() => {
-          if (pin.join("").length === 4) {
-            clearInterval(checkPinInterval);
-
-            fetch("/api/pay-app-service", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: userData?.id,
-                pin,
-                amount: 20,
-                description: "Contract successfully generated",
-              }),
-            })
-              .then(async (res) => {
-                const data = await res.json();
-                if (!res.ok) {
-                  Swal.fire(
-                    "Error",
-                    data.error || "Something went wrong",
-                    "error"
-                  );
-                  setLoading(false);
-                  resolve(false);
-                } else {
-                  resolve(true);
-                }
-              })
-              .catch((err) => {
-                setLoading(false);
-                Swal.fire("Error", err.message, "error");
-                resolve(false);
-              });
+      const pinString = pin.join("");
+      
+      fetch("/api/pay-app-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          pin: pinString,
+          amount: 20,
+          description: "Contract successfully generated",
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            Swal.fire(
+              "Error",
+              data.error || "Something went wrong",
+              "error"
+            );
+            resolve(false);
+          } else {
+            resolve(true);
           }
-        }, 300);
-      });
+        })
+        .catch((err) => {
+          Swal.fire("Error", err.message, "error");
+          resolve(false);
+        });
     });
   };
 
@@ -249,6 +192,47 @@ const Page = () => {
     }
   };
 
+  // Function to process payment and submit contract
+  const processPaymentAndSubmit = async () => {
+    setLoading(true);
+    
+    try {
+      // First process payment
+      const paymentSuccess = await handleDeduct();
+      
+      if (paymentSuccess) {
+        // If payment successful, send contract
+        await handleSubmit();
+      }
+    } catch (error) {
+      console.error("Error in process:", error);
+    } finally {
+      setLoading(false);
+      setIsOpen(false);
+    }
+  };
+
+  // Function to show contract summary first
+  const handleSendForSignature = () => {
+    if (!validateInputs()) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Failed",
+        text: "Please correct the errors before sending the contract.",
+      });
+      return;
+    }
+
+    // Show contract summary first
+    setShowContractSummary(true);
+  };
+
+  // Function to proceed to PIN after summary confirmation
+  const handleSummaryConfirm = () => {
+    setShowContractSummary(false);
+    setIsOpen(true); // Show PIN popup next
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="min-h-screen bg-gray-50 fade-in">
@@ -263,13 +247,27 @@ const Page = () => {
             pin={pin}
             setPin={setPin}
             inputCount={inputCount}
-            onConfirm={async () => {
-              const paid = await handleDeduct();
-              if (paid) {
-                await handleSubmit();
-              }
-            }}
+            onConfirm={processPaymentAndSubmit}
+          
           />
+
+          {/* Contract Summary Modal */}
+          <ContractSummary
+            contractTitle={contractTitle}
+            contractContent={contractContent}
+            initiatorName={`${userData?.firstName || ''} ${userData?.lastName || ''}`}
+            initiatorEmail={userData?.email || ''}
+            signeeName={signeeEmail.split('@')[0]} // Extract name from email
+            signeeEmail={signeeEmail}
+            status={status}
+            amount={20}
+            confirmContract={showContractSummary}
+            onBack={() => setShowContractSummary(false)}
+            onConfirm={handleSummaryConfirm}
+            contractType="Custom Contract"
+            dateCreated={new Date().toLocaleDateString()}
+          />
+
           <div className="border-b bg-card">
             <div className="container mx-auto px-6 py-4">
               <div className="flex items-center justify-between">
@@ -299,15 +297,14 @@ const Page = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {/* <Button variant="outline" onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Draft
-                  </Button> */}
-                  {/* <Button variant="outline" onClick={handleDownload}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button> */}
-
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowPreview(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
                   <Button
                     disabled={loading}
                     className={`md:flex items-center text-white transition hidden  ${
@@ -315,11 +312,7 @@ const Page = () => {
                         ? "bg-gray-500 cursor-not-allowed"
                         : "bg-[#C29307] hover:bg-[#b28a06]"
                     }`}
-                    onClick={() => {
-                      if (validateInputs()) {
-                        setIsOpen(true);
-                      }
-                    }}
+                    onClick={handleSendForSignature}
                   >
                     {loading ? (
                       <>
@@ -395,29 +388,6 @@ const Page = () => {
                         <p className="text-red-500 text-sm">{errors.status}</p>
                       )}
                     </div>
-                    {/* 
-                    <div className="border-t pt-4">
-                      <Label htmlFor="pin">Transaction Pin</Label>
-
-                      <Input
-                        id="pin"
-                        type="password"
-                        inputMode="numeric"
-                        pattern="\d*"
-                        placeholder="Enter Pin here.."
-                        value={pin}
-                        maxLength={4}
-                        onChange={(e) => setPin(e.target.value)}
-                        className={` ${errors.pin ? "border-red-500" : ""}`}
-                      />
-                    </div>
-
-                    {errors.pin && (
-                      <div className="flex items-center gap-2 text-red-600">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="text-sm">{errors.pin}</span>
-                      </div>
-                    )} */}
                   </CardContent>
                 </Card>
               </div>
@@ -444,35 +414,49 @@ const Page = () => {
                 </Card>
               </div>
 
-              <Button
-                disabled={loading}
-                className={`flex items-center text-white transition md:hidden ${
-                  loading
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "bg-[#C29307] hover:bg-[#b28a06]"
-                }`}
-                onClick={() => {
-                  if (validateInputs()) {
-                    setIsOpen(true);
-                  }
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send for Signature
-                  </>
-                )}
-              </Button>
+              {/* Mobile Send Button */}
+              <div className="flex flex-col gap-3 md:hidden">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPreview(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview Contract
+                </Button>
+                
+                <Button
+                  disabled={loading}
+                  className={`flex items-center text-white transition ${
+                    loading
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "bg-[#C29307] hover:bg-[#b28a06]"
+                  }`}
+                  onClick={handleSendForSignature}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send for Signature
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <ContractsPreview 
+        isOpen={showPreview} 
+        contract={form.contract} 
+        onClose={() => setShowPreview(false)} 
+      />
     </div>
   );
 };

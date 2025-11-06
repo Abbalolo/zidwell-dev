@@ -28,6 +28,8 @@ interface InvoiceForm {
   created_at: string;
   account_to_pay_name: string;
   invoice_items: InvoiceItem[];
+  fee_option?: "absorbed" | "customer";
+  total_amount?: number;
 }
 
 type Props = {
@@ -44,7 +46,7 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
     message: form.message || "No message provided",
     invoice_id: form.invoice_id || "N/A",
     bill_to: form.bill_to || "N/A",
-    from: form.initiator_name || "N/A",
+    from: form.from || "N/A",
     issue_date: form.issue_date || "N/A",
     due_date: form.due_date || "N/A",
     delivery_due: form.delivery_due || "N/A",
@@ -57,15 +59,28 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
     signed_at: form.signed_at || "N/A",
     account_to_pay_name: form.account_to_pay_name || "N/A",
     invoice_items: Array.isArray(form.invoice_items) ? form.invoice_items : [],
+    fee_option: form.fee_option || "customer",
+    total_amount: form.total_amount || 0,
   };
 
-  console.log(safeForm)
-
-  const calculateTotal = () => {
+  // Calculate subtotal from invoice items
+  const calculateSubtotal = () => {
     return safeForm.invoice_items.reduce(
-      (total:any, item:any) => total + item.quantity * item.price,
+      (total: number, item: InvoiceItem) => total + (item.quantity * item.price),
       0
     );
+  };
+
+  // Calculate processing fee (3.5%)
+  const calculateProcessingFee = (subtotal: number) => {
+    return safeForm.fee_option === "customer" ? subtotal * 0.035 : 0;
+  };
+
+  // Calculate total amount
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const fee = calculateProcessingFee(subtotal);
+    return subtotal + fee;
   };
 
   const formatNumber = (value: number) => {
@@ -75,17 +90,22 @@ const InvoicePreview = ({ form, onClose, isPdf = false }: Props) => {
       maximumFractionDigits: 2,
     }).format(value);
   };
-const formattedDate = (date:string) => {
-const formattedCreatedAt = date
-  ? new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  : "N/A";
-  return formattedCreatedAt
-}
-  
+
+  const formattedDate = (date: string) => {
+    const formattedCreatedAt = date
+      ? new Date(date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "N/A";
+    return formattedCreatedAt;
+  };
+
+  // Get calculated values
+  const subtotal = calculateSubtotal();
+  const processingFee = calculateProcessingFee(subtotal);
+  const total = calculateTotal();
 
   return (
     <div
@@ -160,6 +180,17 @@ const formattedCreatedAt = date
                       {safeForm.delivery_time}
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-invoice-subtle font-medium">
+                      Fee Option:
+                    </span>
+                    <span className="text-foreground capitalize">
+                      {safeForm.fee_option === "customer" 
+                        ? "Customer pays fee" 
+                        : "Fee absorbed"
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -184,6 +215,7 @@ const formattedCreatedAt = date
               </div>
             </div>
           </div>
+
           {/* Message Section */}
           {safeForm.message && (
             <div className="mb-8">
@@ -195,6 +227,7 @@ const formattedCreatedAt = date
               </div>
             </div>
           )}
+
           {/* Items Table */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-foreground mb-6">
@@ -219,7 +252,7 @@ const formattedCreatedAt = date
                   </tr>
                 </thead>
                 <tbody>
-                  {safeForm.invoice_items.map((item:any, i:any) => (
+                  {safeForm.invoice_items.map((item: InvoiceItem, i: number) => (
                     <tr
                       key={i}
                       className="border-b border-invoice-table-border last:border-b-0 hover:bg-invoice-section/50 transition-colors"
@@ -231,10 +264,10 @@ const formattedCreatedAt = date
                         {item.quantity}
                       </td>
                       <td className="p-4 text-right text-foreground">
-                        {formatNumber(item.price)}
+                        ₦{formatNumber(item.price)}
                       </td>
                       <td className="p-4 text-right font-semibold text-foreground">
-                        {formatNumber(item.quantity * item.price)}
+                        ₦{formatNumber(item.quantity * item.price)}
                       </td>
                     </tr>
                   ))}
@@ -242,23 +275,34 @@ const formattedCreatedAt = date
               </table>
             </div>
           </div>
+
           {/* Total Section */}
           <div className="flex justify-end mb-8">
             <div className="bg-invoice-header p-6 rounded-lg text-invoice-header-foreground min-w-80">
               <div className="space-y-3">
                 <div className="flex justify-between text-lg">
                   <span>Subtotal:</span>
-                  <span>₦{formatNumber(safeForm.total_amount)}</span>
+                  <span>₦{formatNumber(subtotal)}</span>
                 </div>
+                
+                {/* Show processing fee only when customer pays */}
+                {safeForm.fee_option === "customer" && processingFee > 0 && (
+                  <div className="flex justify-between text-lg">
+                    <span>Processing Fee (3.5%):</span>
+                    <span>₦{formatNumber(processingFee)}</span>
+                  </div>
+                )}
+                
                 <div className="border-t border-invoice-header-foreground/20 pt-3">
                   <div className="flex justify-between text-xl font-bold">
                     <span>Total:</span>
-                   <span>₦{formatNumber(safeForm.total_amount)}</span>
+                    <span>₦{formatNumber(total)}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
           {/* Customer Note */}
           {safeForm.customer_note && (
             <div className="bg-invoice-section p-6 rounded-lg border border-invoice-table-border">
@@ -270,10 +314,12 @@ const formattedCreatedAt = date
               </p>
             </div>
           )}
+
+          {/* Signatures */}
           {safeForm.initiator_name && safeForm.created_at && (
             <div className="flex gap-2 space-y-3 mt-5">
               <p>Initiator: {safeForm.initiator_name}</p>
-              <p>Date:{formattedDate(safeForm.created_at)}</p>
+              <p>Date: {formattedDate(safeForm.created_at)}</p>
             </div>
           )}
 

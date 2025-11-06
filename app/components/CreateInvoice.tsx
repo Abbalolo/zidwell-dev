@@ -4,7 +4,7 @@ import { TabsContent } from "./ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { AlertCircle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import InvoicePreview from "./previews/InvoicePreview";
 import { useRouter } from "next/navigation";
 import { Label } from "./ui/label";
@@ -21,6 +21,7 @@ import Swal from "sweetalert2";
 import { useUserContextData } from "../context/userData";
 import { Textarea } from "./ui/textarea";
 import PinPopOver from "./PinPopOver";
+import InvoiceSummary from "./InvoiceSummary"; 
 
 type InvoiceItem = {
   item: string;
@@ -62,6 +63,7 @@ function CreateInvoice() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showInvoiceSummary, setShowInvoiceSummary] = useState(false); // New state for summary
   const [form, setForm] = useState<InvoiceForm>({
     name: "",
     email: "",
@@ -79,7 +81,21 @@ function CreateInvoice() {
     status: "unpaid",
   });
 
-  const { userData, setUserData } = useUserContextData();
+  const { userData } = useUserContextData();
+
+
+  // Calculate total amount and fees
+  const calculateTotals = () => {
+    const subtotal = form.invoice_items.reduce(
+      (sum, item) => sum + Number(item.quantity) * Number(item.price),
+      0
+    );
+    
+    const feeAmount = form.fee_option === "customer" ? subtotal * 0.035 : 0;
+    const totalAmount = form.fee_option === "customer" ? subtotal + feeAmount : subtotal;
+    
+    return { subtotal, feeAmount, totalAmount };
+  };
 
   const updateInvoiceItem = (
     index: number,
@@ -115,15 +131,6 @@ function CreateInvoice() {
     }));
   };
 
-  // ✅ restore draft
-  useEffect(() => {
-    const storedDraft = localStorage.getItem("invoiceDraft");
-    if (storedDraft) {
-      const parsed: InvoiceForm = JSON.parse(storedDraft);
-      setForm(parsed);
-    }
-  }, []);
-
   // ✅ initialize from userData
   useEffect(() => {
     if (userData) {
@@ -154,15 +161,7 @@ function CreateInvoice() {
         });
       }
 
-      // calculate totals
-      let totalAmount = form.invoice_items.reduce(
-        (sum, item) => sum + Number(item.quantity) * Number(item.price),
-        0
-      );
-
-      if (form.fee_option === "customer") {
-        totalAmount += totalAmount * 0.035;
-      }
+      const { totalAmount } = calculateTotals();
 
       const payload = {
         userId: userData?.id,
@@ -195,14 +194,6 @@ function CreateInvoice() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
 
-      // if (result.newWalletBalance !== undefined) {
-      //   setUserData((prev: any) => {
-      //     const updated = { ...prev, walletBalance: result.result };
-      //     localStorage.setItem("userData", JSON.stringify(updated));
-      //     return updated;
-      //   });
-      // }
-
       Swal.fire({
         icon: "success",
         title: "Invoice Saved!",
@@ -211,6 +202,7 @@ function CreateInvoice() {
       });
 
       window.location.reload();
+      return true;
     } catch (err) {
       console.error(err);
       await handleRefund();
@@ -219,6 +211,7 @@ function CreateInvoice() {
         title: "Failed to Save Invoice",
         text: (err as Error)?.message || "An unexpected error occurred.",
       });
+      return false;
     }
   };
 
@@ -249,9 +242,23 @@ function CreateInvoice() {
     if (form.payment_type === "multiple" && (!form.unit || form.unit <= 0)) {
       newErrors.unit = "Unit must be greater than 0 for multiple payment.";
     }
-    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
 
-    if (!pin) newErrors.pin = "Please enter transaction pin";
+    // Validate invoice items
+    if (form.invoice_items.length === 0) {
+      newErrors.invoice_items = "At least one invoice item is required.";
+    } else {
+      form.invoice_items.forEach((item, index) => {
+        if (!item.item.trim()) {
+          newErrors[`item_${index}`] = `Item ${index + 1} description is required.`;
+        }
+        if (!item.quantity || Number(item.quantity) <= 0) {
+          newErrors[`quantity_${index}`] = `Item ${index + 1} quantity must be greater than 0.`;
+        }
+        if (!item.price || Number(item.price) <= 0) {
+          newErrors[`price_${index}`] = `Item ${index + 1} price must be greater than 0.`;
+        }
+      });
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -265,87 +272,47 @@ function CreateInvoice() {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
-    if (!validateInvoiceForm()) return;
-
-    try {
-
-
-      await handleSaveInvoice();
-      await Swal.fire("Success", "Invoice created successfully!", "success");
-
-      // window.location.reload();
-    } catch (err) {
-      await handleRefund();
-      console.log(err);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "An error occurred while sending the invoice.",
-      });
-    } finally {
+  const handleSubmit = async () => {
+    const success = await handleSaveInvoice();
+    if (success) {
       setLoading(false);
+      setIsOpen(false);
     }
   };
 
-   const handleDeduct = async (): Promise<boolean> => {
-     setLoading(true);
-     return new Promise((resolve) => {
-       Swal.fire({
-         title: "Confirm Deduction",
-         text: "₦200 will be deducted from your wallet for generating this Invoice.",
-         icon: "warning",
-         showCancelButton: true,
-         confirmButtonColor: "#3085d6",
-         cancelButtonColor: "#d33",
-         confirmButtonText: "Yes, proceed",
-       }).then((result) => {
-         if (!result.isConfirmed) {
-           setLoading(false);
-           return resolve(false);
-         }
- 
-         // ✅ Wait until PIN is entered
-         const checkPinInterval = setInterval(() => {
-           if (pin.join("").length === 4) {
-             clearInterval(checkPinInterval);
- 
-             fetch("/api/pay-app-service", {
-               method: "POST",
-               headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({
-                 userId: userData?.id,
-                 pin,
-                 amount: 200,
-                 description: "Invoice successfully generated",
-               }),
-             })
-               .then(async (res) => {
-                 const data = await res.json();
-                 if (!res.ok) {
-                   Swal.fire(
-                     "Error",
-                     data.error || "Something went wrong",
-                     "error"
-                   );
-                   setLoading(false);
-                   resolve(false);
-                 } else {
-                   resolve(true);
-                 }
-               })
-               .catch((err) => {
-                 setLoading(false);
-                 Swal.fire("Error", err.message, "error");
-                 resolve(false);
-               });
-           }
-         }, 300);
-       });
-     });
-   };
+  const handleDeduct = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const pinString = pin.join("");
+      
+      fetch("/api/pay-app-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          pin: pinString,
+          amount: 200,
+          description: "Invoice successfully generated",
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            Swal.fire(
+              "Error",
+              data.error || "Something went wrong",
+              "error"
+            );
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        })
+        .catch((err) => {
+          Swal.fire("Error", err.message, "error");
+          resolve(false);
+        });
+    });
+  };
 
   const handleRefund = async () => {
     try {
@@ -373,13 +340,46 @@ function CreateInvoice() {
     }
   };
 
-  useEffect(() => {
-    const storedDraft = localStorage.getItem("invoiceDraft");
-    if (storedDraft) {
-      const parsed = JSON.parse(storedDraft);
-      setForm(parsed);
+  // Function to process payment and submit invoice
+  const processPaymentAndSubmit = async () => {
+    setLoading(true);
+    
+    try {
+      // First process payment
+      const paymentSuccess = await handleDeduct();
+      
+      if (paymentSuccess) {
+        // If payment successful, send invoice
+        await handleSubmit();
+      }
+    } catch (error) {
+      console.error("Error in process:", error);
+    } finally {
+      setLoading(false);
+      setIsOpen(false);
     }
-  }, []);
+  };
+
+  // Function to show invoice summary first
+  const handleGenerateInvoice = () => {
+    if (!validateInvoiceForm()) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Failed",
+        text: "Please correct the errors before generating the invoice.",
+      });
+      return;
+    }
+
+    // Show invoice summary first
+    setShowInvoiceSummary(true);
+  };
+
+  // Function to proceed to PIN after summary confirmation
+  const handleSummaryConfirm = () => {
+    setShowInvoiceSummary(false);
+    setIsOpen(true); // Show PIN popup next
+  };
 
   return (
     <>
@@ -389,13 +389,21 @@ function CreateInvoice() {
         pin={pin}
         setPin={setPin}
         inputCount={inputCount}
-        onConfirm={async () => {
-          const paid = await handleDeduct();
-          if (paid) {
-            await handleSubmit();
-          }
-        }}
+        onConfirm={processPaymentAndSubmit}
       />
+
+      {/* Invoice Summary Modal */}
+      <InvoiceSummary
+        invoiceData={form}
+        totals={calculateTotals()}
+        initiatorName={`${userData?.firstName || ''} ${userData?.lastName || ''}`}
+        initiatorEmail={userData?.email || ''}
+        amount={200}
+        confirmInvoice={showInvoiceSummary}
+        onBack={() => setShowInvoiceSummary(false)}
+        onConfirm={handleSummaryConfirm}
+      />
+
       <TabsContent value="create" className="space-y-6">
         <Card>
           <CardHeader>
@@ -649,6 +657,11 @@ function CreateInvoice() {
                         }
                         required
                       />
+                      {errors[`item_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`item_${index}`]}
+                        </p>
+                      )}
                     </div>
 
                     {/* Qty */}
@@ -666,6 +679,11 @@ function CreateInvoice() {
                         }
                         required
                       />
+                      {errors[`quantity_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`quantity_${index}`]}
+                        </p>
+                      )}
                     </div>
 
                     {/* Rate */}
@@ -683,6 +701,11 @@ function CreateInvoice() {
                         }
                         required
                       />
+                      {errors[`price_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`price_${index}`]}
+                        </p>
+                      )}
                     </div>
 
                     {/* Amount */}
@@ -706,6 +729,10 @@ function CreateInvoice() {
                     </div>
                   </div>
                 ))}
+
+                {errors.invoice_items && (
+                  <p className="text-red-500 text-sm">{errors.invoice_items}</p>
+                )}
 
                 <Button
                   type="button"
@@ -761,37 +788,10 @@ function CreateInvoice() {
               )}
             </div>
 
-            {/* <div className="border-t pt-4">
-            <Label htmlFor="pin">Transaction Pin</Label>
-
-            <Input
-              id="pin"
-              type="password"
-              inputMode="numeric"
-              pattern="\d*"
-              placeholder="Enter Pin here.."
-              value={pin}
-              maxLength={4}
-              onChange={(e) => setPin(e.target.value)}
-              className={` ${errors.pin ? "border-red-500" : ""}`}
-            />
-          </div>
-
-          {errors.pin && (
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">{errors.pin}</span>
-            </div>
-          )} */}
-
             {/* Buttons */}
             <div className="flex flex-col md:flex-row gap-3">
               <Button
-                onClick={() => {
-                  if (validateInvoiceForm()) {
-                    setIsOpen(true);
-                  }
-                }}
+                onClick={handleGenerateInvoice}
                 disabled={loading}
                 className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
               >

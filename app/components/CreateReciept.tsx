@@ -10,8 +10,9 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { Label } from "./ui/label";
 import ReceiptPreview from "./previews/RecieptPreview";
-import { AlertCircle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import PinPopOver from "./PinPopOver";
+import ReceiptSummary from "./ReceiptSummary"; 
 
 interface ReceiptItem {
   item: string;
@@ -37,6 +38,8 @@ function CreateReceipt() {
   const inputCount = 4;
   const [pin, setPin] = useState(Array(inputCount).fill(""));
   const [isOpen, setIsOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showReceiptSummary, setShowReceiptSummary] = useState(false); // New state for summary
   const [form, setForm] = useState<ReceiptForm>({
     name: "",
     email: "",
@@ -51,7 +54,6 @@ function CreateReceipt() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
 
   const generateReceiptId = () => {
     const datePart = new Date().getFullYear();
@@ -74,6 +76,15 @@ function CreateReceipt() {
       }));
     }
   }, [userData]);
+
+  // Calculate total amount
+  const calculateTotal = () => {
+    return form.receipt_items.reduce((total, item) => {
+      const quantity = Number(item.quantity) || 0;
+      const price = Number(item.price) || 0;
+      return total + (quantity * price);
+    }, 0);
+  };
 
   const updateReceiptItem = (
     index: number,
@@ -134,8 +145,22 @@ function CreateReceipt() {
     if (!form.payment_for.trim())
       newErrors.payment_for = "Payment description is required.";
 
-    if (pin.length != 4) newErrors.pin = "Pin must be 4 digits";
-    if (!pin) newErrors.pin = "Please enter transaction pin";
+    // Validate receipt items
+    if (form.receipt_items.length === 0) {
+      newErrors.receipt_items = "At least one receipt item is required.";
+    } else {
+      form.receipt_items.forEach((item, index) => {
+        if (!item.item.trim()) {
+          newErrors[`item_${index}`] = `Item ${index + 1} description is required.`;
+        }
+        if (!item.quantity || Number(item.quantity) <= 0) {
+          newErrors[`quantity_${index}`] = `Item ${index + 1} quantity must be greater than 0.`;
+        }
+        if (!item.price || Number(item.price) <= 0) {
+          newErrors[`price_${index}`] = `Item ${index + 1} price must be greater than 0.`;
+        }
+      });
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -177,15 +202,8 @@ function CreateReceipt() {
           text: result.message || "An unexpected error occurred.",
         });
         await handleRefund();
+        return false;
       }
-
-      // if (result.newWalletBalance !== undefined) {
-      //   setUserData((prev: any) => {
-      //     const updated = { ...prev, walletBalance: result.result };
-      //     localStorage.setItem("userData", JSON.stringify(updated));
-      //     return updated;
-      //   });
-      // }
 
       Swal.fire({
         icon: "success",
@@ -195,6 +213,7 @@ function CreateReceipt() {
       }).then(() => {
         router.refresh();
       });
+      return true;
     } catch (err) {
       Swal.fire({
         icon: "error",
@@ -202,88 +221,65 @@ function CreateReceipt() {
         text: (err as Error)?.message || "An unexpected error occurred.",
       });
       await handleRefund();
+      return false;
     }
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
-
     // ✅ Save receipt after successful payment
-    await handleSaveReceipt();
+    const success = await handleSaveReceipt();
 
-    // ✅ Reset states after success
-    setPin(Array(inputCount).fill(""));
-    setForm({
-      name: "",
-      email: "",
-      receiptId: generateReceiptId(),
-      bill_to: "",
-      from: "",
-      issue_date: today,
-      customer_note: "",
-      payment_for: "",
-      receipt_items: [],
-    });
+    if (success) {
+      // ✅ Reset states after success
+      setPin(Array(inputCount).fill(""));
+      setForm({
+        name: "",
+        email: "",
+        receiptId: generateReceiptId(),
+        bill_to: "",
+        from: "",
+        issue_date: today,
+        customer_note: "",
+        payment_for: "",
+        receipt_items: [],
+      });
+    }
 
     setLoading(false);
     setIsOpen(false);
   };
 
   const handleDeduct = async (): Promise<boolean> => {
-       setLoading(true);
     return new Promise((resolve) => {
-      Swal.fire({
-        title: "Confirm Deduction",
-        text: "₦100 will be deducted from your wallet for generating this Receipt.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Yes, proceed",
-      }).then((result) => {
-        if (!result.isConfirmed) {
-          setLoading(false);
-          return resolve(false);
-        }
-
-        // ✅ Wait until PIN is entered
-        const checkPinInterval = setInterval(() => {
-          if (pin.join("").length === 4) {
-            clearInterval(checkPinInterval);
-
-            fetch("/api/pay-app-service", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: userData?.id,
-                pin,
-                amount: 100,
-                description: "Receipt successfully generated",
-              }),
-            })
-              .then(async (res) => {
-                const data = await res.json();
-                if (!res.ok) {
-                  Swal.fire(
-                    "Error",
-                    data.error || "Something went wrong",
-                    "error"
-                  );
-                  setLoading(false);
-                  resolve(false);
-                } else {
-                  
-                  resolve(true);
-                }
-              })
-              .catch((err) => {
-                setLoading(false);
-                Swal.fire("Error", err.message, "error");
-                resolve(false);
-              });
+      const pinString = pin.join("");
+      
+      fetch("/api/pay-app-service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userData?.id,
+          pin: pinString,
+          amount: 100,
+          description: "Receipt successfully generated",
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            Swal.fire(
+              "Error",
+              data.error || "Something went wrong",
+              "error"
+            );
+            resolve(false);
+          } else {
+            resolve(true);
           }
-        }, 300);
-      });
+        })
+        .catch((err) => {
+          Swal.fire("Error", err.message, "error");
+          resolve(false);
+        });
     });
   };
 
@@ -313,6 +309,47 @@ function CreateReceipt() {
     }
   };
 
+  // Function to process payment and submit receipt
+  const processPaymentAndSubmit = async () => {
+    setLoading(true);
+    
+    try {
+      // First process payment
+      const paymentSuccess = await handleDeduct();
+      
+      if (paymentSuccess) {
+        // If payment successful, send receipt
+        await handleSubmit();
+      }
+    } catch (error) {
+      console.error("Error in process:", error);
+    } finally {
+      setLoading(false);
+      setIsOpen(false);
+    }
+  };
+
+  // Function to show receipt summary first
+  const handleGenerateReceipt = () => {
+    if (!validateForm()) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Failed",
+        text: "Please correct the errors before generating the receipt.",
+      });
+      return;
+    }
+
+    // Show receipt summary first
+    setShowReceiptSummary(true);
+  };
+
+  // Function to proceed to PIN after summary confirmation
+  const handleSummaryConfirm = () => {
+    setShowReceiptSummary(false);
+    setIsOpen(true); // Show PIN popup next
+  };
+
   return (
     <>
       <PinPopOver
@@ -321,12 +358,19 @@ function CreateReceipt() {
         pin={pin}
         setPin={setPin}
         inputCount={inputCount}
-        onConfirm={async () => {
-          const paid = await handleDeduct(); 
-          if (paid) {
-            await handleSubmit();
-          }
-        }}
+        onConfirm={processPaymentAndSubmit}
+      />
+
+      {/* Receipt Summary Modal */}
+      <ReceiptSummary
+        receiptData={form}
+        totalAmount={calculateTotal()}
+        initiatorName={`${userData?.firstName || ''} ${userData?.lastName || ''}`}
+        initiatorEmail={userData?.email || ''}
+        amount={100}
+        confirmReceipt={showReceiptSummary}
+        onBack={() => setShowReceiptSummary(false)}
+        onConfirm={handleSummaryConfirm}
       />
 
       <TabsContent value="create" className="space-y-6">
@@ -434,6 +478,11 @@ function CreateReceipt() {
                           updateReceiptItem(index, "item", e.target.value)
                         }
                       />
+                      {errors[`item_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`item_${index}`]}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-6 sm:col-span-2">
                       <Input
@@ -448,6 +497,11 @@ function CreateReceipt() {
                           )
                         }
                       />
+                      {errors[`quantity_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`quantity_${index}`]}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-6 sm:col-span-2">
                       <Input
@@ -462,6 +516,11 @@ function CreateReceipt() {
                           )
                         }
                       />
+                      {errors[`price_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`price_${index}`]}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-6 sm:col-span-2">
                       <Input
@@ -482,6 +541,9 @@ function CreateReceipt() {
                     </div>
                   </div>
                 ))}
+                {errors.receipt_items && (
+                  <p className="text-red-500 text-sm">{errors.receipt_items}</p>
+                )}
                 <Button
                   type="button"
                   variant="outline"
@@ -493,20 +555,6 @@ function CreateReceipt() {
                 </Button>
               </div>
             </div>
-
-            {/* Amount Paid */}
-            {/* <div>
-              <Label>Amount Paid</Label>
-              <Input
-                name="amount_paid"
-                value={form.amount_paid}
-                onChange={handleChange}
-                placeholder="paid amount "
-              />
-              {errors.amount_paid && (
-                <p className="text-red-500 text-sm">{errors.amount_paid}</p>
-              )}
-            </div> */}
 
             {/* Payment For */}
             <div>
@@ -541,36 +589,9 @@ function CreateReceipt() {
               )}
             </div>
 
-            {/* <div className="border-t pt-4">
-            <Label htmlFor="pin">Transaction Pin</Label>
-
-            <Input
-              id="pin"
-              type="password"
-              inputMode="numeric"
-              pattern="\d*"
-              placeholder="Enter Pin here.."
-              value={pin}
-              maxLength={4}
-              onChange={(e) => setPin(e.target.value)}
-              className={` ${errors.pin ? "border-red-500" : ""}`}
-            />
-          </div>
-
-          {errors.pin && (
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">{errors.pin}</span>
-            </div>
-          )} */}
-
             <div className="flex gap-3">
               <Button
-                onClick={() => {
-                  if (validateForm()) {
-                    setIsOpen(true);
-                  }
-                }}
+                onClick={handleGenerateReceipt}
                 disabled={loading}
                 className="bg-[#C29307] hover:bg-[#C29307] hover:shadow-xl transition-all duration-300"
               >
