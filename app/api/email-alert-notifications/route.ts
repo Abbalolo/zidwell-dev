@@ -29,6 +29,12 @@ interface EmailNotificationData {
   timestamp: string;
 }
 
+const baseUrl =
+  process.env.NODE_ENV === "development"
+    ? process.env.NEXT_PUBLIC_DEV_URL
+    : process.env.NEXT_PUBLIC_BASE_URL;
+
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -111,6 +117,7 @@ function generateLoginEmail(user: any, device: any, timestamp: string): string {
         .header { background: #C29307; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; }
         .alert { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .alert spam a {margin-left: 15px; }
         .info-box { background: white; padding: 15px; border-radius: 4px; margin: 10px 0; }
       </style>
     </head>
@@ -135,9 +142,8 @@ function generateLoginEmail(user: any, device: any, timestamp: string): string {
 
           <div class="alert">
             <p><strong>If this wasn't you:</strong></p>
-            <p>• Change your password immediately</p>
-            <p>• Contact our support team</p>
-            <p>• Review your account activity</p>
+            <p>• Change your password immediately <a href="${baseUrl}/auth/password-reset">Click here</a></p>
+            <p>• Contact our support team <spam>000000000</spam></p>
           </div>
 
           <p>Thank you for keeping your account secure.</p>
