@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     const { error: rpcError } = await supabase.rpc("deduct_wallet_balance", {
       user_id: pendingTx.user_id,
       amt: amount,
-      transaction_type: "debit",
+      transaction_type: "p2p_transfer",
       reference: merchantTxRef,
       description: `P2P transfer of ₦${amount} to ${receiverName}`,
     });
