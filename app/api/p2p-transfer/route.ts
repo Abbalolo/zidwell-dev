@@ -143,8 +143,6 @@ export async function POST(req: Request) {
 
 
     const data = await res.json();
-    console.log("Nomba P2P transfer data", data);
-    console.log("receiverWalletId", receiverWalletId);
 
     // ✅ Handle failure immediately (same logic as withdrawal)
     if (data.code !== "00") {
