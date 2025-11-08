@@ -411,7 +411,7 @@ export default function TransactionHistory() {
                       <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
                         {tx.description || tx.type}
 
-                        {tx?.fee === 0 && (
+                        {tx?.fee > 0 && (
                           <span
                             className={`ml-2 text-sm font-medium ${
                               statusConfig[tx.status?.toLowerCase()]?.color ||
