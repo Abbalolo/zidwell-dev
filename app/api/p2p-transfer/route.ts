@@ -63,8 +63,6 @@ export async function POST(req: Request) {
       .eq("wallet_id", receiverAccountId) 
       .single();
 
-    console.log("Receiver fetch:", receiver, receiverError);
-
     const receiverName = receiver ? `${receiver.first_name} ${receiver.last_name}` : "Unknown User";
     const receiverWalletId = receiver?.wallet_id || receiverAccountId;
 
@@ -126,7 +124,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to deduct wallet balance" }, { status: 500 });
     }
 
-    // ✅ Call Nomba wallet transfer API - use receiverAccountId directly
     const res = await fetch(`${process.env.NOMBA_URL}/v1/transfers/wallet`, {
       method: "POST",
       headers: {
@@ -143,8 +140,11 @@ export async function POST(req: Request) {
       }),
     });
 
+
+
     const data = await res.json();
     console.log("Nomba P2P transfer data", data);
+    console.log("receiverWalletId", receiverWalletId);
 
     // ✅ Handle failure immediately (same logic as withdrawal)
     if (data.code !== "00") {
