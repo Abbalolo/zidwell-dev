@@ -63,6 +63,8 @@ export async function POST(req: Request) {
       .eq("wallet_id", receiverAccountId)
       .single();
 
+      console.log("Receiver fetch:", receiver, receiverError);
+
     if (receiverError || !receiver) {
       return NextResponse.json({ message: "Receiver not found" }, { status: 404 });
     }

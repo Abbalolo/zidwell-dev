@@ -905,7 +905,7 @@ export async function POST(req: NextRequest) {
     const isDepositEvent =
       eventType === "payment_success" ||
       eventType === "payment.succeeded" ||
-      tx.type?.toLowerCase().includes("vact") || // Virtual account transfer
+      tx.type?.toLowerCase().includes("vact") || 
       tx.type?.toLowerCase().includes("deposit") ||
       isCardPayment ||
       isVirtualAccountDeposit;
@@ -915,7 +915,7 @@ export async function POST(req: NextRequest) {
       (Boolean(merchantTxRef) && !isServicePurchase) ||
       (tx.type &&
         tx.type.toLowerCase().includes("transfer") &&
-        !tx.type.toLowerCase().includes("vact")); // Exclude virtual account transfers
+        !tx.type.toLowerCase().includes("vact")); 
 
     console.log("   - isCardPayment:", isCardPayment);
     console.log("   - isVirtualAccountDeposit:", isVirtualAccountDeposit);
