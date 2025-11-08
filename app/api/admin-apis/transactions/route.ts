@@ -1,6 +1,7 @@
 // app/api/admin-apis/transactions/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { requireAdmin } from '@/lib/admin-auth';
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -306,6 +307,10 @@ async function getCachedAdminTransactions({
 // Only export HTTP methods
 export async function GET(req: Request) {
   try {
+    // Admin authentication using the utility file
+    const adminUser = await requireAdmin(req);
+    if (adminUser instanceof NextResponse) return adminUser;
+
     const url = new URL(req.url);
     const page = Number(url.searchParams.get("page") ?? 1);
     const limit = Number(url.searchParams.get("limit") ?? 20);
@@ -362,6 +367,10 @@ export async function GET(req: Request) {
           userId
         },
         includeStats
+      },
+      _admin: {
+        performedBy: adminUser?.email,
+        performedAt: new Date().toISOString()
       }
     });
   } catch (err: any) {

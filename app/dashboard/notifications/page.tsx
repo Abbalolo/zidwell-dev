@@ -1,7 +1,7 @@
 // app/notifications/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
-import { Switch } from "@/app/components/ui/switch";
 import { useUserContextData } from "../../context/userData";
 import Loader from "../../components/Loader";
 import DashboardSidebar from "../../components/dashboard-sidebar";
@@ -25,16 +24,25 @@ export default function UserNotificationsPage() {
     notificationsLoading,
     markAsRead,
     markAllAsRead,
+    fetchNotifications
   } = useUserContextData();
 
   const [filter, setFilter] = useState("all");
 
-  // Filter notifications based on selected filter
   const filteredNotifications = notifications.filter((notification) => {
     if (filter === "unread") return !notification.read_at;
     if (filter === "all") return true;
     return notification.type === filter;
   });
+
+  // TEMPORARY: Show all notifications without filtering
+  const displayNotifications = filteredNotifications.map(notification => ({
+    ...notification,
+    // Add display properties for empty notifications
+    displayTitle: notification.title === "Notification" ? "System Notification" : notification.title,
+    displayMessage: notification.message === "No message" ? "Notification received" : notification.message,
+    isPlaceholder: notification.title === "Notification" && notification.message === "No message"
+  }));
 
   const renderTypeBadge = (type: string) => {
     const typeConfig: any = {
@@ -56,6 +64,29 @@ export default function UserNotificationsPage() {
     return <Badge className={config.color}>{config.text}</Badge>;
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return `${Math.floor(diffInHours * 60)}m ago`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  const handleRefresh = () => {
+    console.log('🔄 Manually refreshing notifications...');
+    fetchNotifications();
+  };
+
+  const handleMarkAsRead = (notificationId: string) => {
+    markAsRead(notificationId);
+  };
+
   if (!userData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -68,12 +99,13 @@ export default function UserNotificationsPage() {
     );
   }
 
-  if (notificationsLoading)
+  if (notificationsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader />
       </div>
     );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 fade-in overflow-x-hidden">
@@ -90,16 +122,27 @@ export default function UserNotificationsPage() {
                     ? `${unreadCount} unread notifications`
                     : "All caught up!"}
                 </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {notifications.length} total notifications
+                </p>
               </div>
-              {unreadCount > 0 && (
-                <Button variant="outline" onClick={markAllAsRead}>
-                  Mark All as Read
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefresh}
+                  disabled={notificationsLoading}
+                >
+                  {notificationsLoading ? "Refreshing..." : "Refresh"}
                 </Button>
-              )}
+                {unreadCount > 0 && (
+                  <Button variant="outline" onClick={markAllAsRead}>
+                    Mark All as Read
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Main Content */}
               <div className="lg:col-span-3">
                 <Card>
                   <CardHeader>
@@ -108,61 +151,70 @@ export default function UserNotificationsPage() {
                       <select
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
-                        className="border rounded px-3 py-1 text-sm"
+                        className="border rounded px-3 py-2 text-sm"
                       >
-                        <option value="all">All</option>
-                        <option value="unread">Unread</option>
+                        <option value="all">All ({displayNotifications.length})</option>
+                        <option value="unread">Unread ({unreadCount})</option>
                         <option value="contract">Contract</option>
                         <option value="wallet">Wallet</option>
                         <option value="transaction">Transaction</option>
+                        <option value="info">Info</option>
                       </select>
                     </div>
+                    <CardDescription>
+                      Showing {displayNotifications.length} notifications
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {filteredNotifications.map((notification) => (
+                      {displayNotifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-4 border rounded-lg ${
+                          className={`p-4 border rounded-lg transition-colors ${
                             !notification.read_at
-                              ? "bg-blue-50 border-blue-200"
-                              : "bg-white"
-                          }`}
+                              ? "bg-blue-50 border-blue-200 shadow-sm"
+                              : notification.isPlaceholder
+                              ? "bg-gray-50 border-gray-200"
+                              : "bg-white hover:bg-gray-50"
+                          } ${notification.isPlaceholder ? 'opacity-75' : ''}`}
                         >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 {renderTypeBadge(notification.type)}
                                 {!notification.read_at && (
-                                  <Badge className="bg-blue-100 text-blue-800">
+                                  <Badge className="bg-blue-500 text-white animate-pulse">
                                     NEW
                                   </Badge>
                                 )}
+                                {notification.isPlaceholder && (
+                                  <Badge variant="outline" className="text-gray-500">
+                                    Placeholder
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(notification.created_at)}
+                                </span>
                               </div>
 
-                              <h3 className="font-semibold text-lg">
-                                {notification.title}
+                              <h3 className="font-semibold text-lg mb-2 break-words">
+                                {notification.displayTitle}
                               </h3>
-                              <p className="text-gray-600 mt-1">
-                                {notification.message}
+                              <p className="text-gray-600 mb-3 break-words">
+                                {notification.displayMessage}
                               </p>
 
-                              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                                <span>
-                                  {new Date(
-                                    notification.created_at
-                                  ).toLocaleString()}
+                              <div className="flex items-center gap-4 text-sm text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  {notification.channels?.includes("email") && "📧"}
+                                  {notification.channels?.includes("push") && "🔔"}
+                                  {notification.channels?.includes("sms") && "💬"}
+                                  {notification.channels?.includes("in_app") && "📱"}
+                                  {notification.channels?.join(", ")}
                                 </span>
                                 <span>•</span>
                                 <span>
-                                  {notification.channels?.includes("email") &&
-                                    "📧 "}
-                                  {notification.channels?.includes("push") &&
-                                    "🔔 "}
-                                  {notification.channels?.includes("sms") &&
-                                    "💬 "}
-                                  {notification.channels?.includes("in_app") &&
-                                    "📱"}
+                                  ID: {notification.id.slice(0, 8)}...
                                 </span>
                               </div>
                             </div>
@@ -171,7 +223,8 @@ export default function UserNotificationsPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => markAsRead(notification.id)}
+                                onClick={() => handleMarkAsRead(notification.id)}
+                                className="flex-shrink-0"
                               >
                                 Mark Read
                               </Button>
@@ -180,19 +233,25 @@ export default function UserNotificationsPage() {
                         </div>
                       ))}
 
-                      {filteredNotifications.length === 0 && (
+                      {displayNotifications.length === 0 && (
                         <div className="text-center py-12">
                           <div className="text-6xl mb-4">🔔</div>
-                          <h3 className="text-lg font-semibold">
+                          <h3 className="text-lg font-semibold mb-2">
                             {filter === "unread"
                               ? "No unread notifications"
-                              : "No notifications"}
+                              : "No notifications found"}
                           </h3>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 mb-4">
                             {filter === "unread"
                               ? "You're all caught up!"
-                              : "No notifications found for this filter"}
+                              : "No notifications available for this filter"}
                           </p>
+                          <Button 
+                            variant="outline" 
+                            onClick={handleRefresh}
+                          >
+                            Check for New Notifications
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -200,93 +259,51 @@ export default function UserNotificationsPage() {
                 </Card>
               </div>
 
-              {/* Sidebar - Preferences */}
-              {/* <div className="space-y-6">
+              <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Notification Settings</CardTitle>
-                    <CardDescription>
-                      Manage your notification preferences
-                    </CardDescription>
+                    <CardTitle>Notification Stats</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">
-                        Email Notifications
-                      </label>
-                      <Switch
-                        // You'll need to add these preferences to your context
-                        checked={true}
-                        onCheckedChange={(checked) =>
-                          console.log("Email:", checked)
-                        }
-                      />
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Total:</span>
+                      <span className="font-medium">{notifications.length}</span>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">
-                        Push Notifications
-                      </label>
-                      <Switch
-                        checked={true}
-                        onCheckedChange={(checked) =>
-                          console.log("Push:", checked)
-                        }
-                      />
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Unread:</span>
+                      <span className="font-medium text-blue-600">{unreadCount}</span>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">
-                        SMS Notifications
-                      </label>
-                      <Switch
-                        checked={false}
-                        onCheckedChange={(checked) =>
-                          console.log("SMS:", checked)
-                        }
-                      />
-                    </div>
-
-                    <div className="border-t pt-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">
-                          Contract Updates
-                        </label>
-                        <Switch
-                          checked={true}
-                          onCheckedChange={(checked) =>
-                            console.log("Contract:", checked)
-                          }
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">
-                          Wallet Alerts
-                        </label>
-                        <Switch
-                          checked={true}
-                          onCheckedChange={(checked) =>
-                            console.log("Wallet:", checked)
-                          }
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">
-                          Transaction Alerts
-                        </label>
-                        <Switch
-                          checked={true}
-                          onCheckedChange={(checked) =>
-                            console.log("Transaction:", checked)
-                          }
-                        />
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Showing:</span>
+                      <span className="font-medium text-green-600">{displayNotifications.length}</span>
                     </div>
                   </CardContent>
                 </Card>
-              </div> */}
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Debug Info</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span>User ID:</span>
+                      <span className="font-mono">{userData?.id?.slice(0, 8)}...</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Last Fetch:</span>
+                      <span>{notificationsLoading ? 'Loading...' : 'Ready'}</span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={handleRefresh}
+                    >
+                      Force Refresh
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </main>

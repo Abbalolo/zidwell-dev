@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, Clock, Search, X, Download, Eye } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Clock,
+  Search,
+  X,
+  Download,
+  Eye,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import {
@@ -22,24 +30,24 @@ const statusConfig: any = {
 
 // Define transaction types that should show as positive amounts (incoming money)
 const inflowTypes = [
-  "deposit",                    
-  "virtual_account_deposit",   
-  "card_deposit",             
-  "p2p_received",              
-  "referral",                  
-  "referral_reward"            
+  "deposit",
+  "virtual_account_deposit",
+  "card_deposit",
+  "p2p_received",
+  "referral",
+  "referral_reward",
 ];
 
 // Define transaction types that should show as negative amounts (outgoing money)
 const outflowTypes = [
   "withdrawal",
-  "debit", 
+  "debit",
   "airtime",
   "data",
   "electricity",
   "cable",
   "transfer",
-  "p2p_transfer"
+  "p2p_transfer",
 ];
 
 export default function TransactionHistory() {
@@ -67,16 +75,18 @@ export default function TransactionHistory() {
   };
 
   // Function to handle downloading receipt
-const handleDownloadReceipt = (transaction: any) => {
-  const amountInfo = formatAmount(transaction);
-  
-  // Create receipt HTML content
-  // Create receipt HTML content
-   const receiptHTML = `
+  const handleDownloadReceipt = (transaction: any) => {
+    const amountInfo = formatAmount(transaction);
+
+    // Create receipt HTML content
+    // Create receipt HTML content
+    const receiptHTML = `
   <!DOCTYPE html>
   <html>
     <head>
-      <title>Transaction Receipt - ${transaction.reference || transaction.id}</title>
+      <title>Transaction Receipt - ${
+        transaction.reference || transaction.id
+      }</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -174,7 +184,11 @@ const handleDownloadReceipt = (transaction: any) => {
             Reference: ${transaction.reference || transaction.id}
           </p>
           <p style="color:#9ca3af;margin:0;font-size:12px;">
-            ${new Date(transaction.created_at).toLocaleDateString()} • ${new Date(transaction.created_at).toLocaleTimeString()}
+            ${new Date(
+              transaction.created_at
+            ).toLocaleDateString()} • ${new Date(
+      transaction.created_at
+    ).toLocaleTimeString()}
           </p>
         </div>
 
@@ -211,7 +225,9 @@ const handleDownloadReceipt = (transaction: any) => {
             </div>
             <div class="detail-row">
               <span class="detail-label">Description</span>
-              <span class="detail-value">${transaction.description || "N/A"}</span>
+              <span class="detail-value">${
+                transaction.description || "N/A"
+              }</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Status</span>
@@ -232,11 +248,15 @@ const handleDownloadReceipt = (transaction: any) => {
           <div class="details-card">
             <div class="detail-row">
               <span class="detail-label">Name</span>
-              <span class="detail-value">${transaction?.sender?.name || "N/A"}</span>
+              <span class="detail-value">${
+                transaction?.sender?.name || "N/A"
+              }</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Account Number</span>
-              <span class="detail-value">${transaction?.sender?.accountNumber || "N/A"}</span>
+              <span class="detail-value">${
+                transaction?.sender?.accountNumber || "N/A"
+              }</span>
             </div>
             ${
               transaction?.sender?.bankName
@@ -255,11 +275,15 @@ const handleDownloadReceipt = (transaction: any) => {
           <div class="details-card">
             <div class="detail-row">
               <span class="detail-label">Name</span>
-              <span class="detail-value">${transaction?.receiver?.name || "N/A"}</span>
+              <span class="detail-value">${
+                transaction?.receiver?.name || "N/A"
+              }</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Account Number</span>
-              <span class="detail-value">${transaction?.receiver?.accountNumber || "N/A"}</span>
+              <span class="detail-value">${
+                transaction?.receiver?.accountNumber || "N/A"
+              }</span>
             </div>
             ${
               transaction?.receiver?.bankName
@@ -282,26 +306,30 @@ const handleDownloadReceipt = (transaction: any) => {
   </html>
 `;
 
-  // Create a Blob and download the file directly
-  const blob = new Blob([receiptHTML], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `transaction-receipt-${transaction.reference || transaction.id}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
+    // Create a Blob and download the file directly
+    const blob = new Blob([receiptHTML], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transaction-receipt-${
+      transaction.reference || transaction.id
+    }.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   // Function to format amount with proper sign
   const formatAmount = (transaction: any) => {
     const isOutflowTransaction = isOutflow(transaction.type);
     const amount = Number(transaction.amount);
-    
+
     return {
-      display: `₦${amount.toLocaleString("en-NG", { minimumFractionDigits: 2 })}`,
+      display: `₦${amount.toLocaleString("en-NG", {
+        minimumFractionDigits: 2,
+      })}`,
       isOutflow: isOutflowTransaction,
-      rawAmount: amount
+      rawAmount: amount,
     };
   };
 
@@ -382,6 +410,20 @@ const handleDownloadReceipt = (transaction: any) => {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
                         {tx.description || tx.type}
+
+                        {tx?.fee === 0 && (
+                          <span
+                            className={`ml-2 text-sm font-medium ${
+                              statusConfig[tx.status?.toLowerCase()]?.color ||
+                              "text-gray-500"
+                            }`}
+                          >
+                            • Fee: ₦
+                            {Number(tx.fee).toLocaleString("en-NG", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        )}
                       </h3>
                       <p className="text-gray-500 text-sm mt-1">
                         {new Date(tx.created_at).toLocaleDateString()} •{" "}
@@ -396,7 +438,7 @@ const handleDownloadReceipt = (transaction: any) => {
                         </p>
                       )}
                     </div>
-                    
+
                     {/* Amount and Status - Mobile Layout */}
                     <div className="sm:hidden flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
@@ -417,12 +459,13 @@ const handleDownloadReceipt = (transaction: any) => {
                       </div>
                       <p
                         className={`font-bold text-base ${
-                          amountInfo.isOutflow 
-                            ? "text-red-500" 
+                          amountInfo.isOutflow
+                            ? "text-red-500"
                             : "text-green-600"
                         }`}
                       >
-                        {amountInfo.isOutflow ? '-' : '+'}{amountInfo.display}
+                        {amountInfo.isOutflow ? "-" : "+"}
+                        {amountInfo.display}
                       </p>
                     </div>
                   </div>
@@ -452,12 +495,13 @@ const handleDownloadReceipt = (transaction: any) => {
                     <div className="text-right">
                       <p
                         className={`font-bold text-lg ${
-                          amountInfo.isOutflow 
-                            ? "text-red-500" 
+                          amountInfo.isOutflow
+                            ? "text-red-500"
                             : "text-green-600"
                         }`}
                       >
-                        {amountInfo.isOutflow ? '-' : '+'}{amountInfo.display}
+                        {amountInfo.isOutflow ? "-" : "+"}
+                        {amountInfo.display}
                       </p>
                     </div>
                   </div>

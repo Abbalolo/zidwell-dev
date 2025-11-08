@@ -1,6 +1,7 @@
 // app/api/admin-apis/users/route.ts
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/admin-auth';
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -154,6 +155,10 @@ async function getCachedAdminUsers({ q, page, limit = 20, sortBy = 'created_at',
 // ✅ GET: Fetch paginated users with optional search
 export async function GET(req: Request) {
   try {
+    // Admin authentication using the utility file
+    const adminUser = await requireAdmin(req);
+    if (adminUser instanceof NextResponse) return adminUser;
+
     const url = new URL(req.url);
     const q = url.searchParams.get('q');
     const page = Number(url.searchParams.get('page') ?? 1);
@@ -192,6 +197,10 @@ export async function GET(req: Request) {
           by: sortBy,
           order: sortOrder
         }
+      },
+      _admin: {
+        performedBy: adminUser?.email,
+        performedAt: new Date().toISOString()
       }
     });
   } catch (err: any) {

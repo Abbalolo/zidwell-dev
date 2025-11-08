@@ -37,8 +37,8 @@ export interface SupabaseUser {
   address: string | null;
   dateOfBirth: string;
   profilePicture: string | null;
-
 }
+
 export interface UserData {
   id: string;
   firstName: string;
@@ -74,21 +74,66 @@ interface UserContextType {
   totalTransactions: number;
   searchTerm: string;
   setSearchTerm: Dispatch<SetStateAction<string>>;
-  logout: () => Promise<void>;
   isDarkMode: boolean;
   setIsDarkMode: Dispatch<SetStateAction<boolean>>;
   handleDarkModeToggle: () => void;
-  
-  // Notification-related state
   notifications: Notification[];
   unreadCount: number;
   notificationsLoading: boolean;
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (filter?: string, limit?: number) => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
+  clearNotificationCache: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
+
+class NotificationCache {
+  private cache = new Map();
+  private readonly DEFAULT_TTL = 3 * 60 * 1000;
+  private readonly UNREAD_COUNT_TTL = 60 * 1000;
+
+  set(key: string, data: any, ttl: number = this.DEFAULT_TTL) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
+
+  get(key: string) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+
+    const isExpired = Date.now() - item.timestamp > item.ttl;
+    if (isExpired) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return item.data;
+  }
+
+  delete(key: string) {
+    this.cache.delete(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  cleanup() {
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now - item.timestamp > item.ttl) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+const notificationCache = new NotificationCache();
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -102,164 +147,331 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [lifetimeBalance, setLifetimeBalance] = useState(0);
   const [totalOutflow, setTotalOutflow] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
-  
-  // Notification state
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  // Logout
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserData(null);
-    setNotifications([]);
+  const clearNotificationCache = () => {
+    notificationCache.clear();
   };
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    if (!userData?.id) return;
+const fetchNotifications = async (filter: string = 'all', limit: number = 50) => {
+  if (!userData?.id) {
+    console.log('❌ No userData.id available');
+    return;
+  }
+
+  const cacheKey = `notifications_${userData.id}_${filter}_${limit}`;
+  
+  const cached = notificationCache.get(cacheKey);
+  if (cached && filter === 'all') {
+    setNotifications(cached);
+    const newUnreadCount = cached.filter((n: Notification) => !n.read_at).length;
+    setUnreadCount(newUnreadCount);
+    return;
+  }
+
+  setNotificationsLoading(true);
+  try {
+    const params = new URLSearchParams({
+      userId: userData.id,
+      limit: limit.toString(),
+      filter: filter
+    });
+    const response = await fetch(`/api/notifications?${params.toString()}`);
+
     
-    // Only fetch if it's been more than 30 seconds since last fetch
-    const now = Date.now();
-    if (now - lastFetchTime < 30000 && notifications.length > 0) {
+    if (response.ok) {
+      const data = await response.json();
+  
+      
+      if (data && Array.isArray(data)) {
+        setNotifications(data);
+        setLastFetchTime(Date.now());
+        
+        const newUnreadCount = data.filter((n: Notification) => !n.read_at).length;
+        setUnreadCount(newUnreadCount);
+ 
+        
+        if (filter === 'all') {
+          notificationCache.set(cacheKey, data);
+        }
+      } else {
+        console.error('❌ Invalid data format:', data);
+        setNotifications([]);
+      }
+    } else {
+     
+      const errorText = await response.text();
+     
+      const cached = notificationCache.get(cacheKey);
+      if (cached) {
+        setNotifications(cached);
+      } else {
+        setNotifications([]);
+      }
+    }
+  } catch (error) {
+   
+    const cached = notificationCache.get(cacheKey);
+    if (cached) {
+      setNotifications(cached);
+    } else {
+      setNotifications([]);
+    }
+  } finally {
+    setNotificationsLoading(false);
+  }
+};
+
+
+  const fetchUnreadCount = async () => {
+    if (!userData?.id) return;
+
+    const cacheKey = `unread_count_${userData.id}`;
+    
+    const cached = notificationCache.get(cacheKey);
+    if (cached !== undefined) {
+      setUnreadCount(cached);
       return;
     }
 
-    setNotificationsLoading(true);
     try {
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userData, 
-          limit: 20 // Fetch more for the context
-        })
-      });
-
+      const response = await fetch(`/api/notifications/unread-count?userId=${userData.id}`);
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data);
-        setLastFetchTime(now);
+        const count = data.unreadCount || 0;
+        setUnreadCount(count);
+        notificationCache.set(cacheKey, count, 60 * 1000);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setNotificationsLoading(false);
+      const calculatedCount = notifications.filter(n => !n.read_at).length;
+      setUnreadCount(calculatedCount);
     }
   };
 
-  // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     if (!userData?.id) return;
 
     try {
-      // Optimistic update
       setNotifications(prev => 
         prev.map(n => 
           n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
         )
       );
+      
+      setUnreadCount(prev => Math.max(0, prev - 1));
 
-      await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userData })
+      notificationCache.delete(`notifications_${userData.id}_all_50`);
+      notificationCache.delete(`notifications_${userData.id}_unread_50`);
+      notificationCache.delete(`unread_count_${userData.id}`);
+
+      const response = await fetch(`/api/notifications/${notificationId}/read?userId=${userData.id}`, {
+        method: 'POST'
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark as read');
+      }
+
+      await Promise.all([
+        fetchNotifications(),
+        fetchUnreadCount()
+      ]);
     } catch (error) {
-      console.error('Failed to mark as read:', error);
-      // Revert optimistic update on error
-      fetchNotifications(); // Refetch to get correct state
+      fetchNotifications();
+      fetchUnreadCount();
     }
   };
 
-  // Mark all as read
   const markAllAsRead = async () => {
     if (!userData?.id) return;
 
     try {
-      // Optimistic update
       setNotifications(prev => 
         prev.map(n => ({ ...n, read_at: new Date().toISOString() }))
       );
+      setUnreadCount(0);
 
-      await fetch('/api/notifications/read-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userData })
+      clearNotificationCache();
+
+      const response = await fetch(`/api/notifications/read-all?userId=${userData.id}`, {
+        method: 'POST'
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark all as read');
+      }
+
+      await fetchNotifications();
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
-      fetchNotifications(); // Refetch to get correct state
+      fetchNotifications(); 
+      fetchUnreadCount();
     }
   };
 
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read_at).length;
-
-  // Auto-fetch notifications when user data changes
-  useEffect(() => {
-    if (userData?.id) {
-      fetchNotifications();
-    }
-  }, [userData?.id]);
-
-  // Optional: Periodic refresh (every 2 minutes) when user is active
   useEffect(() => {
     if (!userData?.id) return;
 
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 120000); // 2 minutes
+    const channel = supabase
+      .channel('notification-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notification_logs',
+          filter: `user_id=eq.${userData.id}`,
+        },
+        (payload) => {
+          clearNotificationCache();
+          fetchNotifications();
+          fetchUnreadCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notification_logs',
+          filter: `user_id=eq.${userData.id}`,
+        },
+        (payload) => {
+          clearNotificationCache();
+          fetchNotifications();
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userData?.id]);
 
- 
+  useEffect(() => {
+    if (userData?.id) {
+      fetchNotifications();
+      fetchUnreadCount();
+    }
+  }, [userData?.id]);
+
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const cleanupInterval = setInterval(() => {
+      notificationCache.cleanup();
+    }, 5 * 60 * 1000);
+
+    const refreshInterval = setInterval(() => {
+      fetchNotifications();
+      fetchUnreadCount();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(cleanupInterval);
+      clearInterval(refreshInterval);
+    };
+  }, [userData?.id]);
+
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("userData");
-      if (storedUser) setUser(JSON.parse(storedUser));
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        setUserData(JSON.parse(storedUser));
+      }
     } catch (error) {
       console.error("Failed to parse localStorage user:", error);
     }
   }, []);
 
-  // Fetch podcast episodes
   const fetchEpisodes = async () => {
+    const cacheKey = 'podcast_episodes';
+    const cached = notificationCache.get(cacheKey);
+    
+    if (cached) {
+      setEpisodes(cached);
+      return;
+    }
+
     try {
       const res = await fetch("/api/medium-feed");
       const data = await res.json();
       setEpisodes(data);
+      notificationCache.set(cacheKey, data, 10 * 60 * 1000);
     } catch (err) {
-      console.error("Error fetching episodes:", err);
+      const cached = notificationCache.get(cacheKey);
+      if (cached) {
+        setEpisodes(cached);
+      }
     }
   };
 
-  // Fetch wallet balance
   useEffect(() => {
     const fetchBalance = async () => {
       if (!userData?.id) return;
 
+      const cacheKey = `balance_${userData.id}`;
+      const cached = notificationCache.get(cacheKey);
+      
+      if (cached !== undefined && cached !== null) {
+        setBalance(cached);
+        return;
+      }
+
       try {
         const res = await fetch("/api/wallet-balance", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ userId: userData.id }),
         });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const data = await res.json();
-        setBalance(data.wallet_balance ?? 0);
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch balance');
+        }
+
+        const balance = data.wallet_balance ?? 0;
+        setBalance(balance);
+        notificationCache.set(cacheKey, balance, 2 * 60 * 1000);
+        
       } catch (error) {
-        console.error("Error fetching balance:", error);
+        if (cached !== undefined && cached !== null) {
+          setBalance(cached);
+        } else if (userData?.zidcoinBalance !== undefined) {
+          setBalance(userData.zidcoinBalance);
+        } else {
+          setBalance(0);
+        }
       }
     };
-    fetchBalance();
-  }, [userData?.id]);
 
-  // Fetch all transactions
+    if (userData?.id) {
+      fetchBalance();
+    }
+  }, [userData?.id, userData?.zidcoinBalance]);
+
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!userData?.id) return;
+
+      const cacheKey = `transactions_${userData.id}_${searchTerm}`;
+      const cached = notificationCache.get(cacheKey);
+      
+      if (cached) {
+        setTransactions(cached);
+        return;
+      }
 
       setLoading(true);
       try {
@@ -273,10 +485,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
         const res = await fetch(`/api/bill-transactions?${params.toString()}`);
         const data = await res.json();
-        setTransactions(data.transactions || []);
+        const transactions = data.transactions || [];
+        setTransactions(transactions);
+        notificationCache.set(cacheKey, transactions, 3 * 60 * 1000);
       } catch (error) {
-        console.error("Failed to fetch transactions:", error);
         setTransactions([]);
+        if (cached) {
+          setTransactions(cached);
+        }
       } finally {
         setLoading(false);
       }
@@ -284,10 +500,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     fetchTransactions();
   }, [userData?.id, searchTerm]);
 
-  // Fetch lifetime stats
   useEffect(() => {
     const fetchTransactionStats = async () => {
       if (!userData?.id) return;
+
+      const cacheKey = `transaction_stats_${userData.id}`;
+      const cached = notificationCache.get(cacheKey);
+      
+      if (cached) {
+        setLifetimeBalance(cached.lifetimeBalance);
+        setTotalOutflow(cached.totalOutflow);
+        setTotalTransactions(cached.totalTransactions);
+        return;
+      }
 
       try {
         const res = await fetch("/api/total-inflow", {
@@ -297,17 +522,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         });
 
         const data = await res.json();
-        setLifetimeBalance(data.totalInflow || 0);
-        setTotalOutflow(data.totalOutflow || 0);
-        setTotalTransactions(data.totalTransactions || 0);
+        const stats = {
+          lifetimeBalance: data.totalInflow || 0,
+          totalOutflow: data.totalOutflow || 0,
+          totalTransactions: data.totalTransactions || 0
+        };
+        
+        setLifetimeBalance(stats.lifetimeBalance);
+        setTotalOutflow(stats.totalOutflow);
+        setTotalTransactions(stats.totalTransactions);
+        notificationCache.set(cacheKey, stats, 5 * 60 * 1000);
       } catch (error) {
-        console.error("Failed to fetch transaction stats:", error);
+        if (cached) {
+          setLifetimeBalance(cached.lifetimeBalance);
+          setTotalOutflow(cached.totalOutflow);
+          setTotalTransactions(cached.totalTransactions);
+        }
       }
     };
     fetchTransactionStats();
   }, [userData?.id]);
 
-  // Dark mode
   useEffect(() => {
     const theme = localStorage.getItem("theme");
     if (theme === "dark") {
@@ -323,6 +558,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("theme", newTheme ? "dark" : "light");
   };
 
+  // useEffect(() => {
+  //   fetchEpisodes();
+  // }, []);
+
   return (
     <UserContext.Provider
       value={{
@@ -332,7 +571,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setUserData,
         loading,
         episodes,
-        logout,
         isDarkMode,
         setIsDarkMode,
         handleDarkModeToggle,
@@ -342,14 +580,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         totalTransactions,
         searchTerm,
         setSearchTerm,
-        
-        // Notification context
         notifications,
         unreadCount,
         notificationsLoading,
         fetchNotifications,
         markAsRead,
         markAllAsRead,
+        fetchUnreadCount,
+        clearNotificationCache,
       }}
     >
       {children}

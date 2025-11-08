@@ -80,36 +80,38 @@ const Pricing = () => {
   const handlePlanSubscription = async (plan: any) => {
     if (plan.name === "Pay Per Use") {
       // Handle free plan
-      try {
-        const response = await fetch('/api/subscriptions/free', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user?.id,
-            planName: plan.name,
-          }),
-        });
+      // try {
+      //   const response = await fetch('/api/subscriptions/free', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({
+      //       userId: user?.id,
+      //       planName: plan.name,
+      //     }),
+      //   });
 
-        const data = await response.json();
+      //   const data = await response.json();
         
-        if (data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Welcome!',
-            text: 'You are now on the Pay Per Use plan.',
-          }).then(() => {
-            router.push('/dashboard');
-          });
-        } else {
-          throw new Error(data.message || 'Failed to activate free plan');
-        }
-      } catch (error: any) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: error.message || 'Failed to activate free plan.',
-        });
-      }
+      //   if (data.success) {
+      //     Swal.fire({
+      //       icon: 'success',
+      //       title: 'Welcome!',
+      //       text: 'You are now on the Pay Per Use plan.',
+      //     }).then(() => {
+      //       router.push('/dashboard');
+      //     });
+      //   } else {
+      //     throw new Error(data.message || 'Failed to activate free plan');
+      //   }
+      // } catch (error: any) {
+      //   Swal.fire({
+      //     icon: 'error',
+      //     title: 'Error',
+      //     text: error.message || 'Failed to activate free plan.',
+      //   });
+      // }
+
+      router.push('/auth/signup');
       return;
     }
 
@@ -190,22 +192,22 @@ const Pricing = () => {
       ],
       buttonText: "Get Started",
     },
-    {
-      name: "Business Starter",
-      price: "₦5,000",
-      interval: "per month",
-      bestFor: "SMEs that want freedom from pay-per-use charges.",
-      features: [
-        "Unlimited Invoices & Receipts (no ₦100 fee)",
-        "Invoice payment fees: 1.5% (reduced from 3%)",
-        "Contracts: 10 contracts per month",
-        "Lawyer-Signed Contracts: ₦9,500 each",
-        "Cashback & rewards included",
-        "Tax Filing Support: 2% of monthly revenue capped at ₦100k",
-      ],
-      buttonText: "Subscribe",
-      highlighted: true,
-    },
+    // {
+    //   name: "Business Starter",
+    //   price: "₦5,000",
+    //   interval: "per month",
+    //   bestFor: "SMEs that want freedom from pay-per-use charges.",
+    //   features: [
+    //     "Unlimited Invoices & Receipts (no ₦100 fee)",
+    //     "Invoice payment fees: 1.5% (reduced from 3%)",
+    //     "Contracts: 10 contracts per month",
+    //     "Lawyer-Signed Contracts: ₦9,500 each",
+    //     "Cashback & rewards included",
+    //     "Tax Filing Support: 2% of monthly revenue capped at ₦100k",
+    //   ],
+    //   buttonText: "Subscribe",
+    //   highlighted: true,
+    // },
     {
       name: "Premium CFO",
       price: "₦20,000",
@@ -218,10 +220,11 @@ const Pricing = () => {
         "Priority Support",
       ],
       buttonText: "Subscribe",
+      highlighted: true,
     },
     {
       name: "Diamond CFO",
-      price: "₦20,000",
+      price: "₦250,000",
       interval: "per month",
       bestFor: "Entrepreneurs who want one-on-one financial support.",
       features: [
@@ -248,7 +251,7 @@ const Pricing = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mx-auto md:mx-16">
           {plans.map((plan, index) => (
             <Card
               key={index}

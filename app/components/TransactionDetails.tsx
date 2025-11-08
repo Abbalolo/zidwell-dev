@@ -32,6 +32,7 @@ export default function TransactionDetailsPage() {
   const handleDownloadReceipt = () => {
     if (!transaction) return;
 
+ 
     const amountInfo = formatAmount(transaction);
 
     // Create receipt HTML content
@@ -527,13 +528,13 @@ export default function TransactionDetailsPage() {
                       </span>
                     </div>
 
-                    
-                    {transaction.fee && (
-                      <div className="flex flex-col xs:flex-row xs:justify-between gap-1 xs:gap-2">
+
+                    {transaction.fee || transaction.fee === 0 && (
+                      <div className="flex items-center justify-between gap-1 xs:gap-2">
                         <span className="text-gray-600 text-sm sm:text-base">
                           Transaction Fee
                         </span>
-                        <span className="font-medium text-sm sm:text-base text-right xs:text-left">
+                        <span className="font-medium text-sm ">
                           ₦
                           {Number(transaction.fee).toLocaleString("en-NG", {
                             minimumFractionDigits: 2,

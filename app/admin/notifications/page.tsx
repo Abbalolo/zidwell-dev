@@ -1,4 +1,3 @@
-// app/admin/notifications/page.tsx
 "use client";
 
 import useSWR from "swr";
@@ -160,21 +159,27 @@ export default function NotificationsCenterPage() {
   // Send notification immediately
   const handleSendNow = async (notificationId: string) => {
     try {
-      await fetch(`/api/admin-apis/notifications/${notificationId}/send`, {
+      const response = await fetch(`/api/admin-apis/notifications/${notificationId}/send`, {
         method: "POST",
       });
       
-      Swal.fire({
-        icon: "success",
-        title: "Notification Sent!",
-        text: "The notification has been sent immediately",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      
-      mutate();
-    } catch (err) {
-      Swal.fire("Error", "Failed to send notification", "error");
+      const result = await response.json();
+
+      if (response.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "Notification Sent!",
+          text: "The notification has been sent immediately",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        
+        mutate();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err: any) {
+      Swal.fire("Error", err.message || "Failed to send notification", "error");
     }
   };
 
@@ -193,21 +198,27 @@ export default function NotificationsCenterPage() {
 
     if (result.isConfirmed) {
       try {
-        await fetch(`/api/admin-apis/notifications/${notificationId}`, {
+        const response = await fetch(`/api/admin-apis/notifications?id=${notificationId}`, {
           method: "DELETE",
         });
         
-        Swal.fire({
-          icon: "success",
-          title: "Cancelled!",
-          text: "The notification has been cancelled",
-          timer: 2000,
-          showConfirmButton: false,
-        });
-        
-        mutate();
-      } catch (err) {
-        Swal.fire("Error", "Failed to cancel notification", "error");
+        const deleteResult = await response.json();
+
+        if (response.ok) {
+          Swal.fire({
+            icon: "success",
+            title: "Cancelled!",
+            text: "The notification has been cancelled",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          
+          mutate();
+        } else {
+          throw new Error(deleteResult.error);
+        }
+      } catch (err: any) {
+        Swal.fire("Error", err.message || "Failed to cancel notification", "error");
       }
     }
   };
@@ -402,6 +413,18 @@ export default function NotificationsCenterPage() {
                 Showing {notifications.length} of {totalNotifications} notifications
                 {` - Page ${currentPage} of ${totalPages}`}
               </div>
+              
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Date Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="total">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -450,6 +473,8 @@ export default function NotificationsCenterPage() {
                           <span>📧 Email: {notification.stats.email_sent || 0}</span>
                           <span>💬 SMS: {notification.stats.sms_sent || 0}</span>
                           <span>🔔 Push: {notification.stats.push_sent || 0}</span>
+                          <span>✅ Successful: {notification.stats.successful || 0}</span>
+                          <span>❌ Failed: {notification.stats.failed || 0}</span>
                         </div>
                       )}
                     </div>
@@ -475,6 +500,14 @@ export default function NotificationsCenterPage() {
                       {notification.status === "draft" && (
                         <Button size="sm">
                           Edit
+                        </Button>
+                      )}
+                      {notification.status === "failed" && (
+                        <Button 
+                          size="sm"
+                          onClick={() => handleSendNow(notification.id)}
+                        >
+                          Retry
                         </Button>
                       )}
                     </div>
