@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   try {
     const {
       userId,
-      receiverAccountId,
+      receiverAccountId, 
       amount,
       narration,
       pin,
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     // ✅ Verify user + PIN
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("id, first_name, last_name, transaction_pin, wallet_balance, wallet_id, bank_account_number")
+      .select("id, first_name, last_name, transaction_pin, wallet_balance, wallet_id")
       .eq("id", userId)
       .single();
 
@@ -56,29 +56,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Check receiver exists and get bank account number (Nomba account ID)
+    // ✅ Get receiver details (optional - for transaction record)
     const { data: receiver, error: receiverError } = await supabase
       .from("users")
-      .select("id, first_name, last_name, wallet_id, bank_account_number")
-      .eq("wallet_id", receiverAccountId)
+      .select("id, first_name, last_name, wallet_id")
+      .eq("wallet_id", receiverAccountId) 
       .single();
 
-      console.log("Receiver fetch:", receiver, receiverError);
+    console.log("Receiver fetch:", receiver, receiverError);
 
-    if (receiverError || !receiver) {
-      return NextResponse.json({ message: "Receiver not found" }, { status: 404 });
-    }
+    const receiverName = receiver ? `${receiver.first_name} ${receiver.last_name}` : "Unknown User";
+    const receiverWalletId = receiver?.wallet_id || receiverAccountId;
 
     // ✅ Prevent self-transfer
     if (user.wallet_id === receiverAccountId) {
       return NextResponse.json({ message: "You cannot transfer to your own wallet" }, { status: 400 });
-    }
-
-    if (!receiver.bank_account_number) {
-      return NextResponse.json(
-        { message: "Receiver does not have a valid bank account number" },
-        { status: 400 }
-      );
     }
 
     // ✅ Get Nomba token
@@ -92,7 +84,6 @@ export async function POST(req: Request) {
 
     const merchantTxRef = `P2P_${Date.now()}`;
     const senderName = `${user.first_name} ${user.last_name}`;
-    const receiverName = `${receiver.first_name} ${receiver.last_name}`;
 
     // ✅ Insert pending transaction
     const { data: pendingTx, error: txError } = await supabase
@@ -103,12 +94,10 @@ export async function POST(req: Request) {
         sender: {
           name: senderName,
           wallet_id: user.wallet_id,
-          bank_account_number: user.bank_account_number,
         },
         receiver: {
           name: receiverName,
-          wallet_id: receiver.wallet_id,
-          bank_account_number: receiver.bank_account_number,
+          wallet_id: receiverWalletId,
         },
         amount,
         fee: 0, // No fee for P2P transfers
@@ -137,7 +126,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to deduct wallet balance" }, { status: 500 });
     }
 
-    // ✅ Call Nomba wallet transfer API
+    // ✅ Call Nomba wallet transfer API - use receiverAccountId directly
     const res = await fetch(`${process.env.NOMBA_URL}/v1/transfers/wallet`, {
       method: "POST",
       headers: {
@@ -147,7 +136,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         amount,
-        receiverAccountId: receiver.bank_account_number, 
+        receiverAccountId: receiverAccountId, // Use directly from frontend
         merchantTxRef,
         narration: narration || "P2P Transfer",
         senderName: senderName,
