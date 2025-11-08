@@ -20,6 +20,8 @@ export async function POST(req: Request) {
       .eq("bank_account_number", accNumber)
       .single();
 
+      console.log(user, error);
+
     if (error || !user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

@@ -93,6 +93,8 @@ export default function Transfer() {
     bank.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  console.log(p2pDetails, "setP2pDetails")
+
   // Handle bank selection
   const handleSelectBank = (bank: Bank) => {
     setBankName(bank.name);

@@ -137,7 +137,7 @@ export async function POST(req: Request) {
         bankCode,
         senderName,
         merchantTxRef,
-        narration: "Withdrawal",
+        narration,
       }),
     });
 
