@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         amount,
-        receiverAccountId: receiverAccountId, // Use directly from frontend
+        receiverAccountId: receiverWalletId,
         merchantTxRef,
         narration: narration || "P2P Transfer",
         senderName: senderName,
